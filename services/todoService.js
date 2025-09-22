@@ -21,12 +21,14 @@ export class TodoService {
     
     if (!todo) {
       return {
+        status: 404,
         success: false,
         message: 'Tarea no encontrada'
       };
     }
     
     return {
+      status: 200,
       success: true,
       data: todo
     };
@@ -38,6 +40,7 @@ export class TodoService {
     
     if (!title) {
       return {
+        status: 400,
         success: false,
         message: 'El título es requerido'
       };
@@ -52,6 +55,7 @@ export class TodoService {
     todos.push(newTodo);
     
     return {
+      status: 201,
       success: true,
       data: newTodo,
       message: 'Tarea creada exitosamente'
@@ -66,6 +70,7 @@ export class TodoService {
     
     if (todoIndex === -1) {
       return {
+        status: 404,
         success: false,
         message: 'Tarea no encontrada'
       };
@@ -76,6 +81,7 @@ export class TodoService {
     if (completed !== undefined) todos[todoIndex].completed = completed;
     
     return {
+      status: 200,
       success: true,
       data: todos[todoIndex],
       message: 'Tarea actualizada exitosamente'
@@ -88,6 +94,7 @@ export class TodoService {
     
     if (todoIndex === -1) {
       return {
+        status: 404,
         success: false,
         message: 'Tarea no encontrada'
       };
@@ -96,6 +103,7 @@ export class TodoService {
     const deletedTodo = todos.splice(todoIndex, 1)[0];
     
     return {
+      status: 200,
       success: true,
       data: deletedTodo,
       message: 'Tarea eliminada exitosamente'
