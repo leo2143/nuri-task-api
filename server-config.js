@@ -1,27 +1,28 @@
 import express from 'express';
 import chalk from 'chalk';
+import mongoose from 'mongoose';
 
 // Configuración del servidor
 export const createServer = () => {
   const app = express();
   const PORT = process.env.PORT || 3000;
+  const MONGO_URI = process.env.MONGO_URI;
+
+
+  //Mongoose connecting
+  mongoose.connect(MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  });
+  const db = mongoose.connection;
+  db.on('error', console.error.bind(console, 'connection error:'));
+  db.once('open', () => {
+    console.log(chalk.green('🔗 Conexión a MongoDB establecida'));
+  });
 
   // Middleware para parsear JSON
   app.use(express.json());
 
-  // Middleware para logging de requests
-  app.use((req, res, next) => {
-    console.log(chalk.blue(`📝 ${new Date().toISOString()} - ${req.method} ${req.path}`));
-    next();
-  });
-
-  // Middleware para manejar rutas no encontradas
-  app.use((req, res) => {
-    res.status(404).json({
-      success: false,
-      message: 'Ruta no encontrada'
-    });
-  });
 
   return { app, PORT };
 };
