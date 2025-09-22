@@ -1,5 +1,5 @@
 import User from '../models/userModel.js';
-import { ResponseModel, NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
+import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import chalk from 'chalk';
 
@@ -8,7 +8,7 @@ export class UserService {
     static async getAllUsers() {
         try {
             const users = await User.find().select('-password');
-            if (!users) {
+            if (users.length === 0) {
                 return new NotFoundResponseModel('No se encontraron usuarios en la base de datos');
             }
             return new SuccessResponseModel(users, users.length, 'Usuarios obtenidos correctamente');
