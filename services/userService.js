@@ -9,6 +9,7 @@ import chalk from 'chalk';
 dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET || 'tu_clave_secreta_super_segura';
 
+
 /**
  * Servicio para manejar la lógica de negocio de usuarios
  * @class UserService
