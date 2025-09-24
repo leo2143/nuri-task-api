@@ -8,11 +8,10 @@ export const createServer = () => {
   const PORT = process.env.PORT || 3000;
   const MONGO_URI = process.env.MONGO_URI;
 
-
   //Mongoose connecting
   mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
   });
   const db = mongoose.connection;
   db.on('error', console.error.bind(console, 'connection error:'));
@@ -23,14 +22,17 @@ export const createServer = () => {
   // Middleware para parsear JSON
   app.use(express.json());
 
+  // Servir archivos estáticos desde la carpeta public
+  app.use(express.static('public'));
 
   return { app, PORT };
 };
 
 // Función para iniciar el servidor
 export const startServer = (app, PORT) => {
-    app.listen(PORT, () => {
-        console.log(chalk.cyan(`
+  app.listen(PORT, () => {
+    console.log(
+      chalk.cyan(`
         
                                         TODO LIST API  
                                        ....
@@ -51,13 +53,8 @@ export const startServer = (app, PORT) => {
                                _.' .'______________'. '._
                               [_0______________________0_]
 
-            `));
-        console.log(chalk.green(`🚀 Servidor corriendo en http://localhost:${PORT}`));
-        console.log(chalk.yellow('📝 Endpoints disponibles:'));
-        console.log(chalk.cyan('  GET    /api/todos      - Obtener todas las tareas'));
-        console.log(chalk.cyan('  GET    /api/todos/:id  - Obtener una tarea específica'));
-        console.log(chalk.cyan('  POST   /api/todos      - Crear una nueva tarea'));
-        console.log(chalk.cyan('  PUT    /api/todos/:id  - Actualizar una tarea'));
-        console.log(chalk.cyan('  DELETE /api/todos/:id  - Eliminar una tarea'));
-    });
+            `)
+    );
+    console.log(chalk.green(`🚀 Servidor corriendo en http://localhost:${PORT}`));
+  });
 };

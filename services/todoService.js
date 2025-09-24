@@ -1,112 +1,155 @@
-let todos = [
-  { id: 1, title: 'Aprender Node.js', completed: false },
-  { id: 2, title: 'Crear una API REST', completed: true },
-  { id: 3, title: 'Practicar con Express', completed: false }
-];
+import Todo from '../models/todoModel.js';
+import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
+import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
+import chalk from 'chalk';
 
-// Servicio para manejar la lógica de negocio de las tareas
+/**
+ * Servicio para manejar la lógica de negocio de tareas (todos)
+ * @class TodoService
+ */
 export class TodoService {
-  // Obtener todas las tareas
-  static getAllTodos() {
-    return {
-      success: true,
-      data: todos,
-      count: todos.length
-    };
+  /**
+   * Obtiene todas las tareas de un usuario específico
+   * @static
+   * @async
+   * @function getAllTodos
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de tareas o error
+   * @example
+   */
+  static async getAllTodos(userId) {
+    try {
+      const todos = await Todo.find({}).sort({ createdAt: -1 });
+      if (todos.length === 0) {
+        return new NotFoundResponseModel('No se encontraron tareas para este usuario');
+      }
+      return new SuccessResponseModel(todos, todos.length, 'Tareas obtenidas correctamente');
+    } catch (error) {
+      console.error(chalk.red('Error al obtener tareas:', error));
+      return new ErrorResponseModel('Error al obtener tareas');
+    }
   }
 
-  // Obtener una tarea específica por ID
-  static getTodoById(id) {
-    const todo = todos.find(t => t.id === id);
-    
-    if (!todo) {
-      return {
-        status: 404,
-        success: false,
-        message: 'Tarea no encontrada'
-      };
+  static async getTodoById(id, userId) {
+    try {
+      const todo = await Todo.findOne({ _id: id });
+      if (!todo) {
+        return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
+      }
+      return new SuccessResponseModel(todo, 1, 'Tarea obtenida correctamente');
+    } catch (error) {
+      console.error(chalk.red('Error al obtener tarea:', error));
+      return new ErrorResponseModel('Error al obtener tarea');
     }
-    
-    return {
-      status: 200,
-      success: true,
-      data: todo
-    };
   }
 
-  // Crear una nueva tarea
-  static createTodo(todoData) {
-    const { title } = todoData;
-    
-    if (!title) {
-      return {
-        status: 400,
-        success: false,
-        message: 'El título es requerido'
-      };
+  /**
+   * Crea una nueva tarea para un usuario específico
+   * @static
+   * @async
+   * @function createTodo
+   * @param {Object} todoData - Datos de la tarea a crear
+   * @param {string} todoData.title - Título de la tarea (requerido)
+   * @param {string} [todoData.description=''] - Descripción de la tarea
+   * @param {string} [todoData.priority='medium'] - Prioridad (low/medium/high)
+   * @param {Date} [todoData.dueDate=null] - Fecha límite de la tarea
+   * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con la tarea creada o error
+   * @example
+   */
+  static async createTodo(todoData, userId) {
+    try {
+      const { title, description, priority, dueDate } = todoData;
+
+      if (!title) {
+        return new ErrorResponseModel('El título es requerido');
+      }
+
+      const todo = new Todo({
+        title,
+        description: description || '',
+        priority: priority || 'medium',
+        dueDate: dueDate || null,
+        userId,
+      });
+
+      const savedTodo = await todo.save();
+      return new CreatedResponseModel(savedTodo, 'Tarea creada correctamente');
+    } catch (error) {
+      console.error(chalk.red('Error al crear tarea:', error));
+      return new ErrorResponseModel('Error al crear tarea');
     }
-    
-    const newTodo = {
-      id: todos.length > 0 ? Math.max(...todos.map(t => t.id)) + 1 : 1,
-      title,
-      completed: false
-    };
-    
-    todos.push(newTodo);
-    
-    return {
-      status: 201,
-      success: true,
-      data: newTodo,
-      message: 'Tarea creada exitosamente'
-    };
   }
 
-  // Actualizar una tarea existente
-  static updateTodo(id, updateData) {
-    const { title, completed } = updateData;
-    
-    const todoIndex = todos.findIndex(t => t.id === id);
-    
-    if (todoIndex === -1) {
-      return {
-        status: 404,
-        success: false,
-        message: 'Tarea no encontrada'
-      };
+  static async updateTodo(id, todoData, userId) {
+    try {
+      const { title, description, completed, priority, dueDate } = todoData;
+
+      const todo = await Todo.findOneAndUpdate(
+        { _id: id },
+        {
+          ...(title && { title }),
+          ...(description !== undefined && { description }),
+          ...(completed !== undefined && { completed }),
+          ...(priority && { priority }),
+          ...(dueDate !== undefined && { dueDate }),
+        },
+        { new: true }
+      );
+
+      if (!todo) {
+        return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
+      }
+
+      return new SuccessResponseModel(todo, 1, 'Tarea actualizada correctamente');
+    } catch (error) {
+      console.error(chalk.red('Error al actualizar tarea:', error));
+      return new ErrorResponseModel('Error al actualizar tarea');
     }
-    
-    // Actualizar solo los campos proporcionados
-    if (title !== undefined) todos[todoIndex].title = title;
-    if (completed !== undefined) todos[todoIndex].completed = completed;
-    
-    return {
-      status: 200,
-      success: true,
-      data: todos[todoIndex],
-      message: 'Tarea actualizada exitosamente'
-    };
   }
 
-  // Eliminar una tarea
-  static deleteTodo(id) {
-    const todoIndex = todos.findIndex(t => t.id === id);
-    
-    if (todoIndex === -1) {
-      return {
-        status: 404,
-        success: false,
-        message: 'Tarea no encontrada'
-      };
+  static async deleteTodo(id, userId) {
+    try {
+      const todo = await Todo.findOneAndDelete({ _id: id });
+      if (!todo) {
+        return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
+      }
+      return new SuccessResponseModel(todo, 1, 'Tarea eliminada correctamente');
+    } catch (error) {
+      console.error(chalk.red('Error al eliminar tarea:', error));
+      return new ErrorResponseModel('Error al eliminar tarea');
     }
-    
-    const deletedTodo = todos.splice(todoIndex, 1)[0];
-    
-    return {
-      status: 200,
-      success: true,
-      data: deletedTodo,
-      message: 'Tarea eliminada exitosamente'
-    };
+  }
+
+  static async getTodosByStatus(completed, userId) {
+    try {
+      const todos = await Todo.find({ completed }).sort({ createdAt: -1 });
+      if (todos.length === 0) {
+        return new NotFoundResponseModel(`No se encontraron tareas ${completed ? 'completadas' : 'pendientes'}`);
+      }
+      return new SuccessResponseModel(
+        todos,
+        todos.length,
+        `Tareas ${completed ? 'completadas' : 'pendientes'} obtenidas correctamente`
+      );
+    } catch (error) {
+      console.error(chalk.red('Error al obtener tareas por estado:', error));
+      return new ErrorResponseModel('Error al obtener tareas por estado');
+    }
+  }
+
+  static async getTodosByPriority(priority, userId) {
+    try {
+      const todos = await Todo.find({ priority }).sort({ createdAt: -1 });
+      if (todos.length === 0) {
+        return new NotFoundResponseModel(`No se encontraron tareas ${priority ? 'alta' : 'media' || 'baja'}`);
+      }
+      return new SuccessResponseModel(
+        todos,
+        todos.length,
+        `Tareas ${priority ? 'alta' : 'media' || 'baja'} obtenidas correctamente`
+      );
+    } catch (error) {
+      console.error(chalk.red('Error al obtener tareas por prioridad:', error));
+      return new ErrorResponseModel('Error al obtener tareas por prioridad');
+    }
   }
 }
