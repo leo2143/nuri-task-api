@@ -2,9 +2,11 @@ import { SuccessResponseModel, ErrorResponseModel, NotFoundResponseModel } from 
 
 /**
  * Middleware para manejar rutas no encontradas (404)
- * @param {Object} req - Request object
- * @param {Object} res - Response object
- * @param {Function} next - Next middleware function
+ * @function notFoundHandler
+ * @param {Object} req - Objeto request de Express
+ * @param {Object} res - Objeto response de Express
+ * @param {Function} next - Función para continuar al siguiente middleware
+ * @returns {void} No retorna valor, envía respuesta 404
  */
 export const notFoundHandler = (req, res, next) => {
   res.status(404).json(new NotFoundResponseModel('Ruta no encontrada'));
@@ -12,10 +14,12 @@ export const notFoundHandler = (req, res, next) => {
 
 /**
  * Middleware para manejar errores generales del servidor (500)
- * @param {Error} err - Error object
- * @param {Object} req - Request object
- * @param {Object} res - Response object
- * @param {Function} next - Next middleware function
+ * @function errorHandler
+ * @param {Error} err - Objeto de error capturado
+ * @param {Object} req - Objeto request de Express
+ * @param {Object} res - Objeto response de Express
+ * @param {Function} next - Función para continuar al siguiente middleware
+ * @returns {void} No retorna valor, envía respuesta de error
  */
 export const errorHandler = (err, req, res, next) => {
   console.error('Error:', err);
@@ -25,9 +29,13 @@ export const errorHandler = (err, req, res, next) => {
 
 /**
  * Middleware para validar que el servidor esté funcionando
- * @param {Object} req - Request object
- * @param {Object} res - Response object
- * @param {Function} next - Next middleware function
+ * @function healthCheck
+ * @param {Object} req - Objeto request de Express
+ * @param {string} req.path - Ruta de la petición
+ * @param {Object} res - Objeto response de Express
+ * @param {Function} next - Función para continuar al siguiente middleware
+ * @returns {void} No retorna valor, envía respuesta de salud o continúa
+ * @description Middleware que responde a peticiones de health check en /health
  */
 export const healthCheck = (req, res, next) => {
   if (req.path === '/health') return res.status(200).json(new SuccessResponseModel(null, 0, 'Servidor funcionando correctamente'));
