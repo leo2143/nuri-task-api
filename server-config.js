@@ -9,10 +9,7 @@ export const createServer = () => {
   const MONGO_URI = process.env.MONGO_URI;
 
   //Mongoose connecting
-  mongoose.connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+  mongoose.connect(MONGO_URI, {});
   const db = mongoose.connection;
   db.on('error', console.error.bind(console, 'connection error:'));
   db.once('open', () => {

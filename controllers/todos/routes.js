@@ -13,6 +13,7 @@ export const setupTodoRoutes = app => {
   app.get('/api/todos/completed', validarToken, TodoController.getCompletedTodos);
   app.get('/api/todos/pending', validarToken, TodoController.getPendingTodos);
   app.get('/api/todos/:id', validarToken, TodoController.getTodoById);
+  app.get('/api/todos/title/:title', validarToken, TodoController.getByTitle);
   app.post('/api/todos', validarToken, TodoController.createTodo);
   app.put('/api/todos/:id', validarToken, TodoController.updateTodo);
   app.delete('/api/todos/:id', validarToken, TodoController.deleteTodo);

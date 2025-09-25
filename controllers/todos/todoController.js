@@ -1,4 +1,4 @@
-import { TodoService } from "../../services/todoService.js";
+import { TodoService } from '../../services/todoService.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con tareas (todos)
@@ -6,19 +6,33 @@ import { TodoService } from "../../services/todoService.js";
  */
 export class TodoController {
   /**
-   * Obtiene todas las tareas del usuario autenticado
+   * Obtiene todas las tareas con filtros opcionales
    * @static
    * @async
    * @function getAllTodos
    * @param {Object} req - Objeto request de Express
-   * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.query - Query parameters para filtros
+   * @param {string} [req.query.search] - Término de búsqueda en título
+   * @param {boolean} [req.query.completed] - Filtrar por estado completado
+   * @param {string} [req.query.priority] - Filtrar por prioridad
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAllTodos(req, res) {
-    const userId = req.userId;
-    const result = await TodoService.getAllTodos(userId);
-    res.json(result);
+    try {
+      // Extraer filtros de query parameters
+      const filters = {
+        search: req.query.search,
+        completed: req.query.completed,
+        priority: req.query.priority,
+      };
+
+      const result = await TodoService.getAllTodos(filters);
+      res.status(result.status).json(result);
+    } catch (error) {
+      console.error('Error en getAllTodos:', error);
+      res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
+    }
   }
 
   static async getTodoById(req, res) {
@@ -55,6 +69,12 @@ export class TodoController {
     const todoData = req.body;
     const userId = req.userId;
     const result = await TodoService.updateTodo(id, todoData, userId);
+    res.json(result);
+  }
+
+  static async getByTitle(req, res) {
+    const title = req.params.title;
+    const result = await TodoService.getTodoByTitle(title);
     res.json(result);
   }
 

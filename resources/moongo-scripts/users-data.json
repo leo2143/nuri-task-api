@@ -1,0 +1,56 @@
+[
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cefec"
+    },
+    "name": "leonardo",
+    "email": "leonardo@gmail.com",
+    "password": "pruebadecontraseña",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "name": "david",
+    "email": "david@gmail.com",
+    "password": "$2b$10$zyPLaPqARhc/YbPfNMXRvu8l/eOTJixWX5N00t5B5KYvkbJ33Lh4e",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef01"
+    },
+    "name": "Juan Pérez",
+    "email": "juan@ejemplo.com",
+    "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef02"
+    },
+    "name": "María García",
+    "email": "maria@ejemplo.com",
+    "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef03"
+    },
+    "name": "Carlos López",
+    "email": "carlos@ejemplo.com",
+    "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef04"
+    },
+    "name": "Ana Martínez",
+    "email": "ana@ejemplo.com",
+    "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "__v": 0
+  }
+]
