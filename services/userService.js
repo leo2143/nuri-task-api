@@ -9,25 +9,34 @@ import chalk from 'chalk';
 dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET || 'tu_clave_secreta_super_segura';
 
-
 /**
  * Servicio para manejar la lógica de negocio de usuarios
  * @class UserService
  */
 export class UserService {
   /**
-   * Obtiene todos los usuarios de la base de datos
+   * Obtiene todos los usuarios con filtros opcionales
    * @static
    * @async
    * @function getAllUsers
-   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Respuesta con la lista de usuarios o error
+   * @param {Object} filters - Filtros de búsqueda
+   * @param {string} [filters.search] - Término de búsqueda en nombre
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de usuarios o error
    * @example
    */
-  static async getAllUsers() {
+  static async getAllUsers(filters = {}) {
     try {
-      const users = await User.find().select('-password');
+      // Construir query de búsqueda
+      const query = {};
+
+      // Búsqueda por nombre (case insensitive)
+      if (filters.search) {
+        query.name = { $regex: filters.search, $options: 'i' };
+      }
+
+      const users = await User.find(query).select('-password');
       if (users.length === 0) {
-        return new NotFoundResponseModel('No se encontraron usuarios en la base de datos');
+        return new NotFoundResponseModel('No se encontraron usuarios con los filtros aplicados');
       }
       return new SuccessResponseModel(users, users.length, 'Usuarios obtenidos correctamente');
     } catch (error) {

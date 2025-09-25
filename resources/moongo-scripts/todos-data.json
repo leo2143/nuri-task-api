@@ -1,0 +1,106 @@
+[
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef11"
+    },
+    "title": "Aprender Node.js",
+    "description": "Estudiar conceptos básicos de Node.js y Express",
+    "priority": "high",
+    "dueDate": "2024-02-15T10:00:00.000Z",
+    "completed": false,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef12"
+    },
+    "title": "Crear API REST",
+    "description": "Desarrollar una API REST completa con autenticación",
+    "priority": "high",
+    "dueDate": "2024-02-20T15:30:00.000Z",
+    "completed": false,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef13"
+    },
+    "title": "Configurar MongoDB",
+    "description": "Instalar y configurar MongoDB para el proyecto",
+    "priority": "medium",
+    "dueDate": "2024-02-10T09:00:00.000Z",
+    "completed": true,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef14"
+    },
+    "title": "Implementar JWT",
+    "description": "Agregar autenticación JWT a la aplicación",
+    "priority": "high",
+    "dueDate": "2024-02-18T12:00:00.000Z",
+    "completed": false,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef15"
+    },
+    "title": "Escribir documentación",
+    "description": "Crear documentación completa del proyecto",
+    "priority": "low",
+    "dueDate": "2024-02-25T16:00:00.000Z",
+    "completed": false,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef16"
+    },
+    "title": "Hacer pruebas unitarias",
+    "description": "Implementar tests para todas las funcionalidades",
+    "priority": "medium",
+    "dueDate": "2024-02-22T14:00:00.000Z",
+    "completed": false,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef17"
+    },
+    "title": "Diseñar interfaz de usuario",
+    "description": "Crear mockups y prototipos de la interfaz",
+    "priority": "medium",
+    "dueDate": "2024-02-12T11:00:00.000Z",
+    "completed": true,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef18"
+    },
+    "title": "Optimizar rendimiento",
+    "description": "Mejorar la velocidad y eficiencia de la aplicación",
+    "priority": "high",
+    "dueDate": "2024-02-28T17:00:00.000Z",
+    "completed": false,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  }
+]

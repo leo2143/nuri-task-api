@@ -9,18 +9,40 @@ import chalk from 'chalk';
  */
 export class TodoService {
   /**
-   * Obtiene todas las tareas de un usuario específico
+   * Obtiene todas las tareas con filtros opcionales
    * @static
    * @async
    * @function getAllTodos
+   * @param {Object} filters - Filtros de búsqueda
+   * @param {string} [filters.search] - Término de búsqueda en título
+   * @param {boolean} [filters.completed] - Filtrar por estado completado
+   * @param {string} [filters.priority] - Filtrar por prioridad
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de tareas o error
    * @example
    */
-  static async getAllTodos(userId) {
+  static async getAllTodos(filters = {}) {
     try {
-      const todos = await Todo.find({}).sort({ createdAt: -1 });
+      // Construir query de búsqueda
+      const query = {};
+
+      // Búsqueda por título (case insensitive)
+      if (filters.search) {
+        query.title = { $regex: filters.search, $options: 'i' };
+      }
+
+      // Filtro por estado completado
+      if (filters.completed !== undefined) {
+        query.completed = filters.completed === 'true';
+      }
+
+      // Filtro por prioridad
+      if (filters.priority) {
+        query.priority = filters.priority;
+      }
+
+      const todos = await Todo.find(query).sort({ createdAt: -1 });
       if (todos.length === 0) {
-        return new NotFoundResponseModel('No se encontraron tareas para este usuario');
+        return new NotFoundResponseModel('No se encontraron tareas con los filtros aplicados');
       }
       return new SuccessResponseModel(todos, todos.length, 'Tareas obtenidas correctamente');
     } catch (error) {
@@ -34,6 +56,27 @@ export class TodoService {
       const todo = await Todo.findOne({ _id: id });
       if (!todo) {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
+      }
+      return new SuccessResponseModel(todo, 1, 'Tarea obtenida correctamente');
+    } catch (error) {
+      console.error(chalk.red('Error al obtener tarea:', error));
+      return new ErrorResponseModel('Error al obtener tarea');
+    }
+  }
+  /**
+   * Busca tareas por título (búsqueda exacta)
+   * @static
+   * @async
+   * @function getTodoByTitle
+   * @param {string} title - Título exacto a buscar
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea encontrada o error
+   * @example
+   */
+  static async getTodoByTitle(title) {
+    try {
+      const todo = await Todo.findOne({ title });
+      if (!todo) {
+        return new NotFoundResponseModel('No se encontró la tarea con el título: ' + title);
       }
       return new SuccessResponseModel(todo, 1, 'Tarea obtenida correctamente');
     } catch (error) {

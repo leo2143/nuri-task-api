@@ -1,0 +1,41 @@
+{
+	"info": {
+		"_postman_id": "0905acb4-731a-436a-81cb-9d2baaaca986",
+		"name": "todolistapp",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "20131533"
+	},
+	"item": [
+		{
+			"name": "todos",
+			"item": []
+		},
+		{
+			"name": "goals",
+			"item": []
+		},
+		{
+			"name": "user",
+			"item": []
+		},
+		{
+			"name": "healtcheck",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:{{localhost}}/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "{{localhost}}",
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
