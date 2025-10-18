@@ -31,7 +31,7 @@ export const startServer = (app, PORT) => {
     console.log(
       chalk.cyan(`
         
-                                        TODO LIST API  
+                                        NURI TASK API  
                                        ....
                              ,''. :   __
                                  \\|_.'  \`:       _.----._//_

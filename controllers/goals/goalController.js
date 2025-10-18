@@ -147,27 +147,6 @@ export class GoalController {
   }
 
   /**
-   * Agrega una métrica de progreso semanal
-   * @static
-   * @async
-   * @function addWeeklyMetric
-   * @param {Object} req - Objeto request de Express
-   * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
-   * @param {Object} req.params - Parámetros de la URL
-   * @param {string} req.params.id - ID de la meta
-   * @param {Object} req.body - Datos de la métrica
-   * @param {Object} res - Objeto response de Express
-   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   */
-  static async addWeeklyMetric(req, res) {
-    const { id } = req.params;
-    const metricData = req.body;
-    const userId = req.userId;
-    const result = await GoalService.addWeeklyMetric(id, metricData, userId);
-    res.json(result);
-  }
-
-  /**
    * Agrega un comentario a la meta
    * @static
    * @async

@@ -150,37 +150,6 @@ export class GoalService {
   }
 
   /**
-   * Agrega una métrica de progreso semanal
-   * @static
-   * @async
-   * @function addWeeklyMetric
-   * @param {string} goalId - ID de la meta
-   * @param {Object} metricData - Datos de la métrica
-   * @param {string} metricData.week - Semana (ej: "2024-W01")
-   * @param {number} metricData.progress - Progreso (0-100)
-   * @param {string} metricData.notes - Notas adicionales
-
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica agregada o error
-   */
-  static async addWeeklyMetric(goalId, metricData, userId) {
-    try {
-      const goal = await Goal.findOneAndUpdate(
-        { _id: goalId },
-        { $push: { metrics: metricData } },
-        { new: true, runValidators: true }
-      );
-
-      if (!goal) {
-        return new NotFoundResponseModel('Meta no encontrada');
-      }
-      return new SuccessResponseModel(goal, 1, 'Métrica agregada correctamente');
-    } catch (error) {
-      console.error(chalk.red('Error al agregar métrica:', error));
-      return new ErrorResponseModel('Error al agregar métrica');
-    }
-  }
-
-  /**
    * Agrega un comentario a la meta
    * @static
    * @async

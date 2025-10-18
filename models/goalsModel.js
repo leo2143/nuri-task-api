@@ -79,29 +79,10 @@ const goalSchema = new mongoose.Schema(
         trim: true,
       },
     },
-    metrics: [
-      {
-        week: {
-          type: String,
-          required: true,
-        },
-        progress: {
-          type: Number,
-          min: 0,
-          max: 100,
-          default: 0,
-        },
-        notes: {
-          type: String,
-          trim: true,
-          default: '',
-        },
-        date: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
+    metricsId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Metrics',
+    },
     comments: [
       {
         text: {

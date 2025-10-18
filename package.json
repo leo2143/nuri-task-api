@@ -1,7 +1,7 @@
 {
-  "name": "todo-list-api",
+  "name": "nuri-task-api",
   "version": "1.0.0",
-  "description": "estas es la app de todolist mas linda de todas",
+  "description": "estas es la app nuri task api",
   "type": "module",
   "main": "index.js",
   "scripts": {

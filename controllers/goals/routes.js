@@ -20,6 +20,5 @@ export const setupGoalRoutes = app => {
   app.delete('/api/goals/:id', validarToken, GoalController.deleteGoal);
 
   // Rutas específicas para métricas y comentarios
-  app.post('/api/goals/:id/metrics', validarToken, GoalController.addWeeklyMetric);
   app.post('/api/goals/:id/comments', validarToken, GoalController.addComment);
 };
