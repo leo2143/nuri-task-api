@@ -8,6 +8,12 @@
     "priority": "high",
     "dueDate": "2024-02-15T10:00:00.000Z",
     "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef21"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z",
     "__v": 0
@@ -21,6 +27,12 @@
     "priority": "high",
     "dueDate": "2024-02-20T15:30:00.000Z",
     "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef21"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z",
     "__v": 0
@@ -34,6 +46,12 @@
     "priority": "medium",
     "dueDate": "2024-02-10T09:00:00.000Z",
     "completed": true,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef21"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z",
     "__v": 0
@@ -47,6 +65,12 @@
     "priority": "high",
     "dueDate": "2024-02-18T12:00:00.000Z",
     "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef21"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z",
     "__v": 0
@@ -60,6 +84,12 @@
     "priority": "low",
     "dueDate": "2024-02-25T16:00:00.000Z",
     "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef21"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z",
     "__v": 0
@@ -73,6 +103,12 @@
     "priority": "medium",
     "dueDate": "2024-02-22T14:00:00.000Z",
     "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef21"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z",
     "__v": 0
@@ -82,10 +118,16 @@
       "$oid": "68d1e7f577ec3fe8073cef17"
     },
     "title": "Diseñar interfaz de usuario",
-    "description": "Crear mockups y prototipos de la interfaz",
+    "description": "Crear mockups y prototipos de la interfaz para el portfolio",
     "priority": "medium",
     "dueDate": "2024-02-12T11:00:00.000Z",
     "completed": true,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef22"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z",
     "__v": 0
@@ -94,11 +136,207 @@
     "_id": {
       "$oid": "68d1e7f577ec3fe8073cef18"
     },
-    "title": "Optimizar rendimiento",
-    "description": "Mejorar la velocidad y eficiencia de la aplicación",
+    "title": "Desarrollar sección de proyectos",
+    "description": "Crear la sección que muestre los proyectos del portfolio",
     "priority": "high",
     "dueDate": "2024-02-28T17:00:00.000Z",
     "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef22"
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef19"
+    },
+    "title": "Estudiar React Hooks",
+    "description": "Aprender y practicar useState, useEffect, useContext",
+    "priority": "high",
+    "dueDate": "2024-03-10T10:00:00.000Z",
+    "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef23"
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef20"
+    },
+    "title": "Crear proyecto con Redux",
+    "description": "Desarrollar una aplicación práctica usando Redux para state management",
+    "priority": "medium",
+    "dueDate": "2024-03-20T15:00:00.000Z",
+    "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef23"
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef21a"
+    },
+    "title": "Estudiar servicios de AWS",
+    "description": "Aprender EC2, S3, Lambda y otros servicios core de AWS",
+    "priority": "high",
+    "dueDate": "2024-04-15T12:00:00.000Z",
+    "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef24"
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef22a"
+    },
+    "title": "Realizar exámenes de práctica AWS",
+    "description": "Hacer al menos 5 exámenes de práctica completos",
+    "priority": "medium",
+    "dueDate": "2024-05-20T14:00:00.000Z",
+    "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef24"
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef23a"
+    },
+    "title": "Configurar React Native environment",
+    "description": "Instalar y configurar el entorno de desarrollo para React Native",
+    "priority": "high",
+    "dueDate": "2024-02-05T09:00:00.000Z",
+    "completed": true,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef26"
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef24a"
+    },
+    "title": "Desarrollar pantallas principales de la app",
+    "description": "Crear las pantallas de login, home, profile y settings",
+    "priority": "high",
+    "dueDate": "2024-03-15T16:00:00.000Z",
+    "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef26"
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef25a"
+    },
+    "title": "Integrar Firebase Authentication",
+    "description": "Implementar login con email/password y Google",
+    "priority": "high",
+    "dueDate": "2024-03-25T11:00:00.000Z",
+    "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef26"
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef26a"
+    },
+    "title": "Identificar proyectos open source interesantes",
+    "description": "Buscar y seleccionar 3 proyectos activos para contribuir",
+    "priority": "medium",
+    "dueDate": "2024-02-01T10:00:00.000Z",
+    "completed": true,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef27"
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef27a"
+    },
+    "title": "Hacer primer Pull Request",
+    "description": "Enviar mi primera contribución a un proyecto open source",
+    "priority": "high",
+    "dueDate": "2024-02-20T14:00:00.000Z",
+    "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef27"
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": {
+      "$oid": "68d1e7f577ec3fe8073cef28a"
+    },
+    "title": "Resolver issues del repositorio",
+    "description": "Trabajar en al menos 3 issues etiquetados como 'good first issue'",
+    "priority": "medium",
+    "dueDate": "2024-03-10T13:00:00.000Z",
+    "completed": false,
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "GoalId": {
+      "$oid": "68d1e7f577ec3fe8073cef27"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z",
     "__v": 0

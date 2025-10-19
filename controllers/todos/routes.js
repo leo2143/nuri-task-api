@@ -17,4 +17,5 @@ export const setupTodoRoutes = app => {
   app.post('/api/todos', validarToken, TodoController.createTodo);
   app.put('/api/todos/:id', validarToken, TodoController.updateTodo);
   app.delete('/api/todos/:id', validarToken, TodoController.deleteTodo);
+  app.get('/api/goals/:goalId/todos', validarToken, TodoController.getTodosByGoalId);
 };
