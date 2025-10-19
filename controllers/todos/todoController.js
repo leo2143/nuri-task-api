@@ -20,6 +20,7 @@ export class TodoController {
    */
   static async getAllTodos(req, res) {
     try {
+      const userId = req.userId;
       // Extraer filtros de query parameters
       const filters = {
         search: req.query.search,
@@ -27,7 +28,7 @@ export class TodoController {
         priority: req.query.priority,
       };
 
-      const result = await TodoService.getAllTodos(filters);
+      const result = await TodoService.getAllTodos(filters, userId);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en getAllTodos:', error);
@@ -74,7 +75,8 @@ export class TodoController {
 
   static async getByTitle(req, res) {
     const title = req.params.title;
-    const result = await TodoService.getTodoByTitle(title);
+    const userId = req.userId;
+    const result = await TodoService.getTodoByTitle(title, userId);
     res.json(result);
   }
 
@@ -114,6 +116,23 @@ export class TodoController {
   static async getPendingTodos(req, res) {
     const userId = req.userId;
     const result = await TodoService.getTodosByStatus(false, userId);
+    res.json(result);
+  }
+
+  /**
+   * Obtiene todas las tareas de una meta específica
+   * @static
+   * @async
+   * @function getTodosByGoalId
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.params.goalId - ID de la meta
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   */
+  static async getTodosByGoalId(req, res) {
+    const goalId = req.params.goalId;
+    const userId = req.userId;
+    const result = await TodoService.getTodosByGoalId(goalId, userId);
     res.json(result);
   }
 }

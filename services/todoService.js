@@ -9,7 +9,7 @@ import chalk from 'chalk';
  */
 export class TodoService {
   /**
-   * Obtiene todas las tareas con filtros opcionales
+   * Obtiene todas las tareas con filtros opcionales del usuario autenticado
    * @static
    * @async
    * @function getAllTodos
@@ -17,13 +17,14 @@ export class TodoService {
    * @param {string} [filters.search] - Término de búsqueda en título
    * @param {boolean} [filters.completed] - Filtrar por estado completado
    * @param {string} [filters.priority] - Filtrar por prioridad
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de tareas o error
    * @example
    */
-  static async getAllTodos(filters = {}) {
+  static async getAllTodos(filters = {}, userId) {
     try {
-      // Construir query de búsqueda
-      const query = {};
+      // Construir query de búsqueda - SIEMPRE incluir userId
+      const query = { userId };
 
       // Búsqueda por título (case insensitive)
       if (filters.search) {
@@ -51,9 +52,18 @@ export class TodoService {
     }
   }
 
+  /**
+   * Obtiene una tarea específica por ID del usuario autenticado
+   * @static
+   * @async
+   * @function getTodoById
+   * @param {string} id - ID de la tarea
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea o error
+   */
   static async getTodoById(id, userId) {
     try {
-      const todo = await Todo.findOne({ _id: id });
+      const todo = await Todo.findOne({ _id: id, userId });
       if (!todo) {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
       }
@@ -63,18 +73,20 @@ export class TodoService {
       return new ErrorResponseModel('Error al obtener tarea');
     }
   }
+
   /**
-   * Busca tareas por título (búsqueda exacta)
+   * Busca tareas por título del usuario autenticado (búsqueda exacta)
    * @static
    * @async
    * @function getTodoByTitle
    * @param {string} title - Título exacto a buscar
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea encontrada o error
    * @example
    */
-  static async getTodoByTitle(title) {
+  static async getTodoByTitle(title, userId) {
     try {
-      const todo = await Todo.findOne({ title });
+      const todo = await Todo.findOne({ title, userId });
       if (!todo) {
         return new NotFoundResponseModel('No se encontró la tarea con el título: ' + title);
       }
@@ -95,6 +107,7 @@ export class TodoService {
    * @param {string} [todoData.description=''] - Descripción de la tarea
    * @param {string} [todoData.priority='medium'] - Prioridad (low/medium/high)
    * @param {Date} [todoData.dueDate=null] - Fecha límite de la tarea
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con la tarea creada o error
    * @example
    */
@@ -122,12 +135,22 @@ export class TodoService {
     }
   }
 
+  /**
+   * Actualiza una tarea del usuario autenticado
+   * @static
+   * @async
+   * @function updateTodo
+   * @param {string} id - ID de la tarea
+   * @param {Object} todoData - Datos a actualizar
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea actualizada o error
+   */
   static async updateTodo(id, todoData, userId) {
     try {
       const { title, description, completed, priority, dueDate } = todoData;
 
       const todo = await Todo.findOneAndUpdate(
-        { _id: id },
+        { _id: id, userId },
         {
           ...(title && { title }),
           ...(description !== undefined && { description }),
@@ -149,9 +172,18 @@ export class TodoService {
     }
   }
 
+  /**
+   * Elimina una tarea del usuario autenticado
+   * @static
+   * @async
+   * @function deleteTodo
+   * @param {string} id - ID de la tarea
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con confirmación de eliminación o error
+   */
   static async deleteTodo(id, userId) {
     try {
-      const todo = await Todo.findOneAndDelete({ _id: id });
+      const todo = await Todo.findOneAndDelete({ _id: id, userId });
       if (!todo) {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
       }
@@ -162,9 +194,18 @@ export class TodoService {
     }
   }
 
+  /**
+   * Obtiene tareas por estado del usuario autenticado
+   * @static
+   * @async
+   * @function getTodosByStatus
+   * @param {boolean} completed - Estado de completado
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las tareas filtradas o error
+   */
   static async getTodosByStatus(completed, userId) {
     try {
-      const todos = await Todo.find({ completed }).sort({ createdAt: -1 });
+      const todos = await Todo.find({ completed, userId }).sort({ createdAt: -1 });
       if (todos.length === 0) {
         return new NotFoundResponseModel(`No se encontraron tareas ${completed ? 'completadas' : 'pendientes'}`);
       }
@@ -179,17 +220,44 @@ export class TodoService {
     }
   }
 
+  /**
+   * Obtiene tareas por meta del usuario autenticado
+   * @static
+   * @async
+   * @function getTodosByGoalId
+   * @param {string} goalId - ID de la meta
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las tareas de la meta o error
+   */
+  static async getTodosByGoalId(goalId, userId) {
+    try {
+      const todos = await Todo.find({ GoalId: goalId, userId }).sort({ createdAt: -1 });
+      if (todos.length === 0) {
+        return new NotFoundResponseModel(`No se encontraron tareas para la meta: ${goalId}`);
+      }
+      return new SuccessResponseModel(todos, todos.length, `Tareas para la meta: ${goalId} obtenidas correctamente`);
+    } catch (error) {
+      console.error(chalk.red('Error al obtener tareas por meta:', error));
+      return new ErrorResponseModel('Error al obtener tareas por meta');
+    }
+  }
+
+  /**
+   * Obtiene tareas por prioridad del usuario autenticado
+   * @static
+   * @async
+   * @function getTodosByPriority
+   * @param {string} priority - Prioridad (low/medium/high)
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las tareas filtradas o error
+   */
   static async getTodosByPriority(priority, userId) {
     try {
-      const todos = await Todo.find({ priority }).sort({ createdAt: -1 });
+      const todos = await Todo.find({ priority, userId }).sort({ createdAt: -1 });
       if (todos.length === 0) {
-        return new NotFoundResponseModel(`No se encontraron tareas ${priority ? 'alta' : 'media' || 'baja'}`);
+        return new NotFoundResponseModel(`No se encontraron tareas con prioridad: ${priority}`);
       }
-      return new SuccessResponseModel(
-        todos,
-        todos.length,
-        `Tareas ${priority ? 'alta' : 'media' || 'baja'} obtenidas correctamente`
-      );
+      return new SuccessResponseModel(todos, todos.length, `Tareas con prioridad ${priority} obtenidas correctamente`);
     } catch (error) {
       console.error(chalk.red('Error al obtener tareas por prioridad:', error));
       return new ErrorResponseModel('Error al obtener tareas por prioridad');

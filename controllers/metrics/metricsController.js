@@ -26,7 +26,8 @@ export class MetricsController {
   static async createMetric(req, res) {
     try {
       const metricData = req.body;
-      const result = await MetricService.createMetric(metricData);
+      const userId = req.userId;
+      const result = await MetricService.createMetric(metricData, userId);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en createMetric:', error);
@@ -49,7 +50,8 @@ export class MetricsController {
     try {
       const id = req.params.id;
       const metricData = req.body;
-      const result = await MetricService.updateMetric(id, metricData);
+      const userId = req.userId;
+      const result = await MetricService.updateMetric(id, metricData, userId);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en updateMetric:', error);
@@ -71,13 +73,8 @@ export class MetricsController {
    */
   static async getAllMetrics(req, res) {
     try {
-      // Extraer filtros de query parameters
-      const filters = {
-        goalId: req.query.goalId,
-        week: req.query.week,
-      };
-
-      const result = await MetricService.getAllMetrics(filters);
+      const userId = req.userId;
+      const result = await MetricService.getAllMetrics(userId);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en getAllMetrics:', error);
@@ -98,7 +95,8 @@ export class MetricsController {
   static async getMetricById(req, res) {
     try {
       const id = req.params.id;
-      const result = await MetricService.getMetricById(id);
+      const userId = req.userId;
+      const result = await MetricService.getMetricById(id, userId);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en getMetricById:', error);
@@ -119,7 +117,8 @@ export class MetricsController {
   static async deleteMetric(req, res) {
     try {
       const id = req.params.id;
-      const result = await MetricService.deleteMetric(id);
+      const userId = req.userId;
+      const result = await MetricService.deleteMetric(id, userId);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en deleteMetric:', error);
@@ -140,7 +139,8 @@ export class MetricsController {
   static async getMetricsByGoalId(req, res) {
     try {
       const goalId = req.params.goalId;
-      const result = await MetricService.getMetricsByGoalId(goalId);
+      const userId = req.userId;
+      const result = await MetricService.getMetricByGoalId(goalId, userId);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en getMetricsByGoalId:', error);

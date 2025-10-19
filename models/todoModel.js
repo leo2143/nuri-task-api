@@ -44,6 +44,10 @@ const todoSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    GoalId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Goal',
+    },
     priority: {
       type: String,
       enum: ['low', 'medium', 'high'],

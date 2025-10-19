@@ -8,18 +8,27 @@ import chalk from 'chalk';
  * Servicio para manejar la lógica de negocio de métricas
  * @class MetricService
  * @description Cada meta tiene UNA métrica que se actualiza con el progreso
+ * Las métricas se filtran por userId a través de la relación con Goal
  */
 export class MetricService {
   /**
-   * Obtiene todas las métricas
+   * Obtiene todas las métricas del usuario autenticado
    * @static
    * @async
    * @function getAllMetrics
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de métricas o error
    */
-  static async getAllMetrics() {
+  static async getAllMetrics(userId) {
     try {
-      const metrics = await Metrics.find({}).populate('GoalId', 'title description status').sort({ lastUpdated: -1 });
+      // Primero obtener todas las metas del usuario
+      const userGoals = await Goal.find({ userId }).select('_id');
+      const goalIds = userGoals.map(goal => goal._id);
+
+      // Luego obtener las métricas de esas metas
+      const metrics = await Metrics.find({ GoalId: { $in: goalIds } })
+        .populate('GoalId', 'title description status')
+        .sort({ lastUpdated: -1 });
 
       if (metrics.length === 0) {
         return new NotFoundResponseModel('No se encontraron métricas');
@@ -33,18 +42,24 @@ export class MetricService {
   }
 
   /**
-   * Obtiene la métrica específica por ID
+   * Obtiene la métrica específica por ID del usuario autenticado
    * @static
    * @async
    * @function getMetricById
    * @param {string} id - ID de la métrica
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica o error
    */
-  static async getMetricById(id) {
+  static async getMetricById(id, userId) {
     try {
-      const metric = await Metrics.findById(id).populate('GoalId', 'title description status');
+      const metric = await Metrics.findById(id).populate('GoalId', 'title description status userId');
 
       if (!metric) {
+        return new NotFoundResponseModel('Métrica no encontrada');
+      }
+
+      // Verificar que la métrica pertenece a una meta del usuario
+      if (metric.GoalId.userId.toString() !== userId) {
         return new NotFoundResponseModel('Métrica no encontrada');
       }
 
@@ -56,7 +71,7 @@ export class MetricService {
   }
 
   /**
-   * Crea una nueva métrica para una meta específica
+   * Crea una nueva métrica para una meta específica del usuario autenticado
    * @static
    * @async
    * @function createMetric
@@ -65,6 +80,7 @@ export class MetricService {
    * @param {string} metricData.currentWeek - Semana actual (requerido)
    * @param {number} [metricData.currentProgress=0] - Progreso actual (0-100)
    * @param {string} [metricData.currentNotes=''] - Notas actuales
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con la métrica creada o error
    * @example
    * const metric = await MetricService.createMetric({
@@ -72,9 +88,9 @@ export class MetricService {
    *   currentWeek: 'Semana 1',
    *   currentProgress: 15,
    *   currentNotes: 'Buen inicio'
-   * });
+   * }, userId);
    */
-  static async createMetric(metricData) {
+  static async createMetric(metricData, userId) {
     try {
       const { GoalId, currentWeek, currentProgress, currentNotes } = metricData;
 
@@ -92,10 +108,10 @@ export class MetricService {
         return new ErrorResponseModel('Ya existe una métrica para esta meta. Use actualizar en su lugar');
       }
 
-      // Verificar que la meta existe
-      const goal = await Goal.findById(GoalId);
+      // Verificar que la meta existe Y pertenece al usuario
+      const goal = await Goal.findOne({ _id: GoalId, userId });
       if (!goal) {
-        return new ErrorResponseModel('La meta especificada no existe');
+        return new ErrorResponseModel('La meta especificada no existe o no tienes permisos para acceder a ella');
       }
 
       const metric = new Metrics({
@@ -131,13 +147,19 @@ export class MetricService {
    * @param {string} [metricData.currentWeek] - Semana actual
    * @param {number} [metricData.currentProgress] - Progreso actual (0-100)
    * @param {string} [metricData.currentNotes] - Notas actuales
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica actualizada o error
    */
-  static async updateMetric(id, metricData) {
+  static async updateMetric(id, metricData, userId) {
     try {
-      const metric = await Metrics.findById(id);
+      const metric = await Metrics.findById(id).populate('GoalId', 'userId');
 
       if (!metric) {
+        return new NotFoundResponseModel('Métrica no encontrada');
+      }
+
+      // Verificar que la métrica pertenece a una meta del usuario
+      if (metric.GoalId.userId.toString() !== userId) {
         return new NotFoundResponseModel('Métrica no encontrada');
       }
 
@@ -177,23 +199,29 @@ export class MetricService {
   }
 
   /**
-   * Elimina una métrica por ID
+   * Elimina una métrica por ID del usuario autenticado
    * @static
    * @async
    * @function deleteMetric
    * @param {string} id - ID de la métrica
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con confirmación de eliminación o error
    */
-  static async deleteMetric(id) {
+  static async deleteMetric(id, userId) {
     try {
-      const metric = await Metrics.findById(id);
+      const metric = await Metrics.findById(id).populate('GoalId', 'userId');
 
       if (!metric) {
         return new NotFoundResponseModel('Métrica no encontrada');
       }
 
+      // Verificar que la métrica pertenece a una meta del usuario
+      if (metric.GoalId.userId.toString() !== userId) {
+        return new NotFoundResponseModel('Métrica no encontrada');
+      }
+
       // Eliminar la referencia en la meta
-      await Goal.findByIdAndUpdate(metric.GoalId, { $unset: { metricsId: 1 } });
+      await Goal.findByIdAndUpdate(metric.GoalId._id, { $unset: { metricsId: 1 } });
 
       await Metrics.findByIdAndDelete(id);
 
@@ -205,15 +233,22 @@ export class MetricService {
   }
 
   /**
-   * Obtiene la métrica de una meta específica
+   * Obtiene la métrica de una meta específica del usuario autenticado
    * @static
    * @async
    * @function getMetricByGoalId
    * @param {string} goalId - ID de la meta
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica de la meta o error
    */
-  static async getMetricByGoalId(goalId) {
+  static async getMetricByGoalId(goalId, userId) {
     try {
+      // Verificar que la meta existe y pertenece al usuario
+      const goal = await Goal.findOne({ _id: goalId, userId });
+      if (!goal) {
+        return new NotFoundResponseModel('Meta no encontrada');
+      }
+
       const metric = await Metrics.findOne({ GoalId: goalId }).populate('GoalId', 'title description status');
 
       if (!metric) {
