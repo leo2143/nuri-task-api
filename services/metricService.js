@@ -2,6 +2,7 @@ import Metrics from '../models/metricsModel.js';
 import Goal from '../models/goalsModel.js';
 import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
+import { CreateMetricDto, UpdateMetricDto } from '../models/dtos/metrics/index.js';
 import chalk from 'chalk';
 
 /**
@@ -92,15 +93,14 @@ export class MetricService {
    */
   static async createMetric(metricData, userId) {
     try {
-      const { GoalId, currentWeek, currentProgress, currentNotes } = metricData;
+      const createDto = new CreateMetricDto(metricData);
+      const validation = createDto.validate();
 
-      if (!GoalId) {
-        return new ErrorResponseModel('El ID de la meta es requerido');
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
       }
 
-      if (!currentWeek) {
-        return new ErrorResponseModel('La semana actual es requerida');
-      }
+      const { GoalId } = metricData;
 
       // Verificar si ya existe una métrica para esta meta
       const existingMetric = await Metrics.findOne({ GoalId });
@@ -114,15 +114,8 @@ export class MetricService {
         return new ErrorResponseModel('La meta especificada no existe o no tienes permisos para acceder a ella');
       }
 
-      const metric = new Metrics({
-        GoalId,
-        currentWeek,
-        currentProgress: currentProgress !== undefined ? currentProgress : 0,
-        currentNotes: currentNotes || '',
-        history: [],
-        lastUpdated: new Date(),
-      });
-
+      const cleanData = createDto.toPlainObject();
+      const metric = new Metrics(cleanData);
       const savedMetric = await metric.save();
 
       // Actualizar la meta con el ID de la métrica
@@ -152,6 +145,13 @@ export class MetricService {
    */
   static async updateMetric(id, metricData, userId) {
     try {
+      const updateDto = new UpdateMetricDto(metricData);
+      const validation = updateDto.validate();
+
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
+      }
+
       const metric = await Metrics.findById(id).populate('GoalId', 'userId');
 
       if (!metric) {
@@ -163,14 +163,7 @@ export class MetricService {
         return new NotFoundResponseModel('Métrica no encontrada');
       }
 
-      const { currentWeek, currentProgress, currentNotes } = metricData;
-
-      // Validar progreso si se proporciona
-      if (currentProgress !== undefined) {
-        if (currentProgress < 0 || currentProgress > 100) {
-          return new ErrorResponseModel('El progreso debe estar entre 0 y 100');
-        }
-      }
+      const { currentWeek } = metricData;
 
       // Guardar el estado actual en el historial antes de actualizar
       if (currentWeek && currentWeek !== metric.currentWeek) {
@@ -182,11 +175,9 @@ export class MetricService {
         });
       }
 
-      // Actualizar campos
-      if (currentWeek !== undefined) metric.currentWeek = currentWeek;
-      if (currentProgress !== undefined) metric.currentProgress = currentProgress;
-      if (currentNotes !== undefined) metric.currentNotes = currentNotes;
-      metric.lastUpdated = new Date();
+      // Actualizar con datos limpios del DTO
+      const cleanData = updateDto.toPlainObject();
+      Object.assign(metric, cleanData);
 
       const updatedMetric = await metric.save();
       const populatedMetric = await Metrics.findById(updatedMetric._id).populate('GoalId', 'title description status');

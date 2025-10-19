@@ -1,6 +1,7 @@
 import Todo from '../models/todoModel.js';
 import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
+import { CreateTodoDto, UpdateTodoDto, TodoFilterDto } from '../models/dtos/todo/index.js';
 import chalk from 'chalk';
 
 /**
@@ -23,25 +24,17 @@ export class TodoService {
    */
   static async getAllTodos(filters = {}, userId) {
     try {
-      // Construir query de búsqueda - SIEMPRE incluir userId
-      const query = { userId };
+      const filterDto = new TodoFilterDto(filters);
+      const validation = filterDto.validate();
 
-      // Búsqueda por título (case insensitive)
-      if (filters.search) {
-        query.title = { $regex: filters.search, $options: 'i' };
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
       }
 
-      // Filtro por estado completado
-      if (filters.completed !== undefined) {
-        query.completed = filters.completed === 'true';
-      }
+      const query = { userId, ...filterDto.toMongoQuery() };
+      const sort = filterDto.toMongoSort();
 
-      // Filtro por prioridad
-      if (filters.priority) {
-        query.priority = filters.priority;
-      }
-
-      const todos = await Todo.find(query).sort({ createdAt: -1 });
+      const todos = await Todo.find(query).sort(sort);
       if (todos.length === 0) {
         return new NotFoundResponseModel('No se encontraron tareas con los filtros aplicados');
       }
@@ -113,17 +106,16 @@ export class TodoService {
    */
   static async createTodo(todoData, userId) {
     try {
-      const { title, description, priority, dueDate } = todoData;
+      const createDto = new CreateTodoDto(todoData);
+      const validation = createDto.validate();
 
-      if (!title) {
-        return new ErrorResponseModel('El título es requerido');
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
       }
 
+      const cleanData = createDto.toPlainObject();
       const todo = new Todo({
-        title,
-        description: description || '',
-        priority: priority || 'medium',
-        dueDate: dueDate || null,
+        ...cleanData,
         userId,
       });
 
@@ -147,19 +139,18 @@ export class TodoService {
    */
   static async updateTodo(id, todoData, userId) {
     try {
-      const { title, description, completed, priority, dueDate } = todoData;
+      const updateDto = new UpdateTodoDto(todoData);
+      const validation = updateDto.validate();
 
-      const todo = await Todo.findOneAndUpdate(
-        { _id: id, userId },
-        {
-          ...(title && { title }),
-          ...(description !== undefined && { description }),
-          ...(completed !== undefined && { completed }),
-          ...(priority && { priority }),
-          ...(dueDate !== undefined && { dueDate }),
-        },
-        { new: true }
-      );
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
+      }
+
+      const cleanData = updateDto.toPlainObject();
+      const todo = await Todo.findOneAndUpdate({ _id: id, userId }, cleanData, {
+        new: true,
+        runValidators: true,
+      });
 
       if (!todo) {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);

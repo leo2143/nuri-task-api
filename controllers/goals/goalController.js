@@ -6,18 +6,30 @@ import { GoalService } from '../../services/goalService.js';
  */
 export class GoalController {
   /**
-   * Obtiene todas las metas del usuario autenticado
+   * Obtiene todas las metas del usuario autenticado con filtros opcionales
    * @static
    * @async
    * @function getAllGoals
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.query - Query parameters (status, priority, search, dueDateFrom, dueDateTo, sortBy, sortOrder)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   * @example
+   * GET /api/goals?status=active&priority=high&search=Node&sortBy=dueDate&sortOrder=asc
    */
   static async getAllGoals(req, res) {
     const userId = req.userId;
-    const result = await GoalService.getAllGoals(userId);
+    const filters = {
+      status: req.query.status,
+      priority: req.query.priority,
+      search: req.query.search,
+      dueDateFrom: req.query.dueDateFrom,
+      dueDateTo: req.query.dueDateTo,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
+    };
+    const result = await GoalService.getAllGoals(userId, filters);
     res.json(result);
   }
 

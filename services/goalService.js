@@ -1,6 +1,7 @@
 import Goal from '../models/goalsModel.js';
 import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
+import { CreateGoalDto, UpdateGoalDto, AddCommentDto, GoalFilterDto } from '../models/dtos/goals/index.js';
 import chalk from 'chalk';
 
 /**
@@ -9,16 +10,27 @@ import chalk from 'chalk';
  */
 export class GoalService {
   /**
-   * Obtiene todas las metas del usuario autenticado
+   * Obtiene todas las metas del usuario autenticado con filtros opcionales
    * @static
    * @async
    * @function getAllGoals
    * @param {string} userId - ID del usuario autenticado
+   * @param {Object} [filters={}] - Filtros de búsqueda (status, priority, search, dueDateFrom, dueDateTo, sortBy, sortOrder)
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de metas o error
    */
-  static async getAllGoals(userId) {
+  static async getAllGoals(userId, filters = {}) {
     try {
-      const goals = await Goal.find({ userId }).sort({ createdAt: -1 });
+      const filterDto = new GoalFilterDto(filters);
+      const validation = filterDto.validate();
+
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
+      }
+
+      const query = { userId, ...filterDto.toMongoQuery() };
+      const sort = filterDto.toMongoSort();
+
+      const goals = await Goal.find(query).sort(sort);
       if (goals.length === 0) {
         return new NotFoundResponseModel('No se encontraron metas para este usuario');
       }
@@ -67,8 +79,16 @@ export class GoalService {
    */
   static async createGoal(goalData, userId) {
     try {
+      const createDto = new CreateGoalDto(goalData);
+      const validation = createDto.validate();
+
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
+      }
+
+      const cleanData = createDto.toPlainObject();
       const goal = new Goal({
-        ...goalData,
+        ...cleanData,
         userId,
       });
       const savedGoal = await goal.save();
@@ -91,7 +111,15 @@ export class GoalService {
    */
   static async updateGoal(goalId, updateData, userId) {
     try {
-      const goal = await Goal.findOneAndUpdate({ _id: goalId, userId }, updateData, {
+      const updateDto = new UpdateGoalDto(updateData);
+      const validation = updateDto.validate();
+
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
+      }
+
+      const cleanData = updateDto.toPlainObject();
+      const goal = await Goal.findOneAndUpdate({ _id: goalId, userId }, cleanData, {
         new: true,
         runValidators: true,
       });
@@ -164,9 +192,17 @@ export class GoalService {
    */
   static async addComment(goalId, commentData, userId) {
     try {
+      const commentDto = new AddCommentDto(commentData);
+      const validation = commentDto.validate();
+
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
+      }
+
+      const cleanComment = commentDto.toPlainObject();
       const goal = await Goal.findOneAndUpdate(
         { _id: goalId, userId },
-        { $push: { comments: commentData } },
+        { $push: { comments: cleanComment } },
         { new: true, runValidators: true }
       );
 
