@@ -79,6 +79,11 @@ const goalSchema = new mongoose.Schema(
         trim: true,
       },
     },
+    parentGoalId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Goal',
+      default: null,
+    },
     metricsId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Metrics',

@@ -21,4 +21,5 @@ export const setupGoalRoutes = app => {
 
   // Rutas específicas para métricas y comentarios
   app.post('/api/goals/:id/comments', validarToken, GoalController.addComment);
+  app.get('/api/goals/:id/parent', validarToken, GoalController.getGoalsByParentGoalId);
 };

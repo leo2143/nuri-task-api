@@ -1,0 +1,1502 @@
+{
+  "info": {
+    "_postman_id": "fa5ae79e-200c-47b3-aa0d-4efa44fee151",
+    "name": "todoList",
+    "schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+    "_exporter_id": "20131533",
+    "_collection_link": "https://x55555-0653.postman.co/workspace/x-Workspace~452e73db-648e-4fa2-8c57-05f9b499c1b5/collection/20131533-fa5ae79e-200c-47b3-aa0d-4efa44fee151?action=share&source=collection_link&creator=20131533"
+  },
+  "item": [
+    {
+      "name": "todos",
+      "item": [
+        {
+          "name": "all todos",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/todos"
+          },
+          "response": []
+        },
+        {
+          "name": "all todos by goal id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/goals/:goalId/todos",
+              "host": ["{{localhost}}"],
+              "path": ["api", "goals", ":goalId", "todos"],
+              "variable": [
+                {
+                  "key": "goalId",
+                  "value": "68d1e7f577ec3fe8073cef21"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "create todo",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"title\": \"Nueva tarea\",\r\n    \"description\": \"Descripción de la nueva tarea\",\r\n    \"priority\": \"high\",\r\n    \"dueDate\": \"2024-12-31T23:59:59.000Z\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/todos"
+          },
+          "response": []
+        },
+        {
+          "name": "get todo by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/todos/68d1e7f577ec3fe8073cef11"
+          },
+          "response": []
+        },
+        {
+          "name": "update todo",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"title\": \"Tarea actualizada\",\r\n    \"completed\": true,\r\n    \"priority\": \"medium\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/todos/68d1e7f577ec3fe8073cef11"
+          },
+          "response": []
+        },
+        {
+          "name": "delete todo",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{localhost}}/api/todos/68d1e7f577ec3fe8073cef03"
+          },
+          "response": []
+        },
+        {
+          "name": "get completed todos",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/todos/completed"
+          },
+          "response": []
+        },
+        {
+          "name": "get pending todos",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/todos/pending"
+          },
+          "response": []
+        },
+        {
+          "name": "filter todos by completed",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/todos?completed=false",
+              "host": ["{{localhost}}"],
+              "path": ["api", "todos"],
+              "query": [
+                {
+                  "key": "completed",
+                  "value": "false"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "filter todos by priority",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/todos?priority=high",
+              "host": ["{{localhost}}"],
+              "path": ["api", "todos"],
+              "query": [
+                {
+                  "key": "priority",
+                  "value": "high"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "combined filters todos",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/todos?search=node&completed=false&priority=high",
+              "host": ["{{localhost}}"],
+              "path": ["api", "todos"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "node"
+                },
+                {
+                  "key": "completed",
+                  "value": "false"
+                },
+                {
+                  "key": "priority",
+                  "value": "high"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "goals",
+      "item": [
+        {
+          "name": "create goal",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"title\": \"Aprender Node.js\",\r\n    \"description\": \"Dominar Node.js y Express para desarrollo backend\",\r\n    \"status\": \"active\",\r\n    \"priority\": \"high\",\r\n    \"dueDate\": \"2024-12-31T23:59:59.000Z\",\r\n    \"smart\": {\r\n        \"specific\": \"Crear una API REST completa con Node.js y Express\",\r\n        \"measurable\": \"Implementar 10 endpoints funcionales\",\r\n        \"achievable\": \"Dedicar 2 horas diarias durante 3 meses\",\r\n        \"relevant\": \"Necesario para mi carrera como desarrollador\",\r\n        \"timeBound\": \"Completar antes del 31 de diciembre de 2024\"\r\n    }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/goals"
+          },
+          "response": []
+        },
+        {
+          "name": "get goal by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/goals/68f4269f63e5a138787a1086"
+          },
+          "response": []
+        },
+        {
+          "name": "update goal",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"title\": \"Aprender Node.js - Actualizado\",\r\n    \"status\": \"completed\",\r\n    \"priority\": \"medium\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:{{localhost}}/api/goals/68d1e7f577ec3fe8073cef10"
+          },
+          "response": []
+        },
+        {
+          "name": "delete goal",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{localhost}}/api/goals/68d1e7f577ec3fe8073cef25"
+          },
+          "response": []
+        },
+        {
+          "name": "get active goals",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/goals/active"
+          },
+          "response": []
+        },
+        {
+          "name": "get paused goals",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/goals/paused"
+          },
+          "response": []
+        },
+        {
+          "name": "get completed goals",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/goals/completed"
+          },
+          "response": []
+        },
+        {
+          "name": "add comment to goal",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"text\": \"¡Excelente progreso! Sigue así.\",\r\n    \"author\": \"Leonardo\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/goals/68f45523333bcc8e810632d1/comments"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "user",
+      "item": [
+        {
+          "name": "create user",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"name\": \"leonardo\",\r\n    \"email\": \"leonardo@gmail.com\",\r\n    \"password\": \"pruebadecontraseña\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/users"
+          },
+          "response": []
+        },
+        {
+          "name": "user login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r",
+                  "    pm.expect(pm.response.code).to.equal(200);\r",
+                  "});\r",
+                  "\r",
+                  "const response = pm.response.json();\r",
+                  "pm.globals.set(\"token_auth\", response.data.token);\r",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\": \"david@gmail.com\",\r\n    \"password\": \"pruebadecontraseña\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/users/login"
+          },
+          "response": []
+        },
+        {
+          "name": "all users",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/users"
+          },
+          "response": []
+        },
+        {
+          "name": "delete users",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{localhost}}/api/users/68d1e7f577ec3fe8073cef04"
+          },
+          "response": []
+        },
+        {
+          "name": "get user by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/users/68d1e7f577ec3fe8073cef03"
+          },
+          "response": []
+        },
+        {
+          "name": "update user",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"name\": \"Leonardo Actualizado\",\r\n    \"email\": \"leonardo.updated@gmail.com\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/users/68d1e7f577ec3fe8073cef03"
+          },
+          "response": []
+        },
+        {
+          "name": "search todos by title",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/todos?search=Nueva tarea",
+              "host": ["{{localhost}}"],
+              "path": ["api", "todos"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Nueva tarea"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "search users by name",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/users?search=leonardo",
+              "host": ["{{localhost}}"],
+              "path": ["api", "users"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "leonardo"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "metrics",
+      "item": [
+        {
+          "name": "create metric",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"GoalId\": \"68f4269f63e5a138787a1086\",\r\n    \"currentWeek\": \"Semana 1\",\r\n    \"currentProgress\": 10,\r\n    \"totalCompletedTasks\": 5,\r\n    \"totalTasks\": 20,\r\n    \"estimatedTimeInvested\": 8,\r\n    \"milestones\": [\r\n        {\r\n            \"name\": \"MVP\",\r\n            \"targetProgress\": 30,\r\n            \"description\": \"Completar el producto mínimo viable\"\r\n        }\r\n    ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/metrics"
+          },
+          "response": []
+        },
+        {
+          "name": "all metrics",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/metrics"
+          },
+          "response": []
+        },
+        {
+          "name": "get metric by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/metrics/:id",
+              "host": ["{{localhost}}"],
+              "path": ["api", "metrics", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "68f426bb63e5a138787a108a"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get metric by goal id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/goals/:goalId/metrics",
+              "host": ["{{localhost}}"],
+              "path": ["api", "goals", ":goalId", "metrics"],
+              "variable": [
+                {
+                  "key": "goalId",
+                  "value": "68d1e7f577ec3fe8073cef21"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update metric",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"currentWeek\": \"Semana 2\",\r\n    \"currentProgress\": 25,\r\n    \"totalCompletedTasks\": 10,\r\n    \"totalTasks\": 20,\r\n    \"estimatedTimeInvested\": 16,\r\n    \"qualityScore\": 4\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{localhost}}/api/metrics/:id",
+              "host": ["{{localhost}}"],
+              "path": ["api", "metrics", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "68f426bb63e5a138787a108a"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete metric",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{localhost}}/api/metrics/68f426bb63e5a138787a108a"
+          },
+          "response": []
+        },
+        {
+          "name": "milestones",
+          "item": [
+            {
+              "name": "add milestone",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"name\": \"Prototipo inicial\",\r\n    \"targetProgress\": 30,\r\n    \"description\": \"Completar el MVP\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/milestones",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "milestones"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update milestone",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"achieved\": true\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/milestones/:milestoneId",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "milestones", ":milestoneId"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    },
+                    {
+                      "key": "milestoneId",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete milestone",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/milestones/:milestoneId",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "milestones", ":milestoneId"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    },
+                    {
+                      "key": "milestoneId",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "blockers",
+          "item": [
+            {
+              "name": "add blocker",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"description\": \"API externa no disponible\",\r\n    \"severity\": \"critical\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/blockers",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "blockers"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "resolve blocker",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/blockers/:blockerId/resolve",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "blockers", ":blockerId", "resolve"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    },
+                    {
+                      "key": "blockerId",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete blocker",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/blockers/:blockerId",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "blockers", ":blockerId"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    },
+                    {
+                      "key": "blockerId",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "weekly wins",
+          "item": [
+            {
+              "name": "add weekly win",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"description\": \"Completamos todas las pruebas\",\r\n    \"week\": \"Semana 3\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/weekly-wins",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "weekly-wins"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete weekly win",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/weekly-wins/:winId",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "weekly-wins", ":winId"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    },
+                    {
+                      "key": "winId",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "history",
+          "item": [
+            {
+              "name": "add history entry",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"week\": \"Semana 2\",\r\n    \"progress\": 30,\r\n    \"totalCompletedTasks\": 10,\r\n    \"totalTasks\": 25,\r\n    \"timeInvested\": 12,\r\n    \"notes\": \"Semana muy productiva\",\r\n    \"mood\": \"motivated\",\r\n    \"achievements\": [\"Completé el login\", \"Arreglé 5 bugs\"]\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/history",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "history"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "alerts",
+          "item": [
+            {
+              "name": "get unacknowledged alerts",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/alerts",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "alerts"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "acknowledge alert",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/alerts/:alertId/acknowledge",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "alerts", ":alertId", "acknowledge"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    },
+                    {
+                      "key": "alertId",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "dashboard & predictions",
+          "item": [
+            {
+              "name": "get dashboard",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/dashboard",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "dashboard"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update predictions",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{localhost}}/api/metrics/:id/predictions",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "metrics", ":id", "predictions"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f426bb63e5a138787a108a"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "moodboard",
+      "item": [
+        {
+          "name": "images",
+          "item": [
+            {
+              "name": "create moodboard images",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n \"imageAlt\": \"moodboard\",\r\n \"imagePositionNumber\": 2\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/moodboards/:id/images",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "moodboards", ":id", "images"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f45a92db5669a667804a3c"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update moodboard images",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n \"imageAlt\": \"moodboard\",\r\n \"imagePositionNumber\": 2\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/moodboards/:id/images/:imageId",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "moodboards", ":id", "images", ":imageId"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    },
+                    {
+                      "key": "imageId",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete moodboard images",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "DELETE",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"title\": \"prueba moodboard\",\r\n    \"images\": [\r\n        {\r\n            \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n            \"imageAlt\": \"moodboard\",\r\n            \"imagePositionNumber\": 1\r\n        }\r\n    ],\r\n    \"phrases\": []\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/moodboards/:id/images/:imageId",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "moodboards", ":id", "images", ":imageId"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    },
+                    {
+                      "key": "imageId",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "phrases",
+          "item": [
+            {
+              "name": "create moodboard phrases",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"phrase\": \"prueba moodboard\"\r\n\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/moodboards/:id/phrases",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "moodboards", ":id", "phrases"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68f45a92db5669a667804a3c"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update moodboard phrases",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"title\": \"prueba moodboard\",\r\n    \"images\": [\r\n        {\r\n            \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n            \"imageAlt\": \"moodboard\",\r\n            \"imagePositionNumber\": 1\r\n        }\r\n    ],\r\n    \"phrases\": []\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/moodboards/:id/phrases/:phraseId",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "moodboards", ":id", "phrases", ":phraseId"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    },
+                    {
+                      "key": "phraseId",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete moodboard phrases",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": {
+                    "token": "{{token_auth}}"
+                  }
+                },
+                "method": "DELETE",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"title\": \"prueba moodboard\",\r\n    \"images\": [\r\n        {\r\n            \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n            \"imageAlt\": \"moodboard\",\r\n            \"imagePositionNumber\": 1\r\n        }\r\n    ],\r\n    \"phrases\": []\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/moodboards/:id/phrases/:phraseId",
+                  "host": ["{{localhost}}"],
+                  "path": ["api", "moodboards", ":id", "phrases", ":phraseId"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    },
+                    {
+                      "key": "phraseId",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "create moodboard",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"title\": \"prueba moodboard\",\r\n    \"images\": [\r\n        {\r\n            \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n            \"imageAlt\": \"moodboard\",\r\n            \"imagePositionNumber\": 1\r\n        }\r\n    ],\r\n    \"phrases\": []\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/moodboards"
+          },
+          "response": []
+        },
+        {
+          "name": "get moodboard by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/moodboards/:id",
+              "host": ["{{localhost}}"],
+              "path": ["api", "moodboards", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "68f45a92db5669a667804a3c"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update moodboard",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"title\": \"prueba moodboard\",\r\n    \"images\": [\r\n        {\r\n            \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n            \"imageAlt\": \"moodboardsas\",\r\n            \"imagePositionNumber\": 1\r\n        }\r\n    ],\r\n    \"phrases\": []\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{localhost}}/api/moodboards/:id",
+              "host": ["{{localhost}}"],
+              "path": ["api", "moodboards", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "68f45a92db5669a667804a3c"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete moodboard",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{localhost}}/api/moodboards/68d1e7f577ec3fe8073cef25"
+          },
+          "response": []
+        },
+        {
+          "name": "all moodboard",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/moodboards"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "healtcheck",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{localhost}}/health"
+      },
+      "response": []
+    }
+  ]
+}

@@ -22,6 +22,7 @@ export class GoalFilterDto {
     if (data.dueDateTo !== undefined) this.dueDateTo = data.dueDateTo;
     this.sortBy = data.sortBy || 'createdAt';
     this.sortOrder = data.sortOrder || 'desc';
+    if (data.parentGoalId !== undefined) this.parentGoalId = data.parentGoalId;
   }
 
   /**
@@ -111,6 +112,10 @@ export class GoalFilterDto {
       if (this.dueDateTo !== undefined) {
         query.dueDate.$lte = new Date(this.dueDateTo);
       }
+    }
+
+    if (this.parentGoalId !== undefined) {
+      query.parentGoalId = this.parentGoalId;
     }
 
     return query;

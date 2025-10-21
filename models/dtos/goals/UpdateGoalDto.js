@@ -26,6 +26,7 @@ export class UpdateGoalDto {
     if (data.priority !== undefined) this.priority = data.priority;
     if (data.dueDate !== undefined) this.dueDate = data.dueDate;
     if (data.smart !== undefined) this.smart = data.smart;
+    if (data.parentGoalId !== undefined) this.parentGoalId = data.parentGoalId;
   }
 
   /**
@@ -101,7 +102,7 @@ export class UpdateGoalDto {
     if (this.status !== undefined) result.status = this.status;
     if (this.priority !== undefined) result.priority = this.priority;
     if (this.dueDate !== undefined) result.dueDate = this.dueDate;
-
+    if (this.parentGoalId !== undefined) result.parentGoalId = this.parentGoalId;
     if (this.smart !== undefined) {
       result.smart = {};
       if (this.smart.specific !== undefined) result.smart.specific = this.smart.specific.trim();

@@ -177,6 +177,31 @@ export class GoalService {
       return new ErrorResponseModel('Error al obtener metas por estado');
     }
   }
+  /**
+   * Obtiene metas por ID de la meta padre del usuario autenticado
+   * @static
+   * @async
+   * @function getGoalsByParentGoalId
+   * @param {string} parentGoalId - ID de la meta padre
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las metas filtradas o error
+   */
+  static async getGoalsByParentGoalId(parentGoalId, userId) {
+    try {
+      const goals = await Goal.find({ parentGoalId: parentGoalId, userId: userId }).sort({ createdAt: -1 });
+      if (goals.length === 0) {
+        return new NotFoundResponseModel(`No se encontraron metas con ID de meta padre: ${parentGoalId}`);
+      }
+      return new SuccessResponseModel(
+        goals,
+        goals.length,
+        `Metas con ID de meta padre: ${parentGoalId} obtenidas correctamente`
+      );
+    } catch (error) {
+      console.error(chalk.red('Error al obtener metas por ID de meta padre:', error));
+      return new ErrorResponseModel('Error al obtener metas por ID de meta padre');
+    }
+  }
 
   /**
    * Agrega un comentario a la meta del usuario autenticado

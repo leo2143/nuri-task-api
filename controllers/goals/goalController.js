@@ -178,4 +178,22 @@ export class GoalController {
     const result = await GoalService.addComment(id, commentData, userId);
     res.json(result);
   }
+  /**
+   * Obtiene metas por ID de la meta padre
+   * @static
+   * @async
+   * @function getGoalsByParentGoalId
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.params - Parámetros de la URL
+   * @param {string} req.params.id - ID de la meta padre
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   */
+  static async getGoalsByParentGoalId(req, res) {
+    const { id } = req.params;
+    const userId = req.userId;
+    const result = await GoalService.getGoalsByParentGoalId(id, userId);
+    res.json(result);
+  }
 }

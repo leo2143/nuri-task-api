@@ -27,6 +27,7 @@ export class CreateGoalDto {
     this.dueDate = data.dueDate || null;
     this.smart = data.smart;
     this.comments = data.comments || [];
+    this.parentGoalId = data.parentGoalId || null;
   }
 
   /**
@@ -99,6 +100,7 @@ export class CreateGoalDto {
         timeBound: this.smart.timeBound.trim(),
       },
       comments: this.comments,
+      parentGoalId: this.parentGoalId,
     };
   }
 }
