@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { createServer, startServer } from './server-config.js';
 import { setupRoutes } from './routes/routes.js';
 
@@ -7,5 +8,10 @@ const { app, PORT } = createServer();
 // Configurar todas las rutas
 setupRoutes(app);
 
-// Iniciar el servidor
-startServer(app, PORT);
+// Iniciar el servidor (solo si no es Vercel)
+if (process.env.VERCEL !== '1') {
+  startServer(app, PORT);
+}
+
+// Exportar app para Vercel
+export default app;
