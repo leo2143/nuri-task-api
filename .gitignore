@@ -111,9 +111,6 @@ coverage
 *.swo
 *~
 
-# Vercel
-.vercel
-
 # OS generated files
 .DS_Store
 .DS_Store?
