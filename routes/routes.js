@@ -4,6 +4,12 @@ import { setupGoalRoutes } from '../controllers/goals/routes.js';
 import { setupMetricRoutes } from '../controllers/metrics/routes.js';
 import { setupMoodboardRoutes } from '../controllers/moodboard/routes.js';
 import { notFoundHandler, errorHandler, healthCheck } from '../middlewares/errorMiddleware.js';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Para obtener __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Función principal para configurar todas las rutas de la aplicación
@@ -22,12 +28,14 @@ export const setupRoutes = app => {
 
   // Ruta de bienvenida (global) - Ahora sirve la página HTML
   app.get('/', (req, res) => {
-    res.sendFile('index.html', { root: 'public' });
+    const indexPath = join(__dirname, '..', 'public', 'index.html');
+    res.sendFile(indexPath);
   });
 
   // Ruta para la documentación JSDoc
   app.get('/docs', (req, res) => {
-    res.sendFile('index.html', { root: 'docs' });
+    const docsPath = join(__dirname, '..', 'docs', 'index.html');
+    res.sendFile(docsPath);
   });
 
   // Configurar rutas específicas
