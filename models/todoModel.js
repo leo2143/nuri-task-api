@@ -30,11 +30,24 @@ const todoSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
-    comment: {
-      type: String,
-      trim: true,
-      default: '',
-    },
+    comments: [
+      {
+        text: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        author: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     completed: {
       type: Boolean,
       default: false,
@@ -43,6 +56,10 @@ const todoSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    GoalId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Goal',
     },
     priority: {
       type: String,

@@ -15,20 +15,6 @@
       "relevant": "Necesario para avanzar en mi carrera como desarrollador",
       "timeBound": "6 meses"
     },
-    "metrics": [
-      {
-        "week": "2024-W01",
-        "progress": 15,
-        "notes": "Buen inicio, completé el setup del proyecto",
-        "date": "2024-01-01T00:00:00.000Z"
-      },
-      {
-        "week": "2024-W02",
-        "progress": 30,
-        "notes": "Avancé con Express y middleware básicos",
-        "date": "2024-01-08T00:00:00.000Z"
-      }
-    ],
     "comments": [
       {
         "text": "Excelente progreso en las primeras semanas",
@@ -36,6 +22,12 @@
         "date": "2024-01-15T10:00:00.000Z"
       }
     ],
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "metricsId": {
+      "$oid": "78e2f8a588fd4af9184def31"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-20T14:30:00.000Z",
     "__v": 0
@@ -56,14 +48,6 @@
       "relevant": "Necesario para conseguir trabajo como freelancer",
       "timeBound": "3 meses"
     },
-    "metrics": [
-      {
-        "week": "2024-W01",
-        "progress": 20,
-        "notes": "Diseñé la estructura y wireframes",
-        "date": "2024-01-01T00:00:00.000Z"
-      }
-    ],
     "comments": [
       {
         "text": "El diseño inicial se ve muy profesional",
@@ -71,6 +55,12 @@
         "date": "2024-01-10T14:30:00.000Z"
       }
     ],
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "metricsId": {
+      "$oid": "78e2f8a588fd4af9184def32"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-10T14:30:00.000Z",
     "__v": 0
@@ -91,14 +81,6 @@
       "relevant": "React es fundamental para desarrollo frontend",
       "timeBound": "3 meses"
     },
-    "metrics": [
-      {
-        "week": "2024-W01",
-        "progress": 10,
-        "notes": "Empecé con los conceptos básicos",
-        "date": "2024-01-01T00:00:00.000Z"
-      }
-    ],
     "comments": [
       {
         "text": "Pausado temporalmente para enfocarse en Node.js",
@@ -106,6 +88,12 @@
         "date": "2024-01-20T09:00:00.000Z"
       }
     ],
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "metricsId": {
+      "$oid": "78e2f8a588fd4af9184def33"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-20T09:00:00.000Z",
     "__v": 0
@@ -126,14 +114,6 @@
       "relevant": "AWS es muy demandado en el mercado laboral",
       "timeBound": "8 meses"
     },
-    "metrics": [
-      {
-        "week": "2024-W01",
-        "progress": 5,
-        "notes": "Empecé con los fundamentos de AWS",
-        "date": "2024-01-01T00:00:00.000Z"
-      }
-    ],
     "comments": [
       {
         "text": "Meta a largo plazo pero muy importante",
@@ -141,6 +121,12 @@
         "date": "2024-01-05T16:00:00.000Z"
       }
     ],
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "metricsId": {
+      "$oid": "78e2f8a588fd4af9184def34"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-08T00:00:00.000Z",
     "__v": 0
@@ -161,14 +147,6 @@
       "relevant": "El inglés es esencial para desarrolladores",
       "timeBound": "12 meses"
     },
-    "metrics": [
-      {
-        "week": "2024-W01",
-        "progress": 100,
-        "notes": "¡Meta completada exitosamente!",
-        "date": "2024-01-01T00:00:00.000Z"
-      }
-    ],
     "comments": [
       {
         "text": "¡Felicitaciones! Lograste un gran progreso",
@@ -176,6 +154,12 @@
         "date": "2024-01-01T12:00:00.000Z"
       }
     ],
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "metricsId": {
+      "$oid": "78e2f8a588fd4af9184def35"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T12:00:00.000Z",
     "__v": 0
@@ -196,14 +180,6 @@
       "relevant": "Expandir habilidades a desarrollo móvil",
       "timeBound": "5 meses"
     },
-    "metrics": [
-      {
-        "week": "2024-W01",
-        "progress": 8,
-        "notes": "Configuré el entorno de desarrollo",
-        "date": "2024-01-01T00:00:00.000Z"
-      }
-    ],
     "comments": [
       {
         "text": "Excelente elección de tecnologías",
@@ -211,6 +187,12 @@
         "date": "2024-01-03T10:00:00.000Z"
       }
     ],
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "metricsId": {
+      "$oid": "78e2f8a588fd4af9184def36"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-03T10:00:00.000Z",
     "__v": 0
@@ -231,14 +213,6 @@
       "relevant": "Mejorar reputación en la comunidad de desarrolladores",
       "timeBound": "7 meses"
     },
-    "metrics": [
-      {
-        "week": "2024-W01",
-        "progress": 3,
-        "notes": "Identifiqué proyectos interesantes para contribuir",
-        "date": "2024-01-01T00:00:00.000Z"
-      }
-    ],
     "comments": [
       {
         "text": "Buena manera de aprender y dar back a la comunidad",
@@ -246,6 +220,12 @@
         "date": "2024-01-02T15:00:00.000Z"
       }
     ],
+    "userId": {
+      "$oid": "68d2cf072897f6a7a500a4b5"
+    },
+    "metricsId": {
+      "$oid": "78e2f8a588fd4af9184def37"
+    },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-02T15:00:00.000Z",
     "__v": 0

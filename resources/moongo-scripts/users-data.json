@@ -5,7 +5,8 @@
     },
     "name": "leonardo",
     "email": "leonardo@gmail.com",
-    "password": "pruebadecontraseña",
+    "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "isAdmin": false,
     "__v": 0
   },
   {
@@ -15,6 +16,7 @@
     "name": "david",
     "email": "david@gmail.com",
     "password": "$2b$10$zyPLaPqARhc/YbPfNMXRvu8l/eOTJixWX5N00t5B5KYvkbJ33Lh4e",
+    "isAdmin": true,
     "__v": 0
   },
   {
@@ -24,6 +26,7 @@
     "name": "Juan Pérez",
     "email": "juan@ejemplo.com",
     "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "isAdmin": false,
     "__v": 0
   },
   {
@@ -33,6 +36,7 @@
     "name": "María García",
     "email": "maria@ejemplo.com",
     "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "isAdmin": false,
     "__v": 0
   },
   {
@@ -42,6 +46,7 @@
     "name": "Carlos López",
     "email": "carlos@ejemplo.com",
     "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "isAdmin": false,
     "__v": 0
   },
   {
@@ -51,6 +56,7 @@
     "name": "Ana Martínez",
     "email": "ana@ejemplo.com",
     "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "isAdmin": false,
     "__v": 0
   }
 ]

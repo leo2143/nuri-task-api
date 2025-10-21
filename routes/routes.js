@@ -1,6 +1,8 @@
 import { setupTodoRoutes } from '../controllers/todos/routes.js';
 import { setupUserRoutes } from '../controllers/users/routes.js';
 import { setupGoalRoutes } from '../controllers/goals/routes.js';
+import { setupMetricRoutes } from '../controllers/metrics/routes.js';
+import { setupMoodboardRoutes } from '../controllers/moodboard/routes.js';
 import { notFoundHandler, errorHandler, healthCheck } from '../middlewares/errorMiddleware.js';
 
 /**
@@ -32,6 +34,8 @@ export const setupRoutes = app => {
   setupTodoRoutes(app);
   setupUserRoutes(app);
   setupGoalRoutes(app);
+  setupMetricRoutes(app);
+  setupMoodboardRoutes(app);
 
   // Middlewares globales (deben ir al final)
   app.use(notFoundHandler);

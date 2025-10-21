@@ -1,6 +1,7 @@
 import Goal from '../models/goalsModel.js';
 import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
+import { CreateGoalDto, UpdateGoalDto, AddCommentDto, GoalFilterDto } from '../models/dtos/goals/index.js';
 import chalk from 'chalk';
 
 /**
@@ -9,16 +10,27 @@ import chalk from 'chalk';
  */
 export class GoalService {
   /**
-   * Obtiene todas las metas de un usuario específico
+   * Obtiene todas las metas del usuario autenticado con filtros opcionales
    * @static
    * @async
    * @function getAllGoals
- de las metas
+   * @param {string} userId - ID del usuario autenticado
+   * @param {Object} [filters={}] - Filtros de búsqueda (status, priority, search, dueDateFrom, dueDateTo, sortBy, sortOrder)
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de metas o error
    */
-  static async getAllGoals(userId) {
+  static async getAllGoals(userId, filters = {}) {
     try {
-      const goals = await Goal.find({}).sort({ createdAt: -1 });
+      const filterDto = new GoalFilterDto(filters);
+      const validation = filterDto.validate();
+
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
+      }
+
+      const query = { userId, ...filterDto.toMongoQuery() };
+      const sort = filterDto.toMongoSort();
+
+      const goals = await Goal.find(query).sort(sort);
       if (goals.length === 0) {
         return new NotFoundResponseModel('No se encontraron metas para este usuario');
       }
@@ -30,16 +42,17 @@ export class GoalService {
   }
 
   /**
-   * Obtiene una meta específica por ID
+   * Obtiene una meta específica por ID del usuario autenticado
    * @static
    * @async
    * @function getGoalById
    * @param {string} goalId - ID de la meta
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la meta o error
    */
-  static async getGoalById(goalId) {
+  static async getGoalById(goalId, userId) {
     try {
-      const goal = await Goal.findOne({ _id: goalId });
+      const goal = await Goal.findOne({ _id: goalId, userId });
       if (!goal) {
         return new NotFoundResponseModel('Meta no encontrada');
       }
@@ -51,7 +64,7 @@ export class GoalService {
   }
 
   /**
-   * Crea una nueva meta
+   * Crea una nueva meta para el usuario autenticado
    * @static
    * @async
    * @function createGoal
@@ -61,13 +74,21 @@ export class GoalService {
    * @param {string} goalData.priority - Prioridad de la meta
    * @param {Date} goalData.dueDate - Fecha límite
    * @param {Object} goalData.smart - Criterios SMART
-
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con la meta creada o error
    */
   static async createGoal(goalData, userId) {
     try {
+      const createDto = new CreateGoalDto(goalData);
+      const validation = createDto.validate();
+
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
+      }
+
+      const cleanData = createDto.toPlainObject();
       const goal = new Goal({
-        ...goalData,
+        ...cleanData,
         userId,
       });
       const savedGoal = await goal.save();
@@ -79,18 +100,26 @@ export class GoalService {
   }
 
   /**
-   * Actualiza una meta existente
+   * Actualiza una meta existente del usuario autenticado
    * @static
    * @async
    * @function updateGoal
    * @param {string} goalId - ID de la meta
    * @param {Object} updateData - Datos a actualizar
-
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la meta actualizada o error
    */
   static async updateGoal(goalId, updateData, userId) {
     try {
-      const goal = await Goal.findOneAndUpdate({ _id: goalId }, updateData, {
+      const updateDto = new UpdateGoalDto(updateData);
+      const validation = updateDto.validate();
+
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
+      }
+
+      const cleanData = updateDto.toPlainObject();
+      const goal = await Goal.findOneAndUpdate({ _id: goalId, userId }, cleanData, {
         new: true,
         runValidators: true,
       });
@@ -106,17 +135,17 @@ export class GoalService {
   }
 
   /**
-   * Elimina una meta
+   * Elimina una meta del usuario autenticado
    * @static
    * @async
    * @function deleteGoal
    * @param {string} goalId - ID de la meta
-
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta de confirmación o error
    */
   static async deleteGoal(goalId, userId) {
     try {
-      const goal = await Goal.findOneAndDelete({ _id: goalId });
+      const goal = await Goal.findOneAndDelete({ _id: goalId, userId });
       if (!goal) {
         return new NotFoundResponseModel('Meta no encontrada');
       }
@@ -128,17 +157,17 @@ export class GoalService {
   }
 
   /**
-   * Obtiene metas por estado
+   * Obtiene metas por estado del usuario autenticado
    * @static
    * @async
    * @function getGoalsByStatus
    * @param {string} status - Estado de las metas (active/paused/completed)
-
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las metas filtradas o error
    */
   static async getGoalsByStatus(status, userId) {
     try {
-      const goals = await Goal.find({ status }).sort({ createdAt: -1 });
+      const goals = await Goal.find({ status, userId }).sort({ createdAt: -1 });
       if (goals.length === 0) {
         return new NotFoundResponseModel(`No se encontraron metas con estado: ${status}`);
       }
@@ -148,40 +177,34 @@ export class GoalService {
       return new ErrorResponseModel('Error al obtener metas por estado');
     }
   }
-
   /**
-   * Agrega una métrica de progreso semanal
+   * Obtiene metas por ID de la meta padre del usuario autenticado
    * @static
    * @async
-   * @function addWeeklyMetric
-   * @param {string} goalId - ID de la meta
-   * @param {Object} metricData - Datos de la métrica
-   * @param {string} metricData.week - Semana (ej: "2024-W01")
-   * @param {number} metricData.progress - Progreso (0-100)
-   * @param {string} metricData.notes - Notas adicionales
-
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica agregada o error
+   * @function getGoalsByParentGoalId
+   * @param {string} parentGoalId - ID de la meta padre
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las metas filtradas o error
    */
-  static async addWeeklyMetric(goalId, metricData, userId) {
+  static async getGoalsByParentGoalId(parentGoalId, userId) {
     try {
-      const goal = await Goal.findOneAndUpdate(
-        { _id: goalId },
-        { $push: { metrics: metricData } },
-        { new: true, runValidators: true }
-      );
-
-      if (!goal) {
-        return new NotFoundResponseModel('Meta no encontrada');
+      const goals = await Goal.find({ parentGoalId: parentGoalId, userId: userId }).sort({ createdAt: -1 });
+      if (goals.length === 0) {
+        return new NotFoundResponseModel(`No se encontraron metas con ID de meta padre: ${parentGoalId}`);
       }
-      return new SuccessResponseModel(goal, 1, 'Métrica agregada correctamente');
+      return new SuccessResponseModel(
+        goals,
+        goals.length,
+        `Metas con ID de meta padre: ${parentGoalId} obtenidas correctamente`
+      );
     } catch (error) {
-      console.error(chalk.red('Error al agregar métrica:', error));
-      return new ErrorResponseModel('Error al agregar métrica');
+      console.error(chalk.red('Error al obtener metas por ID de meta padre:', error));
+      return new ErrorResponseModel('Error al obtener metas por ID de meta padre');
     }
   }
 
   /**
-   * Agrega un comentario a la meta
+   * Agrega un comentario a la meta del usuario autenticado
    * @static
    * @async
    * @function addComment
@@ -189,14 +212,22 @@ export class GoalService {
    * @param {Object} commentData - Datos del comentario
    * @param {string} commentData.text - Texto del comentario
    * @param {string} commentData.author - Autor del comentario
-
+   * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el comentario agregado o error
    */
   static async addComment(goalId, commentData, userId) {
     try {
+      const commentDto = new AddCommentDto(commentData);
+      const validation = commentDto.validate();
+
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
+      }
+
+      const cleanComment = commentDto.toPlainObject();
       const goal = await Goal.findOneAndUpdate(
-        { _id: goalId },
-        { $push: { comments: commentData } },
+        { _id: goalId, userId },
+        { $push: { comments: cleanComment } },
         { new: true, runValidators: true }
       );
 

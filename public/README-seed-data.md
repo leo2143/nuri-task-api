@@ -87,12 +87,14 @@ db.users.find({}, { _id: 1, name: 1, email: 1 });
 
 **Contraseña para todos:** `123456` (hasheada con bcrypt)
 
-### ✅ Todos (8)
+### ✅ Todos (18)
 
-- 6 tareas para Juan Pérez
-- 2 tareas para María García
-- Variedad de prioridades y estados
+- 18 tareas relacionadas con las 7 metas
+- Cada todo está vinculado a una meta específica (GoalId)
+- Variedad de prioridades (low, medium, high)
+- Diferentes estados (completado/pendiente)
 - Fechas de vencimiento realistas
+- Relación: Todo → Goal → User
 
 ### 🎯 Goals (7)
 
@@ -134,6 +136,7 @@ Password: 123456
   "dueDate": "ISO Date",
   "completed": "boolean",
   "userId": "ObjectId (reference to User)",
+  "GoalId": "ObjectId (reference to Goal)",
   "createdAt": "ISO Date",
   "updatedAt": "ISO Date"
 }

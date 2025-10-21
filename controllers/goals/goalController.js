@@ -6,18 +6,30 @@ import { GoalService } from '../../services/goalService.js';
  */
 export class GoalController {
   /**
-   * Obtiene todas las metas del usuario autenticado
+   * Obtiene todas las metas del usuario autenticado con filtros opcionales
    * @static
    * @async
    * @function getAllGoals
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.query - Query parameters (status, priority, search, dueDateFrom, dueDateTo, sortBy, sortOrder)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   * @example
+   * GET /api/goals?status=active&priority=high&search=Node&sortBy=dueDate&sortOrder=asc
    */
   static async getAllGoals(req, res) {
     const userId = req.userId;
-    const result = await GoalService.getAllGoals(userId);
+    const filters = {
+      status: req.query.status,
+      priority: req.query.priority,
+      search: req.query.search,
+      dueDateFrom: req.query.dueDateFrom,
+      dueDateTo: req.query.dueDateTo,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
+    };
+    const result = await GoalService.getAllGoals(userId, filters);
     res.json(result);
   }
 
@@ -147,27 +159,6 @@ export class GoalController {
   }
 
   /**
-   * Agrega una métrica de progreso semanal
-   * @static
-   * @async
-   * @function addWeeklyMetric
-   * @param {Object} req - Objeto request de Express
-   * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
-   * @param {Object} req.params - Parámetros de la URL
-   * @param {string} req.params.id - ID de la meta
-   * @param {Object} req.body - Datos de la métrica
-   * @param {Object} res - Objeto response de Express
-   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   */
-  static async addWeeklyMetric(req, res) {
-    const { id } = req.params;
-    const metricData = req.body;
-    const userId = req.userId;
-    const result = await GoalService.addWeeklyMetric(id, metricData, userId);
-    res.json(result);
-  }
-
-  /**
    * Agrega un comentario a la meta
    * @static
    * @async
@@ -185,6 +176,24 @@ export class GoalController {
     const commentData = req.body;
     const userId = req.userId;
     const result = await GoalService.addComment(id, commentData, userId);
+    res.json(result);
+  }
+  /**
+   * Obtiene metas por ID de la meta padre
+   * @static
+   * @async
+   * @function getGoalsByParentGoalId
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.params - Parámetros de la URL
+   * @param {string} req.params.id - ID de la meta padre
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   */
+  static async getGoalsByParentGoalId(req, res) {
+    const { id } = req.params;
+    const userId = req.userId;
+    const result = await GoalService.getGoalsByParentGoalId(id, userId);
     res.json(result);
   }
 }

@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
  * @property {string} name - Nombre del usuario (requerido)
  * @property {string} email - Email del usuario (requerido, único)
  * @property {string} password - Contraseña hasheada del usuario (requerido)
+ * @property {boolean} isAdmin - Indica si el usuario es administrador (default: false)
  */
 
 /**
@@ -14,19 +15,23 @@ import mongoose from 'mongoose';
  * @constant {mongoose.Schema} userSchema
  */
 const userSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    password: {
-        type: String,
-        required: true
-    }
+  name: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 /**
