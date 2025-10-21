@@ -161,6 +161,7 @@ export class UserService {
           userId: user._id,
           email: user.email,
           name: user.name,
+          isAdmin: user.isAdmin,
         },
         JWT_SECRET,
         { expiresIn: '24h' }
@@ -182,5 +183,81 @@ export class UserService {
       console.error(chalk.red('Error al hacer login:', error));
       return new ErrorResponseModel('Error al hacer login');
     }
+  }
+  static async changePassword(userId, oldPassword, newPassword) {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return new NotFoundResponseModel('No se encontró el usuario con el id: ' + userId + ' en la base de datos');
+      }
+      const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+      if (!isPasswordValid) {
+        return new ErrorResponseModel('Contraseña inválida');
+      }
+      const newHashedPassword = await bcrypt.hash(newPassword, 10);
+      user.password = newHashedPassword;
+      await user.save();
+      return new SuccessResponseModel(user, 1, 'Contraseña actualizada correctamente');
+    } catch (error) {
+      console.error(chalk.red('Error al cambiar la contraseña:', error));
+      return new ErrorResponseModel('Error al cambiar la contraseña');
+    }
+  }
+  /**
+   * Resetea la contraseña de un usuario (solo para admin)
+   * @static
+   * @async
+   * @function resetUserPassword
+   * @param {string} userId - ID del usuario
+   * @param {string} newPassword - Nueva contraseña temporal
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+   * @description Solo admin puede resetear contraseñas. Genera una contraseña temporal hasheada.
+   */
+  static async resetUserPassword(userId, newPassword) {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return new NotFoundResponseModel('No se encontró el usuario con el id: ' + userId);
+      }
+
+      // Hashear la nueva contraseña
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+      // Actualizar contraseña
+      user.password = hashedPassword;
+      await user.save();
+
+      return new SuccessResponseModel(
+        {
+          userId: user._id,
+          email: user.email,
+          temporaryPassword: newPassword, // Solo mostrar una vez
+          message: 'Contraseña reseteada. El usuario debe cambiarla en su próximo login.',
+        },
+        1,
+        'Contraseña reseteada correctamente'
+      );
+    } catch (error) {
+      console.error(chalk.red('Error al resetear contraseña:', error));
+      return new ErrorResponseModel('Error al resetear contraseña');
+    }
+  }
+
+  /**
+   * Genera una contraseña temporal segura (solo para admin)
+   * @static
+   * @function generateTemporaryPassword
+   * @param {number} length - Longitud de la contraseña (default: 12)
+   * @returns {string} Contraseña temporal
+   * @description Genera una contraseña aleatoria segura para reseteos
+   */
+  static generateTemporaryPassword(length = 12) {
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    return password;
   }
 }

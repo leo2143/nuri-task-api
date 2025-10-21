@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "fa5ae79e-200c-47b3-aa0d-4efa44fee151",
+    "_postman_id": "c8965002-2364-4843-909f-798a32f58ccb",
     "name": "todoList",
     "schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
     "_exporter_id": "20131533",
-    "_collection_link": "https://x55555-0653.postman.co/workspace/x-Workspace~452e73db-648e-4fa2-8c57-05f9b499c1b5/collection/20131533-fa5ae79e-200c-47b3-aa0d-4efa44fee151?action=share&source=collection_link&creator=20131533"
+    "_collection_link": "https://x55555-0653.postman.co/workspace/x-Workspace~452e73db-648e-4fa2-8c57-05f9b499c1b5/collection/20131533-c8965002-2364-4843-909f-798a32f58ccb?action=share&source=collection_link&creator=20131533"
   },
   "item": [
     {
@@ -240,6 +240,40 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "add comment to todo",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"text\": \"¡Excelente progreso!\",\r\n    \"author\": \"Leonardo\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{localhost}}/api/todos/:id/comments",
+              "host": ["{{localhost}}"],
+              "path": ["api", "todos", ":id", "comments"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -281,7 +315,17 @@
             },
             "method": "GET",
             "header": [],
-            "url": "{{localhost}}/api/goals/68f4269f63e5a138787a1086"
+            "url": {
+              "raw": "{{localhost}}/api/goals/:goaldId",
+              "host": ["{{localhost}}"],
+              "path": ["api", "goals", ":goaldId"],
+              "variable": [
+                {
+                  "key": "goaldId",
+                  "value": ""
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -577,144 +621,6 @@
     {
       "name": "metrics",
       "item": [
-        {
-          "name": "create metric",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"GoalId\": \"68f4269f63e5a138787a1086\",\r\n    \"currentWeek\": \"Semana 1\",\r\n    \"currentProgress\": 10,\r\n    \"totalCompletedTasks\": 5,\r\n    \"totalTasks\": 20,\r\n    \"estimatedTimeInvested\": 8,\r\n    \"milestones\": [\r\n        {\r\n            \"name\": \"MVP\",\r\n            \"targetProgress\": 30,\r\n            \"description\": \"Completar el producto mínimo viable\"\r\n        }\r\n    ]\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{localhost}}/api/metrics"
-          },
-          "response": []
-        },
-        {
-          "name": "all metrics",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "GET",
-            "header": [],
-            "url": "{{localhost}}/api/metrics"
-          },
-          "response": []
-        },
-        {
-          "name": "get metric by id",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{localhost}}/api/metrics/:id",
-              "host": ["{{localhost}}"],
-              "path": ["api", "metrics", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "68f426bb63e5a138787a108a"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "get metric by goal id",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{localhost}}/api/goals/:goalId/metrics",
-              "host": ["{{localhost}}"],
-              "path": ["api", "goals", ":goalId", "metrics"],
-              "variable": [
-                {
-                  "key": "goalId",
-                  "value": "68d1e7f577ec3fe8073cef21"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "update metric",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "PUT",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"currentWeek\": \"Semana 2\",\r\n    \"currentProgress\": 25,\r\n    \"totalCompletedTasks\": 10,\r\n    \"totalTasks\": 20,\r\n    \"estimatedTimeInvested\": 16,\r\n    \"qualityScore\": 4\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{localhost}}/api/metrics/:id",
-              "host": ["{{localhost}}"],
-              "path": ["api", "metrics", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "68f426bb63e5a138787a108a"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "delete metric",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "DELETE",
-            "header": [],
-            "url": "{{localhost}}/api/metrics/68f426bb63e5a138787a108a"
-          },
-          "response": []
-        },
         {
           "name": "milestones",
           "item": [
@@ -1138,6 +1044,144 @@
               "response": []
             }
           ]
+        },
+        {
+          "name": "create metric",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"GoalId\": \"68f4269f63e5a138787a1086\",\r\n    \"currentWeek\": \"Semana 1\",\r\n    \"currentProgress\": 10,\r\n    \"totalCompletedTasks\": 5,\r\n    \"totalTasks\": 20,\r\n    \"estimatedTimeInvested\": 8,\r\n    \"milestones\": [\r\n        {\r\n            \"name\": \"MVP\",\r\n            \"targetProgress\": 30,\r\n            \"description\": \"Completar el producto mínimo viable\"\r\n        }\r\n    ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/metrics"
+          },
+          "response": []
+        },
+        {
+          "name": "all metrics",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/metrics"
+          },
+          "response": []
+        },
+        {
+          "name": "get metric by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/metrics/:id",
+              "host": ["{{localhost}}"],
+              "path": ["api", "metrics", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "68f426bb63e5a138787a108a"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get metric by goal id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/goals/:goalId/metrics",
+              "host": ["{{localhost}}"],
+              "path": ["api", "goals", ":goalId", "metrics"],
+              "variable": [
+                {
+                  "key": "goalId",
+                  "value": "68d1e7f577ec3fe8073cef21"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update metric",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"currentWeek\": \"Semana 2\",\r\n    \"currentProgress\": 25,\r\n    \"totalCompletedTasks\": 10,\r\n    \"totalTasks\": 20,\r\n    \"estimatedTimeInvested\": 16,\r\n    \"qualityScore\": 4\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{localhost}}/api/metrics/:id",
+              "host": ["{{localhost}}"],
+              "path": ["api", "metrics", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "68f426bb63e5a138787a108a"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete metric",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{localhost}}/api/metrics/68f426bb63e5a138787a108a"
+          },
+          "response": []
         }
       ]
     },
@@ -1484,6 +1528,227 @@
             "method": "GET",
             "header": [],
             "url": "{{localhost}}/api/moodboards"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "users",
+      "item": [
+        {
+          "name": "login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r",
+                  "    pm.expect(pm.response.code).to.equal(200);\r",
+                  "});\r",
+                  "\r",
+                  "const response = pm.response.json();\r",
+                  "pm.globals.set(\"token_auth\", response.data.token);\r",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"leonardo.updated@gmail.com\",\n    \"password\": \"temporal123\"  \n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/users/login"
+          },
+          "response": []
+        },
+        {
+          "name": "register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Nuevo Usuario\",\n    \"email\": \"nuevo@example.com\",\n    \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/users"
+          },
+          "response": []
+        },
+        {
+          "name": "change password",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"oldPassword\": \"password123\",\n    \"newPassword\": \"newpassword456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/users/change-password"
+          },
+          "response": []
+        },
+        {
+          "name": "get all users (admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/users"
+          },
+          "response": []
+        },
+        {
+          "name": "get user by id (admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/users/68d1e7f577ec3fe8073cefec"
+          },
+          "response": []
+        },
+        {
+          "name": "update user (admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Nombre Actualizado\",\n    \"email\": \"actualizado@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{localhost}}/api/users/68d2cf072897f6a7a500a4b5"
+          },
+          "response": []
+        },
+        {
+          "name": "delete user (admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{localhost}}/api/users/68d2cf072897f6a7a500a4b5"
+          },
+          "response": []
+        },
+        {
+          "name": "reset password (admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"newPassword\": \"temporal123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{localhost}}/api/admin/users/:id/reset-password",
+              "host": ["{{localhost}}"],
+              "path": ["api", "admin", "users", ":id", "reset-password"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "68d1e7f577ec3fe8073cefec"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "reset password auto-generate (admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{localhost}}/api/admin/users/:id/reset-password",
+              "host": ["{{localhost}}"],
+              "path": ["api", "admin", "users", ":id", "reset-password"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "68d2cf072897f6a7a500a4b5"
+                }
+              ]
+            }
           },
           "response": []
         }

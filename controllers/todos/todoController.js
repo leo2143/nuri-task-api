@@ -135,4 +135,35 @@ export class TodoController {
     const result = await TodoService.getTodosByGoalId(goalId, userId);
     res.json(result);
   }
+
+  /**
+   * Agrega un comentario a una tarea
+   * @static
+   * @async
+   * @function addCommentToTodo
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.params.id - ID de la tarea
+   * @param {Object} req.body - Datos del comentario
+   * @param {string} req.body.text - Texto del comentario (requerido)
+   * @param {string} req.body.author - Autor del comentario (requerido)
+   * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   * @example
+   * // POST /api/todos/:id/comments
+   * // Body: { "text": "¡Excelente progreso!", "author": "Juan" }
+   */
+  static async addCommentToTodo(req, res) {
+    try {
+      const todoId = req.params.id;
+      const commentData = req.body;
+      const userId = req.userId;
+
+      const result = await TodoService.addCommentToTodo(todoId, commentData, userId);
+      res.status(result.status).json(result);
+    } catch (error) {
+      console.error('Error en addCommentToTodo:', error);
+      res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
+    }
+  }
 }

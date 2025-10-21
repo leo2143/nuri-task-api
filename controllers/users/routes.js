@@ -1,5 +1,5 @@
 import { UsersController } from './usersController.js';
-import { validarToken } from '../../middlewares/authMiddleware.js';
+import { validarAdminToken, validarToken } from '../../middlewares/authMiddleware.js';
 
 /**
  * Función para configurar las rutas de usuarios
@@ -9,12 +9,19 @@ import { validarToken } from '../../middlewares/authMiddleware.js';
  * @description Configura las rutas de usuarios, algunas públicas (login, registro) y otras protegidas
  */
 export const setupUserRoutes = app => {
+  // Rutas públicas
   app.post('/api/users/login', UsersController.loginUser);
-
   app.post('/api/users', UsersController.createUser);
 
-  app.get('/api/users', validarToken, UsersController.getAllUsers);
-  app.get('/api/users/:id', validarToken, UsersController.getUserById);
-  app.put('/api/users/:id', validarToken, UsersController.updateUser);
-  app.delete('/api/users/:id', validarToken, UsersController.deleteUser);
+  // Rutas protegidas con autenticación normal
+  app.put('/api/users/change-password', validarToken, UsersController.changePassword);
+
+  // Rutas protegidas con permisos de admin
+  app.get('/api/users', validarAdminToken, UsersController.getAllUsers);
+  app.get('/api/users/:id', validarAdminToken, UsersController.getUserById);
+  app.put('/api/users/:id', validarAdminToken, UsersController.updateUser);
+  app.delete('/api/users/:id', validarAdminToken, UsersController.deleteUser);
+
+  // Ruta admin para resetear contraseñas
+  app.put('/api/admin/users/:id/reset-password', validarAdminToken, UsersController.resetUserPassword);
 };

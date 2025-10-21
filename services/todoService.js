@@ -1,7 +1,7 @@
 import Todo from '../models/todoModel.js';
 import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
-import { CreateTodoDto, UpdateTodoDto, TodoFilterDto } from '../models/dtos/todo/index.js';
+import { CreateTodoDto, UpdateTodoDto, TodoFilterDto, AddCommentDto } from '../models/dtos/todo/index.js';
 import chalk from 'chalk';
 
 /**
@@ -252,6 +252,54 @@ export class TodoService {
     } catch (error) {
       console.error(chalk.red('Error al obtener tareas por prioridad:', error));
       return new ErrorResponseModel('Error al obtener tareas por prioridad');
+    }
+  }
+
+  /**
+   * Agrega un comentario a una tarea del usuario autenticado
+   * @static
+   * @async
+   * @function addCommentToTodo
+   * @param {string} todoId - ID de la tarea
+   * @param {Object} commentData - Datos del comentario
+   * @param {string} commentData.text - Texto del comentario (requerido)
+   * @param {string} commentData.author - Autor del comentario (requerido)
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea actualizada o error
+   * @example
+   * // Agregar comentario
+   * await TodoService.addCommentToTodo('64f8a1b2c3d4e5f6a7b8c9d0', {
+   *   text: '¡Gran avance!',
+   *   author: 'Juan Pérez'
+   * }, userId);
+   */
+  static async addCommentToTodo(todoId, commentData, userId) {
+    try {
+      // Validar datos del comentario usando DTO
+      const commentDto = new AddCommentDto(commentData);
+      const validation = commentDto.validate();
+
+      if (!validation.isValid) {
+        return new ErrorResponseModel(validation.errors.join(', '));
+      }
+
+      // Buscar la tarea
+      const todo = await Todo.findOne({ _id: todoId, userId });
+
+      if (!todo) {
+        return new NotFoundResponseModel('No se encontró la tarea con el id: ' + todoId);
+      }
+
+      // Agregar el comentario
+      const newComment = commentDto.toPlainObject();
+      todo.comments.push(newComment);
+
+      await todo.save();
+
+      return new SuccessResponseModel(todo, 1, 'Comentario agregado correctamente');
+    } catch (error) {
+      console.error(chalk.red('Error al agregar comentario:', error));
+      return new ErrorResponseModel('Error al agregar comentario');
     }
   }
 }
