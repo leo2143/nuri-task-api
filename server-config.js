@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import chalk from 'chalk';
 import mongoose from 'mongoose';
 import { fileURLToPath } from 'url';
@@ -34,6 +35,47 @@ export const createServer = () => {
 
   // Middleware para parsear JSON
   app.use(express.json());
+
+  // Configurar CORS
+  const corsOptions = {
+    origin: function (origin, callback) {
+      // Lista de orígenes permitidos
+      const allowedOrigins = [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://localhost:4200',
+        'http://localhost:8080',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:5174',
+        'https://nuri-task-app.vercel.app/'
+        
+        // Agrega aquí tu dominio de producción cuando lo tengas
+        // 'https://tu-dominio.com',
+      ];
+
+      // Permitir requests sin origin (como apps móviles o Postman)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Permitir orígenes de desarrollo que empiecen con localhost o 127.0.0.1
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('No permitido por CORS'));
+      }
+    },
+    credentials: true, // Permite enviar cookies
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
+
+  app.use(cors(corsOptions));
 
   // Servir archivos estáticos desde la carpeta public (usando ruta absoluta)
   const publicPath = join(__dirname, 'public');
