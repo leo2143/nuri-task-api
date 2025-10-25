@@ -3,7 +3,6 @@ import { setupUserRoutes } from '../controllers/users/routes.js';
 import { setupGoalRoutes } from '../controllers/goals/routes.js';
 import { setupMetricRoutes } from '../controllers/metrics/routes.js';
 import { setupMoodboardRoutes } from '../controllers/moodboard/routes.js';
-import { setupAchievementRoutes } from '../controllers/achievements/routes.js';
 import { notFoundHandler, errorHandler, healthCheck } from '../middlewares/errorMiddleware.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -45,7 +44,6 @@ export const setupRoutes = app => {
   setupGoalRoutes(app);
   setupMetricRoutes(app);
   setupMoodboardRoutes(app);
-  setupAchievementRoutes(app);
 
   // Middlewares globales (deben ir al final)
   app.use(notFoundHandler);
