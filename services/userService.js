@@ -203,6 +203,11 @@ export class UserService {
       return new ErrorResponseModel('Error al cambiar la contraseña');
     }
   }
+// TODO: Crear un servicio para cuando el usuario olvide su contraseña, se le envíe un correo con un token para resetear la contraseña
+
+
+
+
   /**
    * Resetea la contraseña de un usuario (solo para admin)
    * @static
