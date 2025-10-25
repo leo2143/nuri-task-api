@@ -1,0 +1,83 @@
+[
+  {
+    "title": "Primeros Pasos",
+    "description": "Crea tu primera tarea",
+    "targetCount": 1,
+    "type": "task",
+    "reward": "Estrella de Bronce",
+    "isActive": true
+  },
+  {
+    "title": "Maestro de Tareas",
+    "description": "Completa 10 tareas",
+    "targetCount": 10,
+    "type": "task",
+    "reward": "Insignia de Plata",
+    "isActive": true
+  },
+  {
+    "title": "Campeón de Productividad",
+    "description": "Completa 50 tareas",
+    "targetCount": 50,
+    "type": "task",
+    "reward": "Trofeo de Oro",
+    "isActive": true
+  },
+  {
+    "title": "Planificador de Metas",
+    "description": "Crea 5 metas",
+    "targetCount": 5,
+    "type": "goal",
+    "reward": "Insignia de Experto en Planificación",
+    "isActive": true
+  },
+  {
+    "title": "Alcanzador de Metas",
+    "description": "Completa 3 metas",
+    "targetCount": 3,
+    "type": "goal",
+    "reward": "Medalla de Cazador de Logros",
+    "isActive": true
+  },
+  {
+    "title": "Guerrero Semanal",
+    "description": "Completa tareas durante 7 días consecutivos",
+    "targetCount": 7,
+    "type": "streak",
+    "reward": "Corona de Consistencia",
+    "isActive": true
+  },
+  {
+    "title": "Profesional de Prioridades",
+    "description": "Completa 20 tareas de alta prioridad",
+    "targetCount": 20,
+    "type": "task",
+    "reward": "Insignia de Maestro del Enfoque",
+    "isActive": true
+  },
+  {
+    "title": "Rastreador de Métricas",
+    "description": "Crea 10 métricas",
+    "targetCount": 10,
+    "type": "metric",
+    "reward": "Escudo de Experto en Análisis",
+    "isActive": true
+  },
+  {
+    "title": "Creador de Hitos",
+    "description": "Alcanza 15 hitos en tus métricas",
+    "targetCount": 15,
+    "type": "metric",
+    "reward": "Estrella de Campeón del Progreso",
+    "isActive": true
+  },
+  {
+    "title": "Jugador de Equipo",
+    "description": "Agrega 50 comentarios a tareas o metas",
+    "targetCount": 50,
+    "type": "comment",
+    "reward": "Emblema de Maestro de Colaboración",
+    "isActive": true
+  }
+]
+
