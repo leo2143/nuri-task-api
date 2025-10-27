@@ -48,7 +48,7 @@ export const createServer = () => {
         'http://localhost:8080',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:5174',
-        'https://nuri-task-app.vercel.app/'
+        'https://nuri-task-app.vercel.app/',
         
         // Agrega aquí tu dominio de producción cuando lo tengas
         // 'https://tu-dominio.com',
