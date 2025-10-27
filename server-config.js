@@ -79,9 +79,6 @@ export const createServer = () => {
   };
 
   app.use(cors(corsOptions));
-  
-  // Manejar explícitamente las peticiones OPTIONS para preflight
-  app.options('*', cors(corsOptions));
 
   // Servir archivos estáticos desde la carpeta public (usando ruta absoluta)
   const publicPath = join(__dirname, 'public');
