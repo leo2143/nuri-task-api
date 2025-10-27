@@ -80,7 +80,7 @@ export const createServer = () => {
 
   app.use(cors(corsOptions));
 
-  // Servir archivos estáticos desde la carpeta public (usando ruta absoluta)
+  // Servir archivos estáticos desde la carpeta public (usando ruta absolutas)
   const publicPath = join(__dirname, 'public');
   app.use(express.static(publicPath));
 
