@@ -191,7 +191,7 @@
   },
   {
     "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef21a"
+      "$oid": "68d1e7f577ec3fe8073cef1a"
     },
     "title": "Estudiar servicios de AWS",
     "description": "Aprender EC2, S3, Lambda y otros servicios core de AWS",
@@ -210,7 +210,7 @@
   },
   {
     "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef22a"
+      "$oid": "68d1e7f577ec3fe8073cef1b"
     },
     "title": "Realizar exámenes de práctica AWS",
     "description": "Hacer al menos 5 exámenes de práctica completos",
@@ -229,7 +229,7 @@
   },
   {
     "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef23a"
+      "$oid": "68d1e7f577ec3fe8073cef1c"
     },
     "title": "Configurar React Native environment",
     "description": "Instalar y configurar el entorno de desarrollo para React Native",
@@ -248,7 +248,7 @@
   },
   {
     "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef24a"
+      "$oid": "68d1e7f577ec3fe8073cef1d"
     },
     "title": "Desarrollar pantallas principales de la app",
     "description": "Crear las pantallas de login, home, profile y settings",
@@ -267,7 +267,7 @@
   },
   {
     "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef25a"
+      "$oid": "68d1e7f577ec3fe8073cef1e"
     },
     "title": "Integrar Firebase Authentication",
     "description": "Implementar login con email/password y Google",
@@ -286,7 +286,7 @@
   },
   {
     "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef26a"
+      "$oid": "68d1e7f577ec3fe8073cef1f"
     },
     "title": "Identificar proyectos open source interesantes",
     "description": "Buscar y seleccionar 3 proyectos activos para contribuir",
@@ -305,7 +305,7 @@
   },
   {
     "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef27a"
+      "$oid": "68d1e7f577ec3fe8073cea00"
     },
     "title": "Hacer primer Pull Request",
     "description": "Enviar mi primera contribución a un proyecto open source",
@@ -324,7 +324,7 @@
   },
   {
     "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef28a"
+      "$oid": "68d1e7f577ec3fe8073cea01"
     },
     "title": "Resolver issues del repositorio",
     "description": "Trabajar en al menos 3 issues etiquetados como 'good first issue'",
