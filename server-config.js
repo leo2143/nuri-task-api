@@ -48,7 +48,7 @@ export const createServer = () => {
         'http://localhost:8080',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:5174',
-        'https://nuri-task-app.vercel.app/',
+        'https://nuri-task-app.vercel.app',
         
         // Agrega aquí tu dominio de producción cuando lo tengas
         // 'https://tu-dominio.com',
@@ -73,9 +73,15 @@ export const createServer = () => {
     credentials: true, // Permite enviar cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Length', 'X-Requested-With'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   };
 
   app.use(cors(corsOptions));
+  
+  // Manejar explícitamente las peticiones OPTIONS para preflight
+  app.options('*', cors(corsOptions));
 
   // Servir archivos estáticos desde la carpeta public (usando ruta absoluta)
   const publicPath = join(__dirname, 'public');
