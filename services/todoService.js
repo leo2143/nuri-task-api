@@ -1,5 +1,9 @@
 import Todo from '../models/todoModel.js';
-import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
+import {
+  NotFoundResponseModel,
+  ErrorResponseModel,
+  BadRequestResponseModel,
+} from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import { CreateTodoDto, UpdateTodoDto, TodoFilterDto, AddCommentDto } from '../models/dtos/todo/index.js';
 import chalk from 'chalk';
@@ -28,7 +32,7 @@ export class TodoService {
       const validation = filterDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const query = { userId, ...filterDto.toMongoQuery() };
@@ -110,7 +114,7 @@ export class TodoService {
       const validation = createDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const cleanData = createDto.toPlainObject();
@@ -143,7 +147,7 @@ export class TodoService {
       const validation = updateDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const cleanData = updateDto.toPlainObject();
@@ -280,7 +284,7 @@ export class TodoService {
       const validation = commentDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       // Buscar la tarea

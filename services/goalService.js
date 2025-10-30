@@ -1,5 +1,9 @@
 import Goal from '../models/goalsModel.js';
-import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
+import {
+  NotFoundResponseModel,
+  ErrorResponseModel,
+  BadRequestResponseModel,
+} from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import { CreateGoalDto, UpdateGoalDto, AddCommentDto, GoalFilterDto } from '../models/dtos/goals/index.js';
 import chalk from 'chalk';
@@ -24,7 +28,7 @@ export class GoalService {
       const validation = filterDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const query = { userId, ...filterDto.toMongoQuery() };
@@ -83,7 +87,7 @@ export class GoalService {
       const validation = createDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const cleanData = createDto.toPlainObject();
@@ -115,7 +119,7 @@ export class GoalService {
       const validation = updateDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const cleanData = updateDto.toPlainObject();
@@ -221,7 +225,7 @@ export class GoalService {
       const validation = commentDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const cleanComment = commentDto.toPlainObject();

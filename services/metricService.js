@@ -1,6 +1,10 @@
 import Metrics from '../models/metricsModel.js';
 import Goal from '../models/goalsModel.js';
-import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
+import {
+  NotFoundResponseModel,
+  ErrorResponseModel,
+  BadRequestResponseModel,
+} from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import {
   CreateMetricDto,
@@ -106,7 +110,7 @@ export class MetricService {
       const validation = createDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const { GoalId } = metricData;
@@ -158,7 +162,7 @@ export class MetricService {
       const validation = updateDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const metric = await Metrics.findById(id).populate('GoalId', 'userId');
@@ -283,7 +287,7 @@ export class MetricService {
       const validation = milestoneDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
@@ -415,7 +419,7 @@ export class MetricService {
       const validation = blockerDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
@@ -457,7 +461,7 @@ export class MetricService {
       const validation = resolveDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
@@ -546,7 +550,7 @@ export class MetricService {
       const validation = winDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
@@ -627,7 +631,7 @@ export class MetricService {
       const validation = historyDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
@@ -671,7 +675,7 @@ export class MetricService {
       const validation = acknowledgeDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
