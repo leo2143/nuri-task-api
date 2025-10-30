@@ -1,6 +1,10 @@
 import UserAchievement from '../models/userAchievementModel.js';
 import Achievement from '../models/achievementModel.js';
-import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
+import {
+  NotFoundResponseModel,
+  ErrorResponseModel,
+  BadRequestResponseModel,
+} from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import { IncrementProgressDto } from '../models/dtos/achievements/index.js';
 import chalk from 'chalk';
@@ -138,7 +142,7 @@ export class UserAchievementService {
       const validation = incrementDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       // Verify achievement exists

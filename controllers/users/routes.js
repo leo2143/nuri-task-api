@@ -13,6 +13,11 @@ export const setupUserRoutes = app => {
   app.post('/api/users/login', UsersController.loginUser);
   app.post('/api/users', UsersController.createUser);
 
+  // Rutas públicas para recuperación de contraseña
+  app.post('/api/users/forgot-password', UsersController.forgotPassword);
+  app.get('/api/users/verify-reset-token/:token', UsersController.verifyResetToken);
+  app.post('/api/users/reset-password', UsersController.resetPassword);
+
   // Rutas protegidas con autenticación normal
   app.put('/api/users/change-password', validarToken, UsersController.changePassword);
 

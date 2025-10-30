@@ -1,10 +1,17 @@
 import User from '../models/userModel.js';
-import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
+import {
+  NotFoundResponseModel,
+  ErrorResponseModel,
+  ConflictResponseModel,
+  BadRequestResponseModel,
+} from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import chalk from 'chalk';
+import crypto from 'crypto';
+import { EmailService } from './emailService.js';
 
 dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET || 'tu_clave_secreta_super_segura';
@@ -81,6 +88,16 @@ export class UserService {
    */
   static async createUser(userData) {
     try {
+      // Verificar si el email ya existe
+      const existingUser = await User.findOne({ email: userData.email });
+      if (existingUser) {
+        return new ConflictResponseModel(
+          'El email ya está registrado. Por favor, utiliza otro email',
+          'email',
+          userData.email
+        );
+      }
+
       // Hashear la contraseña antes de guardar
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
@@ -102,12 +119,33 @@ export class UserService {
       );
     } catch (error) {
       console.error(chalk.red('Error al crear el usuario:', error));
+
+      // Errores de validación de Mongoose
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors)
+          .map(err => err.message)
+          .join(', ');
+        return new BadRequestResponseModel(`Error de validación: ${messages}`);
+      }
+
       return new ErrorResponseModel('Error al crear usuario');
     }
   }
 
   static async updateUser(id, userData) {
     try {
+      // Si se está actualizando el email, verificar que no exista en otro usuario
+      if (userData.email) {
+        const existingUser = await User.findOne({ email: userData.email, _id: { $ne: id } });
+        if (existingUser) {
+          return new ConflictResponseModel(
+            'El email ya está en uso por otro usuario. Por favor, utiliza otro email.',
+            'email',
+            userData.email
+          );
+        }
+      }
+
       const user = await User.findByIdAndUpdate(id, userData, { new: true });
       if (!user) {
         return new NotFoundResponseModel('No se encontró el usuario con el id: ' + id + ' en la base de datos');
@@ -115,6 +153,15 @@ export class UserService {
       return new SuccessResponseModel(user, 1, 'Usuario actualizado correctamente');
     } catch (error) {
       console.error(chalk.red('Error al actualizar usuario:', error));
+
+      // Errores de validación de Mongoose
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors)
+          .map(err => err.message)
+          .join(', ');
+        return new BadRequestResponseModel(`Error de validación: ${messages}`);
+      }
+
       return new ErrorResponseModel('Error al actualizar usuario');
     }
   }
@@ -203,10 +250,169 @@ export class UserService {
       return new ErrorResponseModel('Error al cambiar la contraseña');
     }
   }
-// TODO: Crear un servicio para cuando el usuario olvide su contraseña, se le envíe un correo con un token para resetear la contraseña
+  /**
+   * Solicita la recuperación de contraseña (envía email con token)
+   * @static
+   * @async
+   * @function requestPasswordReset
+   * @param {string} email - Email del usuario que olvidó su contraseña
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+   * @description Genera un token de recuperación, lo guarda en la BD y envía un email al usuario
+   * @example
+   * // POST /api/users/forgot-password
+   * // Body: { "email": "usuario@ejemplo.com" }
+   */
+  static async requestPasswordReset(email) {
+    try {
+      // Buscar usuario por email
+      const user = await User.findOne({ email });
+      if (!user) {
+        // Por seguridad, no revelar si el email existe o no
+        return new SuccessResponseModel(
+          { message: 'Si el email existe, recibirás un correo con instrucciones' },
+          1,
+          'Solicitud procesada'
+        );
+      }
 
+      // Generar token de recuperación seguro (32 bytes en hexadecimal)
+      const resetToken = crypto.randomBytes(32).toString('hex');
 
+      // Hashear el token antes de guardarlo en la BD (seguridad adicional)
+      const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
+      // Guardar token y fecha de expiración (1 hora)
+      user.resetPasswordToken = hashedToken;
+      user.resetPasswordExpires = Date.now() + 3600000; // 1 hora en milisegundos
+      await user.save();
+
+      // Enviar email con el token SIN hashear
+      const emailResult = await EmailService.sendPasswordResetEmail(email, resetToken, user.name);
+
+      if (!emailResult.success) {
+        console.error(chalk.red('Error al enviar email:', emailResult.error));
+        return new ErrorResponseModel('Error al enviar el email de recuperación');
+      }
+
+      console.log(chalk.green('✓ Token de recuperación generado para:', email));
+
+      return new SuccessResponseModel(
+        {
+          message: 'Si el email existe, recibirás un correo con instrucciones',
+          // Solo en desarrollo, mostrar el token (QUITAR EN PRODUCCIÓN)
+          ...(process.env.NODE_ENV === 'development' && { devToken: resetToken }),
+        },
+        1,
+        'Email de recuperación enviado'
+      );
+    } catch (error) {
+      console.error(chalk.red('Error al solicitar recuperación de contraseña:', error));
+      return new ErrorResponseModel('Error al procesar la solicitud de recuperación');
+    }
+  }
+
+  /**
+   * Verifica si un token de recuperación es válido
+   * @static
+   * @async
+   * @function verifyResetToken
+   * @param {string} token - Token de recuperación a verificar
+   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>}
+   * @description Verifica que el token existe y no ha expirado
+   * @example
+   * // GET /api/users/reset-password/:token
+   */
+  static async verifyResetToken(token) {
+    try {
+      // Hashear el token recibido para comparar
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+      // Buscar usuario con ese token y que no haya expirado
+      const user = await User.findOne({
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: { $gt: Date.now() },
+      });
+
+      if (!user) {
+        return new ErrorResponseModel('Token inválido o expirado');
+      }
+
+      return new SuccessResponseModel(
+        {
+          valid: true,
+          email: user.email,
+          message: 'Token válido',
+        },
+        1,
+        'Token verificado correctamente'
+      );
+    } catch (error) {
+      console.error(chalk.red('Error al verificar token:', error));
+      return new ErrorResponseModel('Error al verificar el token');
+    }
+  }
+
+  /**
+   * Resetea la contraseña usando el token de recuperación
+   * @static
+   * @async
+   * @function resetPasswordWithToken
+   * @param {string} token - Token de recuperación
+   * @param {string} newPassword - Nueva contraseña
+   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>}
+   * @description Verifica el token y actualiza la contraseña del usuario
+   * @example
+   * // POST /api/users/reset-password
+   * // Body: { "token": "abc123...", "newPassword": "nuevaContraseña123" }
+   */
+  static async resetPasswordWithToken(token, newPassword) {
+    try {
+      // Validar que se proporcionó una nueva contraseña
+      if (!newPassword || newPassword.length < 6) {
+        return new ErrorResponseModel('La contraseña debe tener al menos 6 caracteres');
+      }
+
+      // Hashear el token recibido para comparar
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+      // Buscar usuario con ese token y que no haya expirado
+      const user = await User.findOne({
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: { $gt: Date.now() },
+      });
+
+      if (!user) {
+        return new ErrorResponseModel('Token inválido o expirado');
+      }
+
+      // Hashear la nueva contraseña
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+      // Actualizar contraseña y limpiar tokens de recuperación
+      user.password = hashedPassword;
+      user.resetPasswordToken = null;
+      user.resetPasswordExpires = null;
+      await user.save();
+
+      // Enviar email de confirmación
+      await EmailService.sendPasswordChangedConfirmation(user.email, user.name);
+
+      console.log(chalk.green('✓ Contraseña reseteada exitosamente para:', user.email));
+
+      return new SuccessResponseModel(
+        {
+          message: 'Contraseña actualizada exitosamente',
+          email: user.email,
+        },
+        1,
+        'Contraseña reseteada correctamente'
+      );
+    } catch (error) {
+      console.error(chalk.red('Error al resetear contraseña con token:', error));
+      return new ErrorResponseModel('Error al resetear la contraseña');
+    }
+  }
 
   /**
    * Resetea la contraseña de un usuario (solo para admin)

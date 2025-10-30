@@ -1,5 +1,9 @@
 import Moodboard from '../models/moodboardModel.js';
-import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
+import {
+  NotFoundResponseModel,
+  ErrorResponseModel,
+  BadRequestResponseModel,
+} from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import {
   CreateMoodboardDto,
@@ -95,7 +99,7 @@ export class MoodboardService {
       const validation = createDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const cleanData = createDto.toPlainObject();
@@ -131,7 +135,7 @@ export class MoodboardService {
       const validation = updateDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const cleanData = updateDto.toPlainObject();
@@ -195,7 +199,7 @@ export class MoodboardService {
       const validation = addImageDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       // Verificar que el moodboard existe y obtener el número actual de imágenes
@@ -347,7 +351,7 @@ export class MoodboardService {
       const validation = addPhraseDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const moodboard = await Moodboard.findOne({ _id: id, userId });
@@ -416,7 +420,7 @@ export class MoodboardService {
       const validation = updatePhraseDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const moodboard = await Moodboard.findOne({ _id: id, userId });

@@ -1,5 +1,9 @@
 import Achievement from '../models/achievementModel.js';
-import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
+import {
+  NotFoundResponseModel,
+  ErrorResponseModel,
+  BadRequestResponseModel,
+} from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import {
   CreateAchievementDto,
@@ -27,7 +31,7 @@ export class AchievementService {
       const validation = filterDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const query = filterDto.toMongoQuery();
@@ -84,7 +88,7 @@ export class AchievementService {
       const validation = createDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const cleanData = createDto.toPlainObject();
@@ -112,7 +116,7 @@ export class AchievementService {
       const validation = updateDto.validate();
 
       if (!validation.isValid) {
-        return new ErrorResponseModel(validation.errors.join(', '));
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
       const cleanData = updateDto.toPlainObject();
