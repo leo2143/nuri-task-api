@@ -65,112 +65,143 @@ export class EmailService {
         subject: 'Recuperación de Contraseña - Nuri Task',
         html: `
           <!DOCTYPE html>
-          <html>
-          <head>
-            <style>
-              body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                line-height: 1.6;
-                color: #333;
-                max-width: 600px;
-                margin: 0 auto;
-                padding: 20px;
-              }
-              .container {
-                background-color: #f9f9f9;
-                border-radius: 10px;
-                padding: 30px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-              }
-              .header {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 20px;
-                border-radius: 10px 10px 0 0;
-                text-align: center;
-              }
-              .content {
-                background-color: white;
-                padding: 30px;
-                border-radius: 0 0 10px 10px;
-              }
-              .button {
-                display: inline-block;
-                padding: 12px 30px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                margin: 20px 0;
-                font-weight: bold;
-              }
-              .footer {
-                text-align: center;
-                margin-top: 20px;
-                font-size: 12px;
-                color: #666;
-              }
-              .warning {
-                background-color: #fff3cd;
-                border-left: 4px solid #ffc107;
-                padding: 10px;
-                margin: 15px 0;
-              }
-              .token-box {
-                background-color: #f8f9fa;
-                border: 2px dashed #667eea;
-                padding: 15px;
-                margin: 15px 0;
-                border-radius: 5px;
-                text-align: center;
-                font-family: 'Courier New', monospace;
-                font-size: 18px;
-                font-weight: bold;
-                color: #667eea;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>🔐 Recuperación de Contraseña</h1>
-              </div>
-              <div class="content">
-                <h2>Hola, ${userName}!</h2>
-                <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en <strong>Nuri Task</strong>.</p>
-                
-                <p>Haz clic en el siguiente botón para restablecer tu contraseña:</p>
-                
-                <div style="text-align: center;">
-                  <a href="${resetUrl}" class="button">Restablecer Contraseña</a>
+          <html lang="es">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Recuperación de Contraseña</title>
+              <style>
+                @import url("https://fonts.googleapis.com/css2?family=Montserrat+Alternates:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap");
+                body {
+                  line-height: 1.6;
+                  color: #37241c;
+                  max-width: 600px;
+                  margin: 0 auto;
+                  padding: 20px;
+                }
+                h1, h2, h3, h4, h5, h6 {
+                  font-family: "Montserrat Alternates", sans-serif;
+                  font-weight: bold;
+                  font-size: 2rem;
+                }
+                p {
+                  font-family: "Nunito Sans", sans-serif;
+                  font-size: 1.5rem;
+                }
+                a {
+                  font-family: "Nunito Sans", sans-serif;
+                  font-weight: bold;
+                  font-size: 1.5rem;
+                  color: #2f9685 !important;
+                }
+                .container {
+                  background-color: #f7f6f2;
+                  border-radius: 10px;
+                  padding: 30px;
+                  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                }
+                .title-container {
+                  background: linear-gradient(135deg, #2f9685 0%, #2f9685 100%);
+                  color: white;
+                  padding: 20px;
+                  border-radius: 10px 10px 0 0;
+                  text-align: center;
+                }
+                .content {
+                  background-color: white;
+                  padding: 30px;
+                  border-radius: 0 0 10px 10px;
+                }
+                .button {
+                  display: inline-block;
+                  font-family: "Nunito Sans", sans-serif;
+                  font-weight: bold;
+                  padding: 12px 30px;
+                  background: linear-gradient(135deg, #2f9685 0%, #2f9685 100%);
+                  color: white !important;
+                  text-decoration: none;
+                  border-radius: 5px;
+                  margin: 20px 0;
+                }
+                .button:hover {
+                  background: linear-gradient(135deg, #2a8878 0%, #2a8878 100%);
+                }
+                .footer {
+                  text-align: center;
+                  margin-top: 20px;
+                  font-size: 12px;
+                  color: #37241cb5;
+                }
+                .warning {
+                  font-family: "Nunito Sans", sans-serif;
+                  background-color: #fff3cd;
+                  border-left: 4px solid #ffc107;
+                  padding: 10px;
+                  margin: 15px 0;
+                }
+                .token-box {
+                  background-color: #f8f9fa;
+                  border: 2px dashed #75bdc9;
+                  padding: 15px;
+                  margin: 15px 0;
+                  border-radius: 5px;
+                  text-align: center;
+                  font-family: "Courier New", monospace;
+                  font-size: 18px;
+                  font-weight: bold;
+                  color: #2a8878;
+                  font-family: 'Nunito Sans', sans-serif;
+                }
+                .link{
+                  color: #2f9685 !important;
+
+                }
+                .button-link{
+                  text-align: center
+                }
+              </style>
+            </head>
+            <body>
+              <header>
+                <div class="title-container">
+                  <h1>🔐 Recuperación de Contraseña <strong>Nuri Task</strong></h1>
                 </div>
-                
-                <p>O copia y pega este enlace en tu navegador:</p>
-                <p style="word-break: break-all; color: #667eea;"><a href="${resetUrl}">${resetUrl}</a></p>
-                
-                <div class="token-box">
-                  Token: ${resetToken}
+              </header>
+              <main class="container">
+                <div class="content">
+                  <h2>Hola, <strong>${userName}</strong>!</h2>
+                  <p>
+                    Hemos recibido una solicitud para restablecer la contraseña de tu
+                    cuenta en <strong>Nuri Task</strong>.
+                  </p>
+                  <p>Haz clic en el siguiente botón para restablecer tu contraseña:</p>
+                  <div class="button-link">
+                    <a href="${resetUrl}" class="button">Restablecer Contraseña</a>
+                  </div>
+                  <p>O copia y pega este enlace en tu navegador:</p>
+                  <p>
+                    <a class="link" href="${resetUrl}">${resetUrl}</a>
+                  </p>
+                  <div class="warning">
+                    <strong>⚠️ Importante:</strong>
+                    <ul>
+                      <li>Este enlace expirará en <strong>1 hora</strong></li>
+                      <li>Si no solicitaste este cambio, ignora este correo</li>
+                      <li>Tu contraseña actual seguirá siendo válida</li>
+                    </ul>
+                  </div>
+                  <p>Si tienes algún problema, contáctanos respondiendo a este correo.</p>
+                  <p>Saludos,<br /><strong>Equipo de Nuri Task</strong></p>
                 </div>
-                
-                <div class="warning">
-                  <strong>⚠️ Importante:</strong>
-                  <ul>
-                    <li>Este enlace expirará en <strong>1 hora</strong></li>
-                    <li>Si no solicitaste este cambio, ignora este correo</li>
-                    <li>Tu contraseña actual seguirá siendo válida</li>
-                  </ul>
-                </div>
-                
-                <p>Si tienes algún problema, contáctanos respondiendo a este correo.</p>
-                
-                <p>Saludos,<br><strong>Equipo de Nuri Task</strong></p>
-              </div>
-              <div class="footer">
+              </main>
+              <footer class="footer">
                 <p>Este es un correo automático, por favor no respondas directamente.</p>
-                <p>&copy; ${new Date().getFullYear()} Nuri Task API. Todos los derechos reservados.</p>
-              </div>
-            </div>
-          </body>
+                <p>
+                  &copy; ${new Date().getFullYear()} Nuri Task API. Todos los derechos
+                  reservados.
+                </p>
+              </footer>
+            </body>
           </html>
         `,
       };
@@ -214,85 +245,106 @@ export class EmailService {
         subject: 'Contraseña Cambiada Exitosamente - Nuri Task',
         html: `
           <!DOCTYPE html>
-          <html>
-          <head>
-            <style>
-              body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                line-height: 1.6;
-                color: #333;
-                max-width: 600px;
-                margin: 0 auto;
-                padding: 20px;
-              }
-              .container {
-                background-color: #f9f9f9;
-                border-radius: 10px;
-                padding: 30px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-              }
-              .header {
-                background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-                color: white;
-                padding: 20px;
-                border-radius: 10px 10px 0 0;
-                text-align: center;
-              }
-              .content {
-                background-color: white;
-                padding: 30px;
-                border-radius: 0 0 10px 10px;
-              }
-              .success-icon {
-                font-size: 48px;
-                text-align: center;
-                margin: 20px 0;
-              }
-              .warning {
-                background-color: #fff3cd;
-                border-left: 4px solid #ffc107;
-                padding: 10px;
-                margin: 15px 0;
-              }
-              .footer {
-                text-align: center;
-                margin-top: 20px;
-                font-size: 12px;
-                color: #666;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>✅ Contraseña Actualizada</h1>
-              </div>
-              <div class="content">
-                <div class="success-icon">🎉</div>
-                <h2>Hola, ${userName}!</h2>
-                <p>Tu contraseña ha sido cambiada exitosamente.</p>
-                
-                <p>Si realizaste este cambio, puedes ignorar este correo.</p>
-                
-                <div class="warning">
-                  <strong>⚠️ ¿No fuiste tú?</strong><br>
-                  Si NO realizaste este cambio, tu cuenta puede estar comprometida. 
-                  Por favor, contáctanos inmediatamente respondiendo a este correo.
+          <html lang="es">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Contraseña Actualizada</title>
+              <style>
+                @import url("https://fonts.googleapis.com/css2?family=Montserrat+Alternates:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap");
+                body {
+                  line-height: 1.6;
+                  color: #37241c;
+                  max-width: 600px;
+                  margin: 0 auto;
+                  padding: 20px;
+                }
+                h1, h2, h3, h4, h5, h6 {
+                  font-family: "Montserrat Alternates", sans-serif;
+                  font-weight: bold;
+                  font-size: 2rem;
+                }
+                p {
+                  font-family: "Nunito Sans", sans-serif;
+                  font-size: 1.5rem;
+                }
+                a {
+                  font-family: "Nunito Sans", sans-serif;
+                  font-weight: bold;
+                  font-size: 1.5rem;
+                  color: #2f9685;
+                }
+                .container {
+                  background-color: #f7f6f2;
+                  border-radius: 10px;
+                  padding: 30px;
+                  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                }
+                .title-container {
+                  background: linear-gradient(135deg, #2f9685 0%, #2f9685 100%);
+                  color: white;
+                  padding: 20px;
+                  border-radius: 10px 10px 0 0;
+                  text-align: center;
+                }
+                .content {
+                  background-color: white;
+                  padding: 30px;
+                  border-radius: 0 0 10px 10px;
+                }
+                .success-icon {
+                  font-size: 48px;
+                  text-align: center;
+                  margin: 20px 0;
+                }
+                .footer {
+                  font-family: "Nunito Sans", sans-serif;
+                  text-align: center;
+                  margin-top: 20px;
+                  font-size: 12px;
+                  color: #37241cb5;
+                }
+                .warning {
+                  font-family: "Nunito Sans", sans-serif;
+                  background-color: #fff3cd;
+                  border-left: 4px solid #ffc107;
+                  padding: 10px;
+                  margin: 15px 0;
+                }
+              </style>
+            </head>
+            <body>
+              <header>
+                <div class="title-container">
+                  <h1>✅ Contraseña Actualizada <strong>Nuri Task</strong></h1>
                 </div>
-                
-                <p>Fecha y hora del cambio: <strong>${new Date().toLocaleString('es-ES')}</strong></p>
-                
-                <p>Saludos,<br><strong>Equipo de Nuri Task</strong></p>
-              </div>
-              <div class="footer">
+              </header>
+              <main class="container">
+                <div class="content">
+                  <div class="success-icon">🎉</div>
+                  <h2>Hola, <strong>${userName}</strong>!</h2>
+                  <p>Tu contraseña ha sido cambiada exitosamente.</p>
+                  <p>Si realizaste este cambio, puedes ignorar este correo.</p>
+                  <div class="warning">
+                    <strong>⚠️ ¿No fuiste tú?</strong>
+                    <br>
+                    Si NO realizaste este cambio, tu cuenta puede estar comprometida. 
+                    Por favor, contáctanos inmediatamente respondiendo a este correo.
+                  </div>
+                  <p>Fecha y hora del cambio: <strong>${new Date().toLocaleString('es-ES')}</strong></p>
+                  <p>Saludos,<br /><strong>Equipo de Nuri Task</strong></p>
+                </div>
+              </main>
+              <footer class="footer">
                 <p>Este es un correo automático, por favor no respondas directamente.</p>
-                <p>&copy; ${new Date().getFullYear()} Nuri Task API. Todos los derechos reservados.</p>
-              </div>
-            </div>
-          </body>
+                <p>
+                  &copy; ${new Date().getFullYear()} Nuri Task API. Todos los derechos
+                  reservados.
+                </p>
+              </footer>
+            </body>
           </html>
         `,
-       
       };
 
       const info = await transporter.sendMail(mailOptions);

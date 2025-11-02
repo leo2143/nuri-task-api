@@ -8,3 +8,6 @@ docs/
 .env.production.local
 package-lock.json
 yarn.lock
+resources/mail-template.html
+resources/mail-template-confirmation.html
+services/emailService.js

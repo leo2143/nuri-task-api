@@ -1,212 +1,62 @@
 [
   {
     "_id": {
-      "$oid": "78e2f8a588fd4af9184def31"
+      "$oid": "68d1e7f577ec3fe8073cefec"
     },
-    "GoalId": {
-      "$oid": "68d1e7f577ec3fe8073cef21"
-    },
-    "currentProgress": 60,
-    "currentStreak": 4,
-    "bestStreak": 4,
-    "notes": "Excelente progreso esta semana. Implementé autenticación JWT exitosamente y la API está tomando forma.",
-    "history": [
-      {
-        "progress": 15,
-        "date": "2024-01-01T00:00:00.000Z"
-      },
-      {
-        "progress": 30,
-        "date": "2024-01-08T00:00:00.000Z"
-      },
-      {
-        "progress": 45,
-        "date": "2024-01-15T00:00:00.000Z"
-      },
-      {
-        "progress": 60,
-        "date": "2024-01-22T00:00:00.000Z"
-      }
-    ],
-    "lastUpdated": "2024-01-22T00:00:00.000Z",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-22T00:00:00.000Z",
+    "name": "leonardo",
+    "email": "leonardo@gmail.com",
+    "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "isAdmin": false,
     "__v": 0
   },
   {
     "_id": {
-      "$oid": "78e2f8a588fd4af9184def32"
+      "$oid": "68d2cf072897f6a7a500a4b5"
     },
-    "GoalId": {
-      "$oid": "68d1e7f577ec3fe8073cef22"
-    },
-    "currentProgress": 50,
-    "currentStreak": 3,
-    "bestStreak": 3,
-    "notes": "El diseño va muy bien. Agregué animaciones con Framer Motion y la sección de proyectos está completada.",
-    "history": [
-      {
-        "progress": 20,
-        "date": "2024-01-01T00:00:00.000Z"
-      },
-      {
-        "progress": 35,
-        "date": "2024-01-08T00:00:00.000Z"
-      },
-      {
-        "progress": 50,
-        "date": "2024-01-15T00:00:00.000Z"
-      }
-    ],
-    "lastUpdated": "2024-01-15T00:00:00.000Z",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-15T00:00:00.000Z",
+    "name": "david",
+    "email": "david@gmail.com",
+    "password": "$2b$10$zyPLaPqARhc/YbPfNMXRvu8l/eOTJixWX5N00t5B5KYvkbJ33Lh4e",
+    "isAdmin": true,
     "__v": 0
   },
   {
     "_id": {
-      "$oid": "78e2f8a588fd4af9184def33"
+      "$oid": "68d1e7f577ec3fe8073cef01"
     },
-    "GoalId": {
-      "$oid": "68d1e7f577ec3fe8073cef23"
-    },
-    "currentProgress": 18,
-    "currentStreak": 0,
-    "bestStreak": 2,
-    "notes": "Esta semana no pude avanzar mucho por otros proyectos. Voy a retomar con más fuerza la próxima semana.",
-    "history": [
-      {
-        "progress": 10,
-        "date": "2024-01-01T00:00:00.000Z"
-      },
-      {
-        "progress": 18,
-        "date": "2024-01-08T00:00:00.000Z"
-      }
-    ],
-    "lastUpdated": "2024-01-08T00:00:00.000Z",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-08T00:00:00.000Z",
+    "name": "Juan Pérez",
+    "email": "juan@ejemplo.com",
+    "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "isAdmin": false,
     "__v": 0
   },
   {
     "_id": {
-      "$oid": "78e2f8a588fd4af9184def34"
+      "$oid": "68d1e7f577ec3fe8073cef02"
     },
-    "GoalId": {
-      "$oid": "68d1e7f577ec3fe8073cef24"
-    },
-    "currentProgress": 20,
-    "currentStreak": 3,
-    "bestStreak": 3,
-    "notes": "Configuré mi primera VPC desde cero. Los laboratorios de AWS están siendo muy útiles para entender los servicios.",
-    "history": [
-      {
-        "progress": 5,
-        "date": "2024-01-01T00:00:00.000Z"
-      },
-      {
-        "progress": 12,
-        "date": "2024-01-08T00:00:00.000Z"
-      },
-      {
-        "progress": 20,
-        "date": "2024-01-15T00:00:00.000Z"
-      }
-    ],
-    "lastUpdated": "2024-01-15T00:00:00.000Z",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-15T00:00:00.000Z",
+    "name": "María García",
+    "email": "maria@ejemplo.com",
+    "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "isAdmin": false,
     "__v": 0
   },
   {
     "_id": {
-      "$oid": "78e2f8a588fd4af9184def35"
+      "$oid": "68d1e7f577ec3fe8073cef03"
     },
-    "GoalId": {
-      "$oid": "68d1e7f577ec3fe8073cef25"
-    },
-    "currentProgress": 100,
-    "currentStreak": 1,
-    "bestStreak": 1,
-    "notes": "¡Meta completada! Ahora me siento mucho más seguro leyendo documentación técnica en inglés.",
-    "history": [
-      {
-        "progress": 100,
-        "date": "2024-01-01T00:00:00.000Z"
-      }
-    ],
-    "lastUpdated": "2024-01-01T00:00:00.000Z",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "name": "Carlos López",
+    "email": "carlos@ejemplo.com",
+    "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "isAdmin": false,
     "__v": 0
   },
   {
     "_id": {
-      "$oid": "78e2f8a588fd4af9184def36"
+      "$oid": "68d1e7f577ec3fe8073cef04"
     },
-    "GoalId": {
-      "$oid": "68d1e7f577ec3fe8073cef26"
-    },
-    "currentProgress": 40,
-    "currentStreak": 4,
-    "bestStreak": 4,
-    "notes": "Firebase Auth está funcionando perfectamente. La navegación entre pantallas quedó muy fluida.",
-    "history": [
-      {
-        "progress": 8,
-        "date": "2024-01-01T00:00:00.000Z"
-      },
-      {
-        "progress": 15,
-        "date": "2024-01-08T00:00:00.000Z"
-      },
-      {
-        "progress": 28,
-        "date": "2024-01-15T00:00:00.000Z"
-      },
-      {
-        "progress": 40,
-        "date": "2024-01-22T00:00:00.000Z"
-      }
-    ],
-    "lastUpdated": "2024-01-22T00:00:00.000Z",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-22T00:00:00.000Z",
-    "__v": 0
-  },
-  {
-    "_id": {
-      "$oid": "78e2f8a588fd4af9184def37"
-    },
-    "GoalId": {
-      "$oid": "68d1e7f577ec3fe8073cef27"
-    },
-    "currentProgress": 22,
-    "currentStreak": 4,
-    "bestStreak": 4,
-    "notes": "¡Mi primer PR fue aceptado! Resolví 2 issues menores y me siento cada vez más cómodo contribuyendo a proyectos open source.",
-    "history": [
-      {
-        "progress": 3,
-        "date": "2024-01-01T00:00:00.000Z"
-      },
-      {
-        "progress": 8,
-        "date": "2024-01-08T00:00:00.000Z"
-      },
-      {
-        "progress": 15,
-        "date": "2024-01-15T00:00:00.000Z"
-      },
-      {
-        "progress": 22,
-        "date": "2024-01-22T00:00:00.000Z"
-      }
-    ],
-    "lastUpdated": "2024-01-22T00:00:00.000Z",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-22T00:00:00.000Z",
+    "name": "Ana Martínez",
+    "email": "ana@ejemplo.com",
+    "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+    "isAdmin": false,
     "__v": 0
   }
 ]
