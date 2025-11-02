@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm run swagger",
+  "buildCommand": "npm run prebuild",
   "builds": [
     {
       "src": "index.js",
@@ -12,6 +12,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/swagger-ui/(.*)",
+      "destination": "/public/swagger-ui/$1"
+    },
     {
       "source": "/api-docs",
       "destination": "/index.js"

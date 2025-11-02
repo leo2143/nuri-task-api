@@ -8,7 +8,7 @@ import { notFoundHandler, errorHandler, healthCheck } from '../middlewares/error
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readFileSync } from 'fs';
-import swaggerUi from 'swagger-ui-express';
+import express from 'express';
 
 // Para obtener __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -40,15 +40,19 @@ export const setupRoutes = app => {
   setupMoodboardRoutes(app);
   setupAchievementRoutes(app);
 
-  // Ruta para la documentación Swagger (configuración compatible con Vercel)
-  const CSS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui.min.css';
+  // Servir archivos estáticos de Swagger UI
+  app.use('/swagger-ui', express.static(join(__dirname, '..', 'public', 'swagger-ui')));
 
-  const swaggerOptions = {
-    customCssUrl: CSS_URL,
-    customSiteTitle: 'Nuri Task API Documentation',
-  };
+  // Servir el archivo swagger.json dinámicamente
+  app.get('/api-docs/swagger.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.json(swaggerFile);
+  });
 
-  app.use('/api-docs', swaggerUi.serveFiles(swaggerFile, swaggerOptions), swaggerUi.setup(swaggerFile, swaggerOptions));
+  // Redirigir /api-docs a la UI de Swagger
+  app.get('/api-docs', (req, res) => {
+    res.redirect('/swagger-ui/');
+  });
 
   // Middlewares globales (deben ir al final)
   app.use(notFoundHandler);
