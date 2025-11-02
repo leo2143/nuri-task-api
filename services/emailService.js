@@ -108,7 +108,7 @@ export class EmailService {
                   text-align: center;
                 }
                 .content {
-                  background-color: white;
+                  background-color: #F7F6F2;
                   padding: 30px;
                   border-radius: 0 0 10px 10px;
                 }
@@ -288,7 +288,7 @@ export class EmailService {
                   text-align: center;
                 }
                 .content {
-                  background-color: white;
+                  background-color: #F7F6F2;
                   padding: 30px;
                   border-radius: 0 0 10px 10px;
                 }
