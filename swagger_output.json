@@ -75,16 +75,6 @@
         }
       }
     },
-    "/swagger.json": {
-      "get": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/todos": {
       "get": {
         "tags": [

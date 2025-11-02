@@ -13,6 +13,14 @@
   ],
   "rewrites": [
     {
+      "source": "/api-docs",
+      "destination": "/index.js"
+    },
+    {
+      "source": "/api-docs/(.*)",
+      "destination": "/index.js"
+    },
+    {
       "source": "/css/(.*)",
       "destination": "/public/css/$1"
     },

@@ -40,41 +40,8 @@ export const setupRoutes = app => {
   setupMoodboardRoutes(app);
   setupAchievementRoutes(app);
 
-  // Endpoint para servir el swagger.json dinámicamente con host correcto
-  app.get('/swagger.json', (req, res) => {
-    const protocol = req.protocol;
-    const host = req.get('host');
-    const dynamicSwagger = {
-      ...swaggerFile,
-      host: host,
-      schemes: [protocol],
-    };
-    res.json(dynamicSwagger);
-  });
-
   // Ruta para la documentación Swagger
-  // Usar swaggerUiAssetPath para servir assets correctamente en Vercel
-  const swaggerUiAssetPath = swaggerUi.getAbsoluteFSPath();
-
-  // Servir assets estáticos de Swagger UI
-  app.use('/api-docs', (req, res, next) => {
-    // Verificar si es una solicitud de asset
-    if (req.path.endsWith('.js') || req.path.endsWith('.css') || req.path.endsWith('.png')) {
-      return res.sendFile(join(swaggerUiAssetPath, req.path));
-    }
-    next();
-  });
-
-  const swaggerOptions = {
-    swaggerOptions: {
-      url: '/swagger.json',
-    },
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'Nuri Task API Documentation',
-  };
-
-  app.use('/api-docs', swaggerUi.serve);
-  app.get('/api-docs', swaggerUi.setup(swaggerFile, swaggerOptions));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
   // Middlewares globales (deben ir al final)
   app.use(notFoundHandler);
