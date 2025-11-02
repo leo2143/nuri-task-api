@@ -7,12 +7,15 @@ import { setupAchievementRoutes } from '../controllers/achievements/routes.js';
 import { notFoundHandler, errorHandler, healthCheck } from '../middlewares/errorMiddleware.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { readFileSync } from 'fs';
 import swaggerUi from 'swagger-ui-express';
-import swaggerFile from '../swagger_output.json' with { type: 'json' };
 
 // Para obtener __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Cargar swagger_output.json
+const swaggerFile = JSON.parse(readFileSync(new URL('../swagger_output.json', import.meta.url)));
 
 /**
  * Función principal para configurar todas las rutas de la aplicación
@@ -22,30 +25,24 @@ const __dirname = dirname(__filename);
  * @description Configura todas las rutas de la API, middlewares globales y manejo de errores
  */
 export const setupRoutes = app => {
-  // Middleware de health check (global)
-  app.use(healthCheck);
+  // Health check endpoint
+  app.get('/health', healthCheck);
 
   app.get('/', (req, res) => {
     const indexPath = join(__dirname, '..', 'public', 'index.html');
     res.sendFile(indexPath);
   });
 
-  // Ruta para la documentación JSDoc
-  app.get('/docs', (req, res) => {
-    const docsPath = join(__dirname, '..', 'docs', 'index.html');
-    res.sendFile(docsPath);
-  });
-
-  // Configurar rutas específicas
   setupTodoRoutes(app);
   setupUserRoutes(app);
   setupGoalRoutes(app);
   setupMetricRoutes(app);
   setupMoodboardRoutes(app);
   setupAchievementRoutes(app);
+
   // Ruta para la documentación Swagger
-  app.use('/api-docs', swaggerUi.serve);
-  app.get('/api-docs', swaggerUi.setup(swaggerFile));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile, { swaggerOptions: { url: '/swagger.json' } }));
+
   // Middlewares globales (deben ir al final)
   app.use(notFoundHandler);
   app.use(errorHandler);

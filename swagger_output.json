@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "description": "API REST para la gestión de tareas, metas, métricas y logros personales"
   },
-  "host": "localhost:8888",
+  "host": "localhost:3000",
   "basePath": "/",
   "tags": [
     {
@@ -22,7 +22,7 @@
     },
     {
       "name": "Metrics",
-      "description": "Métricas de progreso (enfoque motivacional)"
+      "description": "Métricas de progreso"
     },
     {
       "name": "Moodboards",
@@ -55,27 +55,17 @@
     "application/json"
   ],
   "paths": {
+    "/health": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/": {
-      "get": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/docs": {
-      "get": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api-docs": {
       "get": {
         "description": "",
         "responses": {
