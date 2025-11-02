@@ -2,21 +2,27 @@ import swaggerAutogen from 'swagger-autogen';
 
 // Detectar el host durante el build
 const getHost = () => {
-  // Si está en Vercel, usar la URL de producción o la URL del deployment
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
     return process.env.VERCEL_PROJECT_PRODUCTION_URL;
   }
   if (process.env.VERCEL_URL) {
     return process.env.VERCEL_URL;
   }
-  // Por defecto, localhost
   return 'localhost:3000';
 };
 
 const isVercel = process.env.VERCEL === '1';
 
-console.log('🔧 Build Swagger con host:', getHost());
+console.log('==========================================');
+console.log('🚀 INICIANDO GENERACIÓN DE SWAGGER');
+console.log('==========================================');
+console.log('🔧 Host detectado:', getHost());
 console.log('🔧 Entorno:', isVercel ? 'Vercel' : 'Local');
+console.log('🔧 VERCEL:', process.env.VERCEL);
+console.log('🔧 VERCEL_URL:', process.env.VERCEL_URL);
+console.log('🔧 VERCEL_PROJECT_PRODUCTION_URL:', process.env.VERCEL_PROJECT_PRODUCTION_URL);
+console.log('🔧 Schemes:', isVercel ? 'https' : 'http');
+console.log('==========================================');
 
 const doc = {
   info: {
@@ -60,8 +66,15 @@ const endpointsFiles = [
 ];
 
 swaggerAutogen(outputFile, endpointsFiles, doc).then(() => {
-  console.log('✅ Documentación Swagger generada correctamente');
+  console.log('==========================================');
+  console.log('✅ SWAGGER GENERADO EXITOSAMENTE');
+  console.log('📄 Archivo:', outputFile);
+  console.log('🌐 Host final:', doc.host);
+  console.log('🔒 Schemes:', doc.schemes);
+  console.log('==========================================');
 
-  // Importar y ejecutar el servidor después de generar swagger
-  import('./index.js');
+  // Importar y ejecutar el servidor después de generar swagger (solo en dev local)
+  if (!process.env.VERCEL) {
+    import('./index.js');
+  }
 });
