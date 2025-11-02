@@ -6,9 +6,9 @@ const doc = {
     version: '1.0.0',
     description: 'API REST para la gestión de tareas, metas, métricas y logros personales',
   },
-  host: 'localhost:8888',
+  host: process.env.VERCEL_URL || 'localhost:3000',
   basePath: '/',
-  schemes: ['http'],
+  schemes: process.env.VERCEL_URL ? ['https'] : ['http'],
   consumes: ['application/json'],
   produces: ['application/json'],
   tags: [
