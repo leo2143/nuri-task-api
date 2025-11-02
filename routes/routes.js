@@ -40,8 +40,15 @@ export const setupRoutes = app => {
   setupMoodboardRoutes(app);
   setupAchievementRoutes(app);
 
-  // Ruta para la documentación Swagger
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
+  // Ruta para la documentación Swagger (configuración compatible con Vercel)
+  const CSS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui.min.css';
+
+  const swaggerOptions = {
+    customCssUrl: CSS_URL,
+    customSiteTitle: 'Nuri Task API Documentation',
+  };
+
+  app.use('/api-docs', swaggerUi.serveFiles(swaggerFile, swaggerOptions), swaggerUi.setup(swaggerFile, swaggerOptions));
 
   // Middlewares globales (deben ir al final)
   app.use(notFoundHandler);
