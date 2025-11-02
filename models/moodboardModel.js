@@ -70,23 +70,6 @@ const moodboardSchema = new mongoose.Schema(
  * @class Moodboard
  * @extends mongoose.Model
  * @description Modelo que representa un moodboard en la base de datos
- * @example
- * // Crear un nuevo moodboard
- * const moodboard = new Moodboard({
- *   title: 'Mi Moodboard de Inspiración',
- *   userId: '68d2cf072897f6a7a500a4b5',
- *   images: [
- *     {
- *       imageUrl: 'https://example.com/image1.jpg',
- *       imageAlt: 'Imagen inspiradora 1',
- *       imagePositionNumber: 1
- *     }
- *   ],
- *   phrases: [
- *     { phrase: 'Nunca te rindas' },
- *     { phrase: 'Sigue adelante' }
- *   ]
- * });
  */
 const Moodboard = mongoose.model('Moodboard', moodboardSchema);
 export default Moodboard;

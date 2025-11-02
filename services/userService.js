@@ -29,7 +29,6 @@ export class UserService {
    * @param {Object} filters - Filtros de búsqueda
    * @param {string} [filters.search] - Término de búsqueda en nombre
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de usuarios o error
-   * @example
    */
   static async getAllUsers(filters = {}) {
     try {
@@ -59,7 +58,6 @@ export class UserService {
    * @function getUserById
    * @param {string} id - ID del usuario a buscar
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el usuario encontrado o error
-   * @example
    */
   static async getUserById(id) {
     try {
@@ -84,7 +82,6 @@ export class UserService {
    * @param {string} userData.email - Email del usuario
    * @param {string} userData.password - Contraseña del usuario (será hasheada)
    * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con el usuario creado o error
-   * @example
    */
   static async createUser(userData) {
     try {
@@ -258,9 +255,6 @@ export class UserService {
    * @param {string} email - Email del usuario que olvidó su contraseña
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
    * @description Genera un token de recuperación, lo guarda en la BD y envía un email al usuario
-   * @example
-   * // POST /api/users/forgot-password
-   * // Body: { "email": "usuario@ejemplo.com" }
    */
   static async requestPasswordReset(email) {
     try {
@@ -319,8 +313,6 @@ export class UserService {
    * @param {string} token - Token de recuperación a verificar
    * @returns {Promise<SuccessResponseModel|ErrorResponseModel>}
    * @description Verifica que el token existe y no ha expirado
-   * @example
-   * // GET /api/users/reset-password/:token
    */
   static async verifyResetToken(token) {
     try {
@@ -361,9 +353,6 @@ export class UserService {
    * @param {string} newPassword - Nueva contraseña
    * @returns {Promise<SuccessResponseModel|ErrorResponseModel>}
    * @description Verifica el token y actualiza la contraseña del usuario
-   * @example
-   * // POST /api/users/reset-password
-   * // Body: { "token": "abc123...", "newPassword": "nuevaContraseña123" }
    */
   static async resetPasswordWithToken(token, newPassword) {
     try {
@@ -443,7 +432,7 @@ export class UserService {
         {
           userId: user._id,
           email: user.email,
-          temporaryPassword: newPassword, // Solo mostrar una vez
+          temporaryPassword: newPassword,
           message: 'Contraseña reseteada. El usuario debe cambiarla en su próximo login.',
         },
         1,

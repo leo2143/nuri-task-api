@@ -1,11 +1,7 @@
 import Todo from '../models/todoModel.js';
-import {
-  NotFoundResponseModel,
-  ErrorResponseModel,
-  BadRequestResponseModel,
-} from '../models/responseModel.js';
+import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
-import { CreateTodoDto, UpdateTodoDto, TodoFilterDto, AddCommentDto } from '../models/dtos/todo/index.js';
+import { CreateTodoDto, UpdateTodoDto, TodoFilterDto, AddCommentDto, MinTodoDto } from '../models/dtos/todo/index.js';
 import chalk from 'chalk';
 
 /**
@@ -23,8 +19,9 @@ export class TodoService {
    * @param {boolean} [filters.completed] - Filtrar por estado completado
    * @param {string} [filters.priority] - Filtrar por prioridad
    * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de tareas o error
-   * @example
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista resumida de tareas o error
+   * @description Devuelve solo información mínima (id, title, completed, priority, dueDate, dates)
+   * Para información completa, usar getTodoById
    */
   static async getAllTodos(filters = {}, userId) {
     try {
@@ -42,7 +39,10 @@ export class TodoService {
       if (todos.length === 0) {
         return new NotFoundResponseModel('No se encontraron tareas con los filtros aplicados');
       }
-      return new SuccessResponseModel(todos, todos.length, 'Tareas obtenidas correctamente');
+
+      const minTodos = MinTodoDto.fromArray(todos);
+
+      return new SuccessResponseModel(minTodos, minTodos.length, 'Tareas obtenidas correctamente');
     } catch (error) {
       console.error(chalk.red('Error al obtener tareas:', error));
       return new ErrorResponseModel('Error al obtener tareas');
@@ -79,7 +79,6 @@ export class TodoService {
    * @param {string} title - Título exacto a buscar
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea encontrada o error
-   * @example
    */
   static async getTodoByTitle(title, userId) {
     try {
@@ -106,7 +105,6 @@ export class TodoService {
    * @param {Date} [todoData.dueDate=null] - Fecha límite de la tarea
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con la tarea creada o error
-   * @example
    */
   static async createTodo(todoData, userId) {
     try {
@@ -270,12 +268,6 @@ export class TodoService {
    * @param {string} commentData.author - Autor del comentario (requerido)
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea actualizada o error
-   * @example
-   * // Agregar comentario
-   * await TodoService.addCommentToTodo('64f8a1b2c3d4e5f6a7b8c9d0', {
-   *   text: '¡Gran avance!',
-   *   author: 'Juan Pérez'
-   * }, userId);
    */
   static async addCommentToTodo(todoId, commentData, userId) {
     try {

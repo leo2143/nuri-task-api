@@ -1,5 +1,5 @@
 import { MetricsController } from './metricsController.js';
-import { validarToken } from '../../middlewares/authMiddleware.js';
+import { validateToken } from '../../middlewares/authMiddleware.js';
 
 /**
  * Función para configurar las rutas de métricas
@@ -9,38 +9,138 @@ import { validarToken } from '../../middlewares/authMiddleware.js';
  * @description Configura las rutas de métricas protegidas con autenticación JWT
  */
 export const setupMetricRoutes = app => {
-  // ========== RUTAS BÁSICAS DE MÉTRICAS ==========
-  app.post('/api/metrics', validarToken, MetricsController.createMetric);
-  app.get('/api/metrics', validarToken, MetricsController.getAllMetrics);
-  app.get('/api/metrics/:id', validarToken, MetricsController.getMetricById);
-  app.put('/api/metrics/:id', validarToken, MetricsController.updateMetric);
-  app.delete('/api/metrics/:id', validarToken, MetricsController.deleteMetric);
+  app.post('/api/metrics', validateToken, (req, res) => {
+    // #swagger.tags = ['Metrics']
+    // #swagger.summary = 'Crea una nueva métrica para una meta'
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Datos de la métrica',
+         required: true,
+         schema: {
+           GoalId: '507f1f77bcf86cd799439012',
+           currentProgress: 0,
+           notes: 'Comenzando seguimiento'
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MetricsController.createMetric(req, res);
+  });
 
-  // Ruta especial para obtener métricas por meta
-  app.get('/api/goals/:goalId/metrics', validarToken, MetricsController.getMetricsByGoalId);
+  app.get('/api/metrics', validateToken, (req, res) => {
+    // #swagger.tags = ['Metrics']
+    // #swagger.summary = 'Obtiene todas las métricas del usuario'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MetricsController.getAllMetrics(req, res);
+  });
 
-  // ========== DASHBOARD Y PREDICCIONES ==========
-  app.get('/api/metrics/:id/dashboard', validarToken, MetricsController.getMetricDashboard);
-  app.post('/api/metrics/:id/predictions', validarToken, MetricsController.updatePredictions);
+  app.get('/api/metrics/:id', validateToken, (req, res) => {
+    // #swagger.tags = ['Metrics']
+    // #swagger.summary = 'Obtiene una métrica por su ID'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la métrica',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MetricsController.getMetricById(req, res);
+  });
 
-  // ========== GESTIÓN DE HITOS ==========
-  app.post('/api/metrics/:id/milestones', validarToken, MetricsController.addMilestone);
-  app.put('/api/metrics/:id/milestones/:milestoneId', validarToken, MetricsController.updateMilestone);
-  app.delete('/api/metrics/:id/milestones/:milestoneId', validarToken, MetricsController.deleteMilestone);
+  app.put('/api/metrics/:id', validateToken, (req, res) => {
+    // #swagger.tags = ['Metrics']
+    // #swagger.summary = 'Actualiza una métrica existente'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la métrica',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Datos a actualizar',
+         schema: {
+           currentProgress: 85,
+           notes: 'Completé 3 módulos esta semana'
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MetricsController.updateMetric(req, res);
+  });
 
-  // ========== GESTIÓN DE BLOQUEADORES ==========
-  app.post('/api/metrics/:id/blockers', validarToken, MetricsController.addBlocker);
-  app.put('/api/metrics/:id/blockers/:blockerId/resolve', validarToken, MetricsController.resolveBlocker);
-  app.delete('/api/metrics/:id/blockers/:blockerId', validarToken, MetricsController.deleteBlocker);
+  app.delete('/api/metrics/:id', validateToken, (req, res) => {
+    // #swagger.tags = ['Metrics']
+    // #swagger.summary = 'Elimina una métrica'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la métrica',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MetricsController.deleteMetric(req, res);
+  });
 
-  // ========== GESTIÓN DE LOGROS SEMANALES ==========
-  app.post('/api/metrics/:id/weekly-wins', validarToken, MetricsController.addWeeklyWin);
-  app.delete('/api/metrics/:id/weekly-wins/:winId', validarToken, MetricsController.deleteWeeklyWin);
+  app.get('/api/goals/:goalId/metrics', validateToken, (req, res) => {
+    // #swagger.tags = ['Metrics']
+    // #swagger.summary = 'Obtiene la métrica de una meta específica'
+    /* #swagger.parameters['goalId'] = {
+         in: 'path',
+         description: 'ID de la meta',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MetricsController.getMetricsByGoalId(req, res);
+  });
 
-  // ========== GESTIÓN DE HISTORIAL ==========
-  app.post('/api/metrics/:id/history', validarToken, MetricsController.addHistoryEntry);
+  app.get('/api/metrics/:id/dashboard', validateToken, (req, res) => {
+    // #swagger.tags = ['Metrics']
+    // #swagger.summary = 'Obtiene el dashboard motivacional de una métrica'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la métrica',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MetricsController.getMetricDashboard(req, res);
+  });
 
-  // ========== GESTIÓN DE ALERTAS ==========
-  app.get('/api/metrics/:id/alerts', validarToken, MetricsController.getUnacknowledgedAlerts);
-  app.put('/api/metrics/:id/alerts/:alertId/acknowledge', validarToken, MetricsController.acknowledgeAlert);
+  app.post('/api/metrics/:id/history', validateToken, (req, res) => {
+    // #swagger.tags = ['Metrics']
+    // #swagger.summary = 'Agrega una entrada al historial de la métrica'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la métrica',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Datos del historial',
+         required: true,
+         schema: {
+           progress: 65,
+           date: '2025-11-01T10:00:00.000Z'
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MetricsController.addHistoryEntry(req, res);
+  });
 };

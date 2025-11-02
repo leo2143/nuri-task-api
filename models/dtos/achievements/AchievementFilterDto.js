@@ -1,16 +1,16 @@
 /**
- * DTO for filtering achievement templates
+ * DTO para filtrar plantillas de logros
  * @class AchievementFilterDto
- * @description Defines the structure and validations for filtering global achievement templates
+ * @description Define la estructura y validaciones para filtrar plantillas de logros globales
  */
 export class AchievementFilterDto {
   /**
-   * @param {Object} filters - Filter parameters
-   * @param {string} [filters.type] - Filter by type (task/goal/metric/streak/comment)
-   * @param {boolean} [filters.isActive] - Filter by active status
-   * @param {string} [filters.search] - Search in title or description
-   * @param {string} [filters.sortBy] - Field to sort by (title, type, targetCount, createdAt)
-   * @param {string} [filters.sortOrder] - Sort order (asc/desc)
+   * @param {Object} filters - Parámetros de filtro
+   * @param {string} [filters.type] - Filtrar por tipo (task/goal/metric/streak/comment)
+   * @param {boolean} [filters.isActive] - Filtrar por estado activo
+   * @param {string} [filters.search] - Buscar en título o descripción
+   * @param {string} [filters.sortBy] - Campo por el cual ordenar (title, type, targetCount, createdAt)
+   * @param {string} [filters.sortOrder] - Orden de clasificación (asc/desc)
    */
   constructor(filters = {}) {
     this.type = filters.type;
@@ -21,13 +21,13 @@ export class AchievementFilterDto {
   }
 
   /**
-   * Validates that the filter data is correct
-   * @returns {Object} Object with isValid and errors
+   * Valida que los datos del filtro sean correctos
+   * @returns {Object} Objeto con isValid y errores
    */
   validate() {
     const errors = [];
 
-    // Validate type if exists
+    // Validar type si existe
     if (this.type) {
       const validTypes = ['task', 'goal', 'metric', 'streak', 'comment'];
       if (!validTypes.includes(this.type)) {
@@ -35,18 +35,18 @@ export class AchievementFilterDto {
       }
     }
 
-    // Validate isActive if exists
+    // Validar isActive si existe
     if (this.isActive !== undefined && typeof this.isActive !== 'boolean') {
       errors.push('isActive debe ser un valor booleano');
     }
 
-    // Validate sortBy
+    // Validar sortBy
     const validSortFields = ['title', 'type', 'targetCount', 'createdAt', 'updatedAt'];
     if (this.sortBy && !validSortFields.includes(this.sortBy)) {
       errors.push(`sortBy debe ser uno de: ${validSortFields.join(', ')}`);
     }
 
-    // Validate sortOrder
+    // Validar sortOrder
     const validSortOrders = ['asc', 'desc'];
     if (this.sortOrder && !validSortOrders.includes(this.sortOrder)) {
       errors.push(`sortOrder debe ser uno de: ${validSortOrders.join(', ')}`);
@@ -59,23 +59,23 @@ export class AchievementFilterDto {
   }
 
   /**
-   * Converts the DTO to a MongoDB query object
-   * @returns {Object} MongoDB query object
+   * Convierte el DTO a un objeto de consulta de MongoDB
+   * @returns {Object} Objeto de consulta de MongoDB
    */
   toMongoQuery() {
     const query = {};
 
-    // Filter by type
+    // Filtrar por tipo
     if (this.type) {
       query.type = this.type;
     }
 
-    // Filter by active status
+    // Filtrar por estado activo
     if (this.isActive !== undefined) {
       query.isActive = this.isActive;
     }
 
-    // Search in title or description
+    // Buscar en título o descripción
     if (this.search) {
       query.$or = [
         { title: { $regex: this.search, $options: 'i' } },
@@ -87,12 +87,11 @@ export class AchievementFilterDto {
   }
 
   /**
-   * Converts the DTO to a MongoDB sort object
-   * @returns {Object} MongoDB sort object
+   * Convierte el DTO a un objeto de ordenamiento de MongoDB
+   * @returns {Object} Objeto de ordenamiento de MongoDB
    */
   toMongoSort() {
     const sortOrder = this.sortOrder === 'asc' ? 1 : -1;
     return { [this.sortBy]: sortOrder };
   }
 }
-

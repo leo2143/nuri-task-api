@@ -15,8 +15,6 @@ export class GoalController {
    * @param {Object} req.query - Query parameters (status, priority, search, dueDateFrom, dueDateTo, sortBy, sortOrder)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   * @example
-   * GET /api/goals?status=active&priority=high&search=Node&sortBy=dueDate&sortOrder=asc
    */
   static async getAllGoals(req, res) {
     const userId = req.userId;
@@ -30,7 +28,7 @@ export class GoalController {
       sortOrder: req.query.sortOrder,
     };
     const result = await GoalService.getAllGoals(userId, filters);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
@@ -49,7 +47,7 @@ export class GoalController {
     const { id } = req.params;
     const userId = req.userId;
     const result = await GoalService.getGoalById(id, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
@@ -67,7 +65,7 @@ export class GoalController {
     const goalData = req.body;
     const userId = req.userId;
     const result = await GoalService.createGoal(goalData, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
@@ -88,7 +86,7 @@ export class GoalController {
     const updateData = req.body;
     const userId = req.userId;
     const result = await GoalService.updateGoal(id, updateData, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
@@ -107,7 +105,7 @@ export class GoalController {
     const { id } = req.params;
     const userId = req.userId;
     const result = await GoalService.deleteGoal(id, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
@@ -123,11 +121,13 @@ export class GoalController {
   static async getActiveGoals(req, res) {
     const userId = req.userId;
     const result = await GoalService.getGoalsByStatus('active', userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
    * Obtiene metas pausadas
+   *@route GET /goals/paused
+
    * @static
    * @async
    * @function getPausedGoals
@@ -139,7 +139,7 @@ export class GoalController {
   static async getPausedGoals(req, res) {
     const userId = req.userId;
     const result = await GoalService.getGoalsByStatus('paused', userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
@@ -155,7 +155,7 @@ export class GoalController {
   static async getCompletedGoals(req, res) {
     const userId = req.userId;
     const result = await GoalService.getGoalsByStatus('completed', userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
@@ -176,7 +176,7 @@ export class GoalController {
     const commentData = req.body;
     const userId = req.userId;
     const result = await GoalService.addComment(id, commentData, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
   /**
    * Obtiene metas por ID de la meta padre
@@ -194,6 +194,6 @@ export class GoalController {
     const { id } = req.params;
     const userId = req.userId;
     const result = await GoalService.getGoalsByParentGoalId(id, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 }

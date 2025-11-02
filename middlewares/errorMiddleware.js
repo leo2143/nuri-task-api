@@ -23,7 +23,7 @@ export const notFoundHandler = (req, res, next) => {
  */
 export const errorHandler = (err, req, res, next) => {
   console.error('Error:', err);
-  
+
   res.status(err.status || 500).json(new ErrorResponseModel('Error interno del servidor'));
 };
 
@@ -38,6 +38,7 @@ export const errorHandler = (err, req, res, next) => {
  * @description Middleware que responde a peticiones de health check en /health
  */
 export const healthCheck = (req, res, next) => {
-  if (req.path === '/health') return res.status(200).json(new SuccessResponseModel(null, 0, 'Servidor funcionando correctamente'));
+  if (req.path === '/health')
+    return res.status(200).json(new SuccessResponseModel(null, 0, 'Servidor funcionando correctamente'));
   next();
 };

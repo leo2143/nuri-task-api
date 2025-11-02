@@ -1,28 +1,16 @@
 import Metrics from '../models/metricsModel.js';
 import Goal from '../models/goalsModel.js';
-import {
-  NotFoundResponseModel,
-  ErrorResponseModel,
-  BadRequestResponseModel,
-} from '../models/responseModel.js';
+import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
-import {
-  CreateMetricDto,
-  UpdateMetricDto,
-  AddMilestoneDto,
-  AddBlockerDto,
-  AddWeeklyWinDto,
-  UpdateHistoryDto,
-  ResolveBlockerDto,
-  AcknowledgeAlertDto,
-} from '../models/dtos/metrics/index.js';
+import { CreateMetricDto, UpdateMetricDto } from '../models/dtos/metrics/index.js';
 import chalk from 'chalk';
 
 /**
- * Servicio para manejar la lógica de negocio de métricas
+ * Servicio para manejar la lógica de negocio de métricas (simplificado - enfoque motivacional)
  * @class MetricService
  * @description Cada meta tiene UNA métrica que se actualiza con el progreso
  * Las métricas se filtran por userId a través de la relación con Goal
+ * Enfoque motivacional: muestra avance y favorece constancia, sin evaluar rendimiento
  */
 export class MetricService {
   /**
@@ -91,18 +79,10 @@ export class MetricService {
    * @function createMetric
    * @param {Object} metricData - Datos de la métrica a crear
    * @param {string} metricData.GoalId - ID de la meta (requerido)
-   * @param {string} metricData.currentWeek - Semana actual (requerido)
    * @param {number} [metricData.currentProgress=0] - Progreso actual (0-100)
-   * @param {string} [metricData.currentNotes=''] - Notas actuales
+   * @param {string} [metricData.notes=''] - Notas opcionales
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con la métrica creada o error
-   * @example
-   * const metric = await MetricService.createMetric({
-   *   GoalId: '68d1e7f577ec3fe8073cef21',
-   *   currentWeek: 'Semana 1',
-   *   currentProgress: 15,
-   *   currentNotes: 'Buen inicio'
-   * }, userId);
    */
   static async createMetric(metricData, userId) {
     try {
@@ -150,9 +130,8 @@ export class MetricService {
    * @function updateMetric
    * @param {string} id - ID de la métrica
    * @param {Object} metricData - Datos a actualizar
-   * @param {string} [metricData.currentWeek] - Semana actual
    * @param {number} [metricData.currentProgress] - Progreso actual (0-100)
-   * @param {string} [metricData.currentNotes] - Notas actuales
+   * @param {string} [metricData.notes] - Notas opcionales
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica actualizada o error
    */
@@ -176,15 +155,11 @@ export class MetricService {
         return new NotFoundResponseModel('Métrica no encontrada');
       }
 
-      const { currentWeek } = metricData;
-
-      // Guardar el estado actual en el historial antes de actualizar
-      if (currentWeek && currentWeek !== metric.currentWeek) {
+      // Guardar el estado actual en el historial si hay progreso
+      if (metricData.currentProgress !== undefined && metric.currentProgress > 0) {
         metric.history.push({
-          week: metric.currentWeek,
           progress: metric.currentProgress,
-          notes: metric.currentNotes,
-          date: metric.lastUpdated,
+          date: new Date(),
         });
       }
 
@@ -266,355 +241,6 @@ export class MetricService {
     }
   }
 
-  // ========== GESTIÓN DE HITOS ==========
-
-  /**
-   * Agrega un hito a una métrica
-   * @static
-   * @async
-   * @function addMilestone
-   * @param {string} metricId - ID de la métrica
-   * @param {Object} milestoneData - Datos del hito
-   * @param {string} milestoneData.name - Nombre del hito (requerido)
-   * @param {number} [milestoneData.targetProgress] - Progreso objetivo (0-100)
-   * @param {string} [milestoneData.description] - Descripción del hito
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica actualizada o error
-   */
-  static async addMilestone(metricId, milestoneData, userId) {
-    try {
-      const milestoneDto = new AddMilestoneDto(milestoneData);
-      const validation = milestoneDto.validate();
-
-      if (!validation.isValid) {
-        return new BadRequestResponseModel(validation.errors.join(', '));
-      }
-
-      const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
-
-      if (!metric) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      // Verificar que la métrica pertenece a una meta del usuario
-      if (metric.GoalId.userId.toString() !== userId) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      // Agregar el hito
-      metric.milestones.push(milestoneDto.toPlainObject());
-      await metric.save();
-
-      const populatedMetric = await Metrics.findById(metric._id).populate('GoalId', 'title description status');
-
-      return new SuccessResponseModel(populatedMetric, 1, 'Hito agregado correctamente');
-    } catch (error) {
-      console.error(chalk.red('Error al agregar hito:', error));
-      return new ErrorResponseModel('Error al agregar hito');
-    }
-  }
-
-  /**
-   * Actualiza un hito específico de una métrica
-   * @static
-   * @async
-   * @function updateMilestone
-   * @param {string} metricId - ID de la métrica
-   * @param {string} milestoneId - ID del hito
-   * @param {Object} updateData - Datos a actualizar
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica actualizada o error
-   */
-  static async updateMilestone(metricId, milestoneId, updateData, userId) {
-    try {
-      const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
-
-      if (!metric) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      if (metric.GoalId.userId.toString() !== userId) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      const milestone = metric.milestones.id(milestoneId);
-      if (!milestone) {
-        return new NotFoundResponseModel('Hito no encontrado');
-      }
-
-      // Actualizar campos del hito
-      if (updateData.name !== undefined) milestone.name = updateData.name;
-      if (updateData.targetProgress !== undefined) milestone.targetProgress = updateData.targetProgress;
-      if (updateData.description !== undefined) milestone.description = updateData.description;
-      if (updateData.achieved !== undefined) {
-        milestone.achieved = updateData.achieved;
-        if (updateData.achieved) milestone.achievedDate = new Date();
-      }
-
-      await metric.save();
-
-      const populatedMetric = await Metrics.findById(metric._id).populate('GoalId', 'title description status');
-
-      return new SuccessResponseModel(populatedMetric, 1, 'Hito actualizado correctamente');
-    } catch (error) {
-      console.error(chalk.red('Error al actualizar hito:', error));
-      return new ErrorResponseModel('Error al actualizar hito');
-    }
-  }
-
-  /**
-   * Elimina un hito de una métrica
-   * @static
-   * @async
-   * @function deleteMilestone
-   * @param {string} metricId - ID de la métrica
-   * @param {string} milestoneId - ID del hito
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con confirmación o error
-   */
-  static async deleteMilestone(metricId, milestoneId, userId) {
-    try {
-      const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
-
-      if (!metric) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      if (metric.GoalId.userId.toString() !== userId) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      const milestone = metric.milestones.id(milestoneId);
-      if (!milestone) {
-        return new NotFoundResponseModel('Hito no encontrado');
-      }
-
-      milestone.deleteOne();
-      await metric.save();
-
-      return new SuccessResponseModel(null, 0, 'Hito eliminado correctamente');
-    } catch (error) {
-      console.error(chalk.red('Error al eliminar hito:', error));
-      return new ErrorResponseModel('Error al eliminar hito');
-    }
-  }
-
-  // ========== GESTIÓN DE BLOQUEADORES ==========
-
-  /**
-   * Agrega un bloqueador a una métrica
-   * @static
-   * @async
-   * @function addBlocker
-   * @param {string} metricId - ID de la métrica
-   * @param {Object} blockerData - Datos del bloqueador
-   * @param {string} blockerData.description - Descripción del bloqueador (requerido)
-   * @param {string} [blockerData.severity='medium'] - Severidad (low/medium/high/critical)
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica actualizada o error
-   */
-  static async addBlocker(metricId, blockerData, userId) {
-    try {
-      const blockerDto = new AddBlockerDto(blockerData);
-      const validation = blockerDto.validate();
-
-      if (!validation.isValid) {
-        return new BadRequestResponseModel(validation.errors.join(', '));
-      }
-
-      const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
-
-      if (!metric) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      if (metric.GoalId.userId.toString() !== userId) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      // Agregar el bloqueador
-      metric.blockers.push(blockerDto.toPlainObject());
-      await metric.save();
-
-      const populatedMetric = await Metrics.findById(metric._id).populate('GoalId', 'title description status');
-
-      return new SuccessResponseModel(populatedMetric, 1, 'Bloqueador agregado correctamente');
-    } catch (error) {
-      console.error(chalk.red('Error al agregar bloqueador:', error));
-      return new ErrorResponseModel('Error al agregar bloqueador');
-    }
-  }
-
-  /**
-   * Resuelve un bloqueador de una métrica
-   * @static
-   * @async
-   * @function resolveBlocker
-   * @param {string} metricId - ID de la métrica
-   * @param {string} blockerId - ID del bloqueador
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica actualizada o error
-   */
-  static async resolveBlocker(metricId, blockerId, userId) {
-    try {
-      const resolveDto = new ResolveBlockerDto({ blockerId, resolved: true });
-      const validation = resolveDto.validate();
-
-      if (!validation.isValid) {
-        return new BadRequestResponseModel(validation.errors.join(', '));
-      }
-
-      const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
-
-      if (!metric) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      if (metric.GoalId.userId.toString() !== userId) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      const blocker = metric.blockers.id(blockerId);
-      if (!blocker) {
-        return new NotFoundResponseModel('Bloqueador no encontrado');
-      }
-
-      blocker.resolved = true;
-      blocker.resolvedAt = new Date();
-
-      await metric.save();
-
-      const populatedMetric = await Metrics.findById(metric._id).populate('GoalId', 'title description status');
-
-      return new SuccessResponseModel(populatedMetric, 1, 'Bloqueador resuelto correctamente');
-    } catch (error) {
-      console.error(chalk.red('Error al resolver bloqueador:', error));
-      return new ErrorResponseModel('Error al resolver bloqueador');
-    }
-  }
-
-  /**
-   * Elimina un bloqueador de una métrica
-   * @static
-   * @async
-   * @function deleteBlocker
-   * @param {string} metricId - ID de la métrica
-   * @param {string} blockerId - ID del bloqueador
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con confirmación o error
-   */
-  static async deleteBlocker(metricId, blockerId, userId) {
-    try {
-      const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
-
-      if (!metric) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      if (metric.GoalId.userId.toString() !== userId) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      const blocker = metric.blockers.id(blockerId);
-      if (!blocker) {
-        return new NotFoundResponseModel('Bloqueador no encontrado');
-      }
-
-      blocker.deleteOne();
-      await metric.save();
-
-      return new SuccessResponseModel(null, 0, 'Bloqueador eliminado correctamente');
-    } catch (error) {
-      console.error(chalk.red('Error al eliminar bloqueador:', error));
-      return new ErrorResponseModel('Error al eliminar bloqueador');
-    }
-  }
-
-  // ========== GESTIÓN DE LOGROS SEMANALES ==========
-
-  /**
-   * Agrega un logro semanal a una métrica
-   * @static
-   * @async
-   * @function addWeeklyWin
-   * @param {string} metricId - ID de la métrica
-   * @param {Object} winData - Datos del logro
-   * @param {string} winData.description - Descripción del logro (requerido)
-   * @param {string} winData.week - Semana del logro (requerido)
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica actualizada o error
-   */
-  static async addWeeklyWin(metricId, winData, userId) {
-    try {
-      const winDto = new AddWeeklyWinDto(winData);
-      const validation = winDto.validate();
-
-      if (!validation.isValid) {
-        return new BadRequestResponseModel(validation.errors.join(', '));
-      }
-
-      const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
-
-      if (!metric) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      if (metric.GoalId.userId.toString() !== userId) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      // Agregar el logro semanal
-      metric.weeklyWins.push(winDto.toPlainObject());
-      await metric.save();
-
-      const populatedMetric = await Metrics.findById(metric._id).populate('GoalId', 'title description status');
-
-      return new SuccessResponseModel(populatedMetric, 1, 'Logro semanal agregado correctamente');
-    } catch (error) {
-      console.error(chalk.red('Error al agregar logro semanal:', error));
-      return new ErrorResponseModel('Error al agregar logro semanal');
-    }
-  }
-
-  /**
-   * Elimina un logro semanal de una métrica
-   * @static
-   * @async
-   * @function deleteWeeklyWin
-   * @param {string} metricId - ID de la métrica
-   * @param {string} winId - ID del logro semanal
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con confirmación o error
-   */
-  static async deleteWeeklyWin(metricId, winId, userId) {
-    try {
-      const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
-
-      if (!metric) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      if (metric.GoalId.userId.toString() !== userId) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      const win = metric.weeklyWins.id(winId);
-      if (!win) {
-        return new NotFoundResponseModel('Logro semanal no encontrado');
-      }
-
-      win.deleteOne();
-      await metric.save();
-
-      return new SuccessResponseModel(null, 0, 'Logro semanal eliminado correctamente');
-    } catch (error) {
-      console.error(chalk.red('Error al eliminar logro semanal:', error));
-      return new ErrorResponseModel('Error al eliminar logro semanal');
-    }
-  }
-
-  // ========== GESTIÓN DE HISTORIAL ==========
-
   /**
    * Agrega una entrada al historial de la métrica
    * @static
@@ -622,18 +248,13 @@ export class MetricService {
    * @function addHistoryEntry
    * @param {string} metricId - ID de la métrica
    * @param {Object} historyData - Datos de la entrada del historial
+   * @param {number} historyData.progress - Progreso a registrar (0-100)
+   * @param {Date} [historyData.date] - Fecha de la entrada (por defecto: ahora)
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica actualizada o error
    */
   static async addHistoryEntry(metricId, historyData, userId) {
     try {
-      const historyDto = new UpdateHistoryDto(historyData);
-      const validation = historyDto.validate();
-
-      if (!validation.isValid) {
-        return new BadRequestResponseModel(validation.errors.join(', '));
-      }
-
       const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
 
       if (!metric) {
@@ -644,8 +265,21 @@ export class MetricService {
         return new NotFoundResponseModel('Métrica no encontrada');
       }
 
+      // Validar datos del historial
+      if (historyData.progress === undefined || typeof historyData.progress !== 'number') {
+        return new BadRequestResponseModel('El progreso es requerido y debe ser un número');
+      }
+
+      if (historyData.progress < 0 || historyData.progress > 100) {
+        return new BadRequestResponseModel('El progreso debe estar entre 0 y 100');
+      }
+
       // Agregar entrada al historial
-      metric.history.push(historyDto.toPlainObject());
+      metric.history.push({
+        progress: historyData.progress,
+        date: historyData.date || new Date(),
+      });
+
       await metric.save();
 
       const populatedMetric = await Metrics.findById(metric._id).populate('GoalId', 'title description status');
@@ -657,137 +291,8 @@ export class MetricService {
     }
   }
 
-  // ========== GESTIÓN DE ALERTAS ==========
-
   /**
-   * Confirma/marca como leída una alerta
-   * @static
-   * @async
-   * @function acknowledgeAlert
-   * @param {string} metricId - ID de la métrica
-   * @param {string} alertId - ID de la alerta
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica actualizada o error
-   */
-  static async acknowledgeAlert(metricId, alertId, userId) {
-    try {
-      const acknowledgeDto = new AcknowledgeAlertDto({ alertId, acknowledged: true });
-      const validation = acknowledgeDto.validate();
-
-      if (!validation.isValid) {
-        return new BadRequestResponseModel(validation.errors.join(', '));
-      }
-
-      const metric = await Metrics.findById(metricId).populate('GoalId', 'userId');
-
-      if (!metric) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      if (metric.GoalId.userId.toString() !== userId) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      const alert = metric.alerts.id(alertId);
-      if (!alert) {
-        return new NotFoundResponseModel('Alerta no encontrada');
-      }
-
-      alert.acknowledged = true;
-      await metric.save();
-
-      const populatedMetric = await Metrics.findById(metric._id).populate('GoalId', 'title description status');
-
-      return new SuccessResponseModel(populatedMetric, 1, 'Alerta confirmada correctamente');
-    } catch (error) {
-      console.error(chalk.red('Error al confirmar alerta:', error));
-      return new ErrorResponseModel('Error al confirmar alerta');
-    }
-  }
-
-  /**
-   * Obtiene las alertas no confirmadas de una métrica
-   * @static
-   * @async
-   * @function getUnacknowledgedAlerts
-   * @param {string} metricId - ID de la métrica
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las alertas o error
-   */
-  static async getUnacknowledgedAlerts(metricId, userId) {
-    try {
-      const metric = await Metrics.findById(metricId).populate('GoalId', 'userId title');
-
-      if (!metric) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      if (metric.GoalId.userId.toString() !== userId) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      const unacknowledgedAlerts = metric.alerts.filter(alert => !alert.acknowledged);
-
-      return new SuccessResponseModel(
-        unacknowledgedAlerts,
-        unacknowledgedAlerts.length,
-        'Alertas no confirmadas obtenidas correctamente'
-      );
-    } catch (error) {
-      console.error(chalk.red('Error al obtener alertas no confirmadas:', error));
-      return new ErrorResponseModel('Error al obtener alertas no confirmadas');
-    }
-  }
-
-  // ========== CÁLCULOS Y PREDICCIONES ==========
-
-  /**
-   * Actualiza las predicciones y métricas calculadas de una métrica
-   * @static
-   * @async
-   * @function updatePredictions
-   * @param {string} metricId - ID de la métrica
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica actualizada o error
-   */
-  static async updatePredictions(metricId, userId) {
-    try {
-      const metric = await Metrics.findById(metricId).populate('GoalId', 'userId createdAt dueDate');
-
-      if (!metric) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      if (metric.GoalId.userId.toString() !== userId) {
-        return new NotFoundResponseModel('Métrica no encontrada');
-      }
-
-      // Calcular progreso esperado
-      if (metric.GoalId.createdAt && metric.GoalId.dueDate) {
-        metric.expectedProgress = metric.calculateExpectedProgress(metric.GoalId.createdAt, metric.GoalId.dueDate);
-      }
-
-      // Calcular desviación
-      metric.progressDeviation = metric.calculateProgressDeviation();
-
-      // Calcular fecha proyectada de completado
-      if (metric.GoalId.dueDate) {
-        metric.projectedCompletionDate = metric.calculateProjectedCompletion(metric.GoalId.dueDate);
-      }
-
-      await metric.save();
-
-      const populatedMetric = await Metrics.findById(metric._id).populate('GoalId', 'title description status dueDate');
-
-      return new SuccessResponseModel(populatedMetric, 1, 'Predicciones actualizadas correctamente');
-    } catch (error) {
-      console.error(chalk.red('Error al actualizar predicciones:', error));
-      return new ErrorResponseModel('Error al actualizar predicciones');
-    }
-  }
-
-  /**
-   * Obtiene el dashboard completo de métricas para una meta
+   * Obtiene el dashboard simplificado de métricas para una meta
    * @static
    * @async
    * @function getMetricDashboard
@@ -807,56 +312,21 @@ export class MetricService {
         return new NotFoundResponseModel('Métrica no encontrada');
       }
 
-      // Construir dashboard completo
+      // Construir dashboard simplificado (motivacional)
       const dashboard = {
         goalInfo: {
           id: metric.GoalId._id,
           title: metric.GoalId.title,
           description: metric.GoalId.description,
           status: metric.GoalId.status,
-          dueDate: metric.GoalId.dueDate,
         },
-        currentStatus: {
-          week: metric.currentWeek,
-          progress: metric.currentProgress,
-          completedTasks: metric.totalCompletedTasks,
-          totalTasks: metric.totalTasks,
-          missingTasks: metric.missingTasks,
-          notes: metric.currentNotes,
-        },
-        performance: {
-          averageWeeklyProgress: metric.averageWeeklyProgress,
-          progressTrend: metric.progressTrend,
-          taskCompletionRate: metric.taskCompletionRate,
-          efficiency: metric.efficiency,
-          qualityScore: metric.qualityScore,
-        },
-        predictions: {
-          expectedProgress: metric.expectedProgress,
-          progressDeviation: metric.progressDeviation,
-          projectedCompletionDate: metric.projectedCompletionDate,
-        },
+        currentProgress: metric.currentProgress,
+        notes: metric.notes,
         streaks: {
           current: metric.currentStreak,
           best: metric.bestStreak,
         },
-        health: {
-          status: metric.healthStatus,
-          isAtRisk: metric.isAtRisk,
-          activeBlockers: metric.activeBlockersCount,
-          unacknowledgedAlerts: metric.unacknowledgedAlertsCount,
-        },
-        tasks: {
-          breakdown: metric.taskBreakdown,
-          overdue: metric.overdueTasks,
-          onTimeCompletionRate: metric.onTimeCompletionRate,
-          completionPercentage: metric.currentCompletionPercentage,
-        },
-        milestones: metric.milestones,
-        blockers: metric.blockers.filter(b => !b.resolved),
-        recentWins: metric.weeklyWins.slice(-5), // Últimos 5 logros
-        recentHistory: metric.history.slice(-4), // Últimas 4 semanas
-        alerts: metric.alerts.filter(a => !a.acknowledged),
+        history: metric.history,
       };
 
       return new SuccessResponseModel(dashboard, 1, 'Dashboard obtenido correctamente');

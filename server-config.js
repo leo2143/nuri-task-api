@@ -49,17 +49,12 @@ export const createServer = () => {
         'http://127.0.0.1:5173',
         'http://127.0.0.1:5174',
         'https://nuri-task-app.vercel.app',
-        
-        // Agrega aquí tu dominio de producción cuando lo tengas
-        // 'https://tu-dominio.com',
       ];
 
-      // Permitir requests sin origin (como apps móviles o Postman)
       if (!origin) {
         return callback(null, true);
       }
 
-      // Permitir orígenes de desarrollo que empiecen con localhost o 127.0.0.1
       if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
         return callback(null, true);
       }
@@ -70,17 +65,16 @@ export const createServer = () => {
         callback(new Error('No permitido por CORS'));
       }
     },
-    credentials: true, // Permite enviar cookies
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Content-Length', 'X-Requested-With'],
     preflightContinue: false,
-    optionsSuccessStatus: 204
+    optionsSuccessStatus: 204,
   };
 
   app.use(cors(corsOptions));
 
-  // Servir archivos estáticos desde la carpeta public (usando ruta absolutas)
   const publicPath = join(__dirname, 'public');
   app.use(express.static(publicPath));
 

@@ -40,7 +40,7 @@ export class TodoController {
     const id = req.params.id;
     const userId = req.userId;
     const result = await TodoService.getTodoById(id, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
@@ -62,7 +62,7 @@ export class TodoController {
     const todoData = req.body;
     const userId = req.userId;
     const result = await TodoService.createTodo(todoData, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   static async updateTodo(req, res) {
@@ -70,21 +70,21 @@ export class TodoController {
     const todoData = req.body;
     const userId = req.userId;
     const result = await TodoService.updateTodo(id, todoData, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   static async getByTitle(req, res) {
     const title = req.params.title;
     const userId = req.userId;
     const result = await TodoService.getTodoByTitle(title, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   static async deleteTodo(req, res) {
     const id = req.params.id;
     const userId = req.userId;
     const result = await TodoService.deleteTodo(id, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
@@ -100,7 +100,7 @@ export class TodoController {
   static async getCompletedTodos(req, res) {
     const userId = req.userId;
     const result = await TodoService.getTodosByStatus(true, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
@@ -116,7 +116,7 @@ export class TodoController {
   static async getPendingTodos(req, res) {
     const userId = req.userId;
     const result = await TodoService.getTodosByStatus(false, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
@@ -133,7 +133,7 @@ export class TodoController {
     const goalId = req.params.goalId;
     const userId = req.userId;
     const result = await TodoService.getTodosByGoalId(goalId, userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
@@ -149,9 +149,6 @@ export class TodoController {
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   * @example
-   * // POST /api/todos/:id/comments
-   * // Body: { "text": "¡Excelente progreso!", "author": "Juan" }
    */
   static async addCommentToTodo(req, res) {
     try {

@@ -1,42 +1,38 @@
 import UserAchievement from '../models/userAchievementModel.js';
 import Achievement from '../models/achievementModel.js';
-import {
-  NotFoundResponseModel,
-  ErrorResponseModel,
-  BadRequestResponseModel,
-} from '../models/responseModel.js';
+import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import { IncrementProgressDto } from '../models/dtos/achievements/index.js';
 import chalk from 'chalk';
 
 /**
- * Service to handle user progress on achievements
+ * Servicio para gestionar el progreso del usuario en logros
  * @class UserAchievementService
  */
 export class UserAchievementService {
   /**
-   * Gets all achievements with user progress
+   * Obtiene todos los logros con el progreso del usuario
    * @static
    * @async
    * @function getAllAchievementsWithProgress
-   * @param {string} userId - User ID
-   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Response with achievements and user progress
+   * @param {string} userId - ID del usuario
+   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Respuesta con los logros y el progreso del usuario
    */
   static async getAllAchievementsWithProgress(userId) {
     try {
-      // Get all active achievements
+      // Obtener todos los logros activos
       const achievements = await Achievement.find({ isActive: true }).lean();
-      
-      // Get user progress for all achievements
+
+      // Obtener el progreso del usuario para todos los logros
       const userProgress = await UserAchievement.find({ userId }).lean();
-      
-      // Create a map for quick lookup
+
+      // Crear un mapa para búsquedas rápidas
       const progressMap = userProgress.reduce((acc, progress) => {
         acc[progress.achievementId.toString()] = progress;
         return acc;
       }, {});
-      
-      // Merge achievements with user progress
+
+      // Combinar logros con el progreso del usuario
       const result = achievements.map(achievement => ({
         ...achievement,
         userProgress: progressMap[achievement._id.toString()] || {
@@ -55,13 +51,13 @@ export class UserAchievementService {
   }
 
   /**
-   * Gets user progress on all achievements
+   * Obtiene el progreso del usuario en todos los logros
    * @static
    * @async
    * @function getUserProgress
-   * @param {string} userId - User ID
-   * @param {string} [status] - Filter by status (locked/unlocked/completed)
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Response with user progress
+   * @param {string} userId - ID del usuario
+   * @param {string} [status] - Filtrar por estado (locked/unlocked/completed)
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el progreso del usuario
    */
   static async getUserProgress(userId, status = null) {
     try {
@@ -74,15 +70,17 @@ export class UserAchievementService {
         query.status = status;
       }
 
-      const userAchievements = await UserAchievement.find(query)
-        .populate('achievementId')
-        .sort({ updatedAt: -1 });
+      const userAchievements = await UserAchievement.find(query).populate('achievementId').sort({ updatedAt: -1 });
 
       if (userAchievements.length === 0) {
         return new NotFoundResponseModel('No se encontró progreso de logros');
       }
 
-      return new SuccessResponseModel(userAchievements, userAchievements.length, 'Progreso de logros obtenido correctamente');
+      return new SuccessResponseModel(
+        userAchievements,
+        userAchievements.length,
+        'Progreso de logros obtenido correctamente'
+      );
     } catch (error) {
       console.error(chalk.red('Error al obtener progreso de logros:', error));
       return new ErrorResponseModel('Error al obtener progreso de logros');
@@ -90,33 +88,36 @@ export class UserAchievementService {
   }
 
   /**
-   * Gets user progress on a specific achievement
+   * Obtiene el progreso del usuario en un logro específico
    * @static
    * @async
    * @function getUserAchievementProgress
-   * @param {string} userId - User ID
-   * @param {string} achievementId - Achievement ID
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Response with user progress
+   * @param {string} userId - ID del usuario
+   * @param {string} achievementId - ID del logro
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el progreso del usuario
    */
   static async getUserAchievementProgress(userId, achievementId) {
     try {
-      const userAchievement = await UserAchievement.findOne({ userId, achievementId })
-        .populate('achievementId');
+      const userAchievement = await UserAchievement.findOne({ userId, achievementId }).populate('achievementId');
 
       if (!userAchievement) {
-        // If no progress exists, return default values
+        // Si no existe progreso, devolver valores por defecto
         const achievement = await Achievement.findById(achievementId);
         if (!achievement) {
           return new NotFoundResponseModel('Logro no encontrado');
         }
 
-        return new SuccessResponseModel({
-          achievement,
-          currentCount: 0,
-          status: 'locked',
-          unlockedAt: null,
-          completedAt: null,
-        }, 1, 'Progreso de logro obtenido correctamente');
+        return new SuccessResponseModel(
+          {
+            achievement,
+            currentCount: 0,
+            status: 'locked',
+            unlockedAt: null,
+            completedAt: null,
+          },
+          1,
+          'Progreso de logro obtenido correctamente'
+        );
       }
 
       return new SuccessResponseModel(userAchievement, 1, 'Progreso de logro obtenido correctamente');
@@ -127,14 +128,14 @@ export class UserAchievementService {
   }
 
   /**
-   * Increments progress on an achievement
+   * Incrementa el progreso en un logro
    * @static
    * @async
    * @function incrementProgress
-   * @param {string} userId - User ID
-   * @param {string} achievementId - Achievement ID
-   * @param {number} [amount=1] - Amount to increment
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Response with updated progress
+   * @param {string} userId - ID del usuario
+   * @param {string} achievementId - ID del logro
+   * @param {number} [amount=1] - Cantidad a incrementar
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el progreso actualizado
    */
   static async incrementProgress(userId, achievementId, amount = 1) {
     try {
@@ -145,13 +146,13 @@ export class UserAchievementService {
         return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
-      // Verify achievement exists
+      // Verificar que el logro exista
       const achievement = await Achievement.findById(achievementId);
       if (!achievement) {
         return new NotFoundResponseModel('Logro no encontrado');
       }
 
-      // Find or create user achievement
+      // Buscar o crear el logro del usuario
       let userAchievement = await UserAchievement.findOne({ userId, achievementId });
 
       if (!userAchievement) {
@@ -163,24 +164,20 @@ export class UserAchievementService {
         });
       }
 
-      // Increment progress
       userAchievement.currentCount += amount;
 
-      // Check if should unlock or complete
       if (userAchievement.currentCount >= achievement.targetCount) {
         if (userAchievement.status === 'locked') {
           userAchievement.status = 'unlocked';
           userAchievement.unlockedAt = new Date();
         }
-        
-        // If exactly at target or over, mark as completed
+
         userAchievement.status = 'completed';
         userAchievement.completedAt = new Date();
       }
 
       await userAchievement.save();
 
-      // Populate achievement data
       await userAchievement.populate('achievementId');
 
       return new SuccessResponseModel(userAchievement, 1, 'Progreso actualizado correctamente');
@@ -191,12 +188,12 @@ export class UserAchievementService {
   }
 
   /**
-   * Gets user achievement statistics
+   * Obtiene estadísticas de logros del usuario
    * @static
    * @async
    * @function getUserStats
-   * @param {string} userId - User ID
-   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Response with statistics
+   * @param {string} userId - ID del usuario
+   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Respuesta con las estadísticas
    */
   static async getUserStats(userId) {
     try {
@@ -225,13 +222,13 @@ export class UserAchievementService {
   }
 
   /**
-   * Resets user progress on an achievement (Admin only)
+   * Resetea el progreso del usuario en un logro (solo administradores)
    * @static
    * @async
    * @function resetProgress
-   * @param {string} userId - User ID
-   * @param {string} achievementId - Achievement ID
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Response with deletion confirmation
+   * @param {string} userId - ID del usuario
+   * @param {string} achievementId - ID del logro
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la confirmación de eliminación
    */
   static async resetProgress(userId, achievementId) {
     try {
@@ -248,4 +245,3 @@ export class UserAchievementService {
     }
   }
 }
-

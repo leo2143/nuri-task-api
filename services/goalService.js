@@ -1,11 +1,7 @@
 import Goal from '../models/goalsModel.js';
-import {
-  NotFoundResponseModel,
-  ErrorResponseModel,
-  BadRequestResponseModel,
-} from '../models/responseModel.js';
+import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
-import { CreateGoalDto, UpdateGoalDto, AddCommentDto, GoalFilterDto } from '../models/dtos/goals/index.js';
+import { CreateGoalDto, UpdateGoalDto, AddCommentDto, GoalFilterDto, MinGoalDto } from '../models/dtos/goals/index.js';
 import chalk from 'chalk';
 
 /**
@@ -20,7 +16,9 @@ export class GoalService {
    * @function getAllGoals
    * @param {string} userId - ID del usuario autenticado
    * @param {Object} [filters={}] - Filtros de búsqueda (status, priority, search, dueDateFrom, dueDateTo, sortBy, sortOrder)
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de metas o error
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista resumida de metas o error
+   * @description Devuelve solo información mínima (id, title, status, priority, dueDate, dates)
+   * Para información completa incluyendo SMART, comentarios y métricas, usar getGoalById
    */
   static async getAllGoals(userId, filters = {}) {
     try {
@@ -38,7 +36,11 @@ export class GoalService {
       if (goals.length === 0) {
         return new NotFoundResponseModel('No se encontraron metas para este usuario');
       }
-      return new SuccessResponseModel(goals, goals.length, 'Metas obtenidas correctamente');
+
+      // Convertir a DTO mínimo para listados
+      const minGoals = MinGoalDto.fromArray(goals);
+
+      return new SuccessResponseModel(minGoals, minGoals.length, 'Metas obtenidas correctamente');
     } catch (error) {
       console.error(chalk.red('Error al obtener metas:', error));
       return new ErrorResponseModel('Error al obtener metas');

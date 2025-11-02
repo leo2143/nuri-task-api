@@ -1,20 +1,27 @@
+import { CreateAchievementDto } from './CreateAchievementDto.js';
+
 /**
- * DTO for updating an existing achievement template (Admin only)
+ * DTO para actualizar una plantilla de logro existente (Solo administradores)
  * @class UpdateAchievementDto
- * @description Defines the structure and validations for updating a global achievement template
+ * @extends CreateAchievementDto
+ * @description Define la estructura y validaciones para actualizar una plantilla de logro global
+ * Hereda las validaciones de CreateAchievementDto pero todos los campos son opcionales
  */
-export class UpdateAchievementDto {
+export class UpdateAchievementDto extends CreateAchievementDto {
   /**
-   * @param {Object} data - Data to update
-   * @param {string} [data.title] - Achievement title
-   * @param {string} [data.description] - Achievement description
-   * @param {number} [data.targetCount] - Target count to complete
-   * @param {string} [data.type] - Achievement type: task/goal/metric/streak/comment
-   * @param {string} [data.reward] - Achievement reward
-   * @param {boolean} [data.isActive] - Whether achievement is active
+   * @param {Object} data - Datos a actualizar
+   * @param {string} [data.title] - Título del logro
+   * @param {string} [data.description] - Descripción del logro
+   * @param {number} [data.targetCount] - Cantidad objetivo para completar
+   * @param {string} [data.type] - Tipo de logro: task/goal/metric/streak/comment
+   * @param {string} [data.reward] - Recompensa del logro
+   * @param {boolean} [data.isActive] - Si el logro está activo
    */
   constructor(data) {
-    // Only include fields that are present in data
+    // Llamamos super con objeto vacío para inicializar la clase padre
+    super({});
+    
+    // Solo incluir campos que estén presentes en data
     if (data.title !== undefined) this.title = data.title;
     if (data.description !== undefined) this.description = data.description;
     if (data.targetCount !== undefined) this.targetCount = data.targetCount;
@@ -24,47 +31,28 @@ export class UpdateAchievementDto {
   }
 
   /**
-   * Validates that the DTO data is correct
-   * @returns {Object} Object with isValid and errors
+   * Valida que los datos del DTO sean correctos
+   * Reutiliza los métodos de validación del padre
+   * @returns {Object} Objeto con isValid y errores
    */
   validate() {
     const errors = [];
 
-    // Validate title if exists
-    if (this.title !== undefined) {
-      if (typeof this.title !== 'string' || this.title.trim() === '') {
-        errors.push('El título debe ser un string válido');
-      }
-    }
+    // Reutilizar métodos de validación del padre (sin requerir campos)
+    const titleError = this._validateTitle(false);
+    if (titleError) errors.push(titleError);
 
-    // Validate description if exists
-    if (this.description !== undefined) {
-      if (typeof this.description !== 'string' || this.description.trim() === '') {
-        errors.push('La descripción debe ser un string válido');
-      }
-    }
+    const descriptionError = this._validateDescription(false);
+    if (descriptionError) errors.push(descriptionError);
 
-    // Validate targetCount if exists
-    if (this.targetCount !== undefined) {
-      if (typeof this.targetCount !== 'number' || this.targetCount < 1) {
-        errors.push('El targetCount debe ser un número mayor a 0');
-      }
-    }
+    const targetCountError = this._validateTargetCount(false);
+    if (targetCountError) errors.push(targetCountError);
 
-    // Validate type if exists
-    if (this.type !== undefined) {
-      const validTypes = ['task', 'goal', 'metric', 'streak', 'comment'];
-      if (!validTypes.includes(this.type)) {
-        errors.push(`El tipo debe ser uno de: ${validTypes.join(', ')}`);
-      }
-    }
+    const typeError = this._validateType(false);
+    if (typeError) errors.push(typeError);
 
-    // Validate isActive if exists
-    if (this.isActive !== undefined) {
-      if (typeof this.isActive !== 'boolean') {
-        errors.push('isActive debe ser un valor booleano');
-      }
-    }
+    const isActiveError = this._validateIsActive();
+    if (isActiveError) errors.push(isActiveError);
 
     return {
       isValid: errors.length === 0,
@@ -73,8 +61,8 @@ export class UpdateAchievementDto {
   }
 
   /**
-   * Converts the DTO to a plain object
-   * @returns {Object} Plain object with the data to update
+   * Convierte el DTO a un objeto plano
+   * @returns {Object} Objeto plano con los datos a actualizar
    */
   toPlainObject() {
     const result = {};
@@ -89,4 +77,3 @@ export class UpdateAchievementDto {
     return result;
   }
 }
-

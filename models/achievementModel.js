@@ -64,14 +64,6 @@ const achievementSchema = new mongoose.Schema(
  * @extends mongoose.Model
  * @description Model representing a global achievement template in the database
  * These are managed by admins and serve as templates for all users
- * @example
- * const newAchievement = new Achievement({
- *   title: 'Primeros Pasos',
- *   description: 'Crea tu primera tarea',
- *   targetCount: 1,
- *   type: 'task',
- *   reward: 'Estrella de Bronce'
- * });
  */
 const Achievement = mongoose.model('Achievement', achievementSchema);
 export default Achievement;

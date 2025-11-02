@@ -19,18 +19,17 @@ export class EmailService {
     // Configuración para diferentes proveedores de email
     // Puedes usar Gmail, Outlook, o cualquier SMTP
 
-    // Opción 1: Gmail (requiere contraseña de aplicación)
     if (process.env.EMAIL_SERVICE === 'gmail') {
       return nodemailer.createTransport({
         service: 'gmail',
         auth: {
           user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASSWORD, // Usar contraseña de aplicación de Gmail
+          pass: process.env.EMAIL_PASSWORD,
         },
       });
     }
 
-    // Opción 2: SMTP genérico
+    // SMTP genérico
     return nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.gmail.com',
       port: process.env.EMAIL_PORT || 587,
@@ -58,10 +57,8 @@ export class EmailService {
       const transporter = this.createTransport();
 
       // URL del frontend donde el usuario ingresará la nueva contraseña
-      // Esto debería apuntar a tu aplicación frontend
       const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
 
-      // Opciones del correo
       const mailOptions = {
         from: `"${process.env.EMAIL_FROM_NAME || 'Nuri Task API'}" <${process.env.EMAIL_USER}>`,
         to: email,
@@ -175,24 +172,6 @@ export class EmailService {
             </div>
           </body>
           </html>
-        `,
-        // Versión texto plano como respaldo
-        text: `
-          Hola ${userName},
-          
-          Hemos recibido una solicitud para restablecer tu contraseña en Nuri Task.
-          
-          Para restablecer tu contraseña, visita el siguiente enlace:
-          ${resetUrl}
-          
-          Tu token de recuperación es: ${resetToken}
-          
-          Este enlace expirará en 1 hora.
-          
-          Si no solicitaste este cambio, ignora este correo y tu contraseña permanecerá sin cambios.
-          
-          Saludos,
-          Equipo de Nuri Task
         `,
       };
 
@@ -313,21 +292,7 @@ export class EmailService {
           </body>
           </html>
         `,
-        text: `
-          Hola ${userName},
-          
-          Tu contraseña ha sido cambiada exitosamente.
-          
-          Si realizaste este cambio, puedes ignorar este correo.
-          
-          Si NO realizaste este cambio, tu cuenta puede estar comprometida. 
-          Por favor, contáctanos inmediatamente.
-          
-          Fecha y hora del cambio: ${new Date().toLocaleString('es-ES')}
-          
-          Saludos,
-          Equipo de Nuri Task
-        `,
+       
       };
 
       const info = await transporter.sendMail(mailOptions);
@@ -348,4 +313,3 @@ export class EmailService {
     }
   }
 }
-

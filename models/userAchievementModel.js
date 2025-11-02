@@ -55,10 +55,8 @@ const userAchievementSchema = new mongoose.Schema(
   }
 );
 
-// Índice único para evitar duplicados de logro por usuario
 userAchievementSchema.index({ userId: 1, achievementId: 1 }, { unique: true });
 
-// Índice para consultas por usuario
 userAchievementSchema.index({ userId: 1, status: 1 });
 
 /**
@@ -66,14 +64,6 @@ userAchievementSchema.index({ userId: 1, status: 1 });
  * @class UserAchievement
  * @extends mongoose.Model
  * @description Model representing a user's progress on an achievement
- * @example
- * const userProgress = new UserAchievement({
- *   userId: '507f1f77bcf86cd799439011',
- *   achievementId: '507f1f77bcf86cd799439012',
- *   currentCount: 3,
- *   status: 'locked'
- * });
  */
 const UserAchievement = mongoose.model('UserAchievement', userAchievementSchema);
 export default UserAchievement;
-
