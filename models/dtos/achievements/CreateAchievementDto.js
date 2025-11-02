@@ -41,7 +41,7 @@ export class CreateAchievementDto {
     }
 
     return null;
-  }
+    }
 
   /**
    * Valida la descripción
@@ -62,7 +62,7 @@ export class CreateAchievementDto {
     }
 
     return null;
-  }
+    }
 
   /**
    * Valida el targetCount
@@ -83,7 +83,7 @@ export class CreateAchievementDto {
     }
 
     return null;
-  }
+    }
 
   /**
    * Valida el tipo
@@ -106,7 +106,7 @@ export class CreateAchievementDto {
     }
 
     return null;
-  }
+    }
 
   /**
    * Valida isActive

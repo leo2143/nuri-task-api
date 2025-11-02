@@ -214,11 +214,12 @@ http://localhost:3000/api-docs
 
 Durante el despliegue en Vercel, `swagger-ui-express` presentaba problemas en entornos serverless (error: `SwaggerUIBundle is not defined`). La solución implementada fue servir Swagger UI como archivos estáticos locales en lugar de depender del paquete:
 
-1. **Archivos descargados**: CSS, JS y assets de Swagger UI se descargan durante el build (`npm run prebuild`)
-2. **Servidos estáticamente**: Los archivos se sirven desde `public/swagger-ui/`
+1. **Archivos estáticos versionados**: CSS, JS y assets de Swagger UI se obtuvieron del paquete oficial [swagger-ui-dist](https://www.npmjs.com/package/swagger-ui-dist) y se versionan en Git
+2. **Servidos desde `public/`**: Los archivos se sirven estáticamente desde `public/swagger-ui/`
 3. **JSON dinámico**: El `swagger.json` se genera y sirve dinámicamente desde Express
+4. **Template personalizado**: Se utiliza el `index.html` oficial de [swagger-ui-dist](https://github.com/swagger-api/swagger-ui/blob/master/dist/index.html) adaptado para apuntar a nuestro endpoint `/api-docs/swagger.json`
 
-Esta solución está basada en el enfoque documentado por [Vishal Kumar Singh](https://www.linkedin.com/pulse/solving-swaggeruibundle-defined-error-express-swagger-kumar-singh-p71xc/) y garantiza compatibilidad con funciones Lambda de Vercel.
+Esta solución está basada en el enfoque documentado (https://www.linkedin.com/pulse/solving-swaggeruibundle-defined-error-express-swagger-kumar-singh-p71xc/) y garantiza compatibilidad con Vercel.
 
 ### Endpoints Principales
 
