@@ -99,7 +99,8 @@ export class EmailService {
                   border-radius: 10px;
                   padding: 30px;
                   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-                }
+                  color: #3A251D;
+                  }
                 .title-container {
                   background: linear-gradient(135deg, #2f9685 0%, #2f9685 100%);
                   color: white;
@@ -111,6 +112,7 @@ export class EmailService {
                   background-color: #F7F6F2;
                   padding: 30px;
                   border-radius: 0 0 10px 10px;
+
                 }
                 .button {
                   display: inline-block;
@@ -291,6 +293,7 @@ export class EmailService {
                   background-color: #F7F6F2;
                   padding: 30px;
                   border-radius: 0 0 10px 10px;
+                  color: #3A251D;
                 }
                 .success-icon {
                   font-size: 48px;
