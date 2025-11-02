@@ -53,19 +53,28 @@ export const setupRoutes = app => {
   });
 
   // Ruta para la documentación Swagger
-  app.use(
-    '/api-docs',
-    swaggerUi.serveFiles(swaggerFile, {
-      swaggerOptions: {
-        url: '/swagger.json',
-      },
-    }),
-    swaggerUi.setup(swaggerFile, {
-      swaggerOptions: {
-        url: '/swagger.json',
-      },
-    })
-  );
+  // Usar swaggerUiAssetPath para servir assets correctamente en Vercel
+  const swaggerUiAssetPath = swaggerUi.getAbsoluteFSPath();
+
+  // Servir assets estáticos de Swagger UI
+  app.use('/api-docs', (req, res, next) => {
+    // Verificar si es una solicitud de asset
+    if (req.path.endsWith('.js') || req.path.endsWith('.css') || req.path.endsWith('.png')) {
+      return res.sendFile(join(swaggerUiAssetPath, req.path));
+    }
+    next();
+  });
+
+  const swaggerOptions = {
+    swaggerOptions: {
+      url: '/swagger.json',
+    },
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Nuri Task API Documentation',
+  };
+
+  app.use('/api-docs', swaggerUi.serve);
+  app.get('/api-docs', swaggerUi.setup(swaggerFile, swaggerOptions));
 
   // Middlewares globales (deben ir al final)
   app.use(notFoundHandler);
