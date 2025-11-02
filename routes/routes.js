@@ -40,8 +40,32 @@ export const setupRoutes = app => {
   setupMoodboardRoutes(app);
   setupAchievementRoutes(app);
 
+  // Endpoint para servir el swagger.json dinámicamente con host correcto
+  app.get('/swagger.json', (req, res) => {
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const dynamicSwagger = {
+      ...swaggerFile,
+      host: host,
+      schemes: [protocol],
+    };
+    res.json(dynamicSwagger);
+  });
+
   // Ruta para la documentación Swagger
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile, { swaggerOptions: { url: '/swagger.json' } }));
+  app.use(
+    '/api-docs',
+    swaggerUi.serveFiles(swaggerFile, {
+      swaggerOptions: {
+        url: '/swagger.json',
+      },
+    }),
+    swaggerUi.setup(swaggerFile, {
+      swaggerOptions: {
+        url: '/swagger.json',
+      },
+    })
+  );
 
   // Middlewares globales (deben ir al final)
   app.use(notFoundHandler);
