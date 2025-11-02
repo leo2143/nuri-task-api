@@ -53,9 +53,13 @@ export const setupRoutes = app => {
   });
 
   // Ruta para la documentación Swagger
-  app.use('/api-docs', swaggerUi.serve);
-  app.get(
+  app.use(
     '/api-docs',
+    swaggerUi.serveFiles(swaggerFile, {
+      swaggerOptions: {
+        url: '/swagger.json',
+      },
+    }),
     swaggerUi.setup(swaggerFile, {
       swaggerOptions: {
         url: '/swagger.json',
