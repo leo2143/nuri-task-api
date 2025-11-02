@@ -28,17 +28,13 @@ export const errorHandler = (err, req, res, next) => {
 };
 
 /**
- * Middleware para validar que el servidor esté funcionando
+ * Handler para el endpoint de health check
  * @function healthCheck
  * @param {Object} req - Objeto request de Express
- * @param {string} req.path - Ruta de la petición
  * @param {Object} res - Objeto response de Express
- * @param {Function} next - Función para continuar al siguiente middleware
- * @returns {void} No retorna valor, envía respuesta de salud o continúa
- * @description Middleware que responde a peticiones de health check en /health
+ * @returns {void} No retorna valor, envía respuesta de salud
+ * @description Endpoint que responde si el servidor está funcionando correctamente
  */
-export const healthCheck = (req, res, next) => {
-  if (req.path === '/health')
-    return res.status(200).json(new SuccessResponseModel(null, 0, 'Servidor funcionando correctamente'));
-  next();
+export const healthCheck = (req, res) => {
+  res.status(200).json(new SuccessResponseModel(null, 0, 'Servidor funcionando correctamente'));
 };
