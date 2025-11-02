@@ -11,8 +11,7 @@
     "docs": "jsdoc -c jsdoc.conf.json",
     "docs:serve": "jsdoc -c jsdoc.conf.json && npx http-server docs -p 8080 -o",
     "swagger": "node swagger.js",
-    "download-swagger-ui": "node download-swagger-ui.js",
-    "prebuild": "npm run download-swagger-ui && npm run swagger",
+    "prebuild": "npm run swagger",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
