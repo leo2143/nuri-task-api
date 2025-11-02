@@ -7,6 +7,8 @@ import { setupAchievementRoutes } from '../controllers/achievements/routes.js';
 import { notFoundHandler, errorHandler, healthCheck } from '../middlewares/errorMiddleware.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import swaggerUi from 'swagger-ui-express';
+import swaggerFile from '../swagger_output.json' with { type: 'json' };
 
 // Para obtener __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -18,16 +20,11 @@ const __dirname = dirname(__filename);
  * @param {Object} app - Instancia de Express
  * @returns {void} No retorna valor, configura las rutas en la app
  * @description Configura todas las rutas de la API, middlewares globales y manejo de errores
- * @example
- * // En index.js
- * import { setupRoutes } from './routes/routes.js';
- * setupRoutes(app);
  */
 export const setupRoutes = app => {
   // Middleware de health check (global)
   app.use(healthCheck);
 
-  // Ruta de bienvenida (global) - Ahora sirve la página HTML
   app.get('/', (req, res) => {
     const indexPath = join(__dirname, '..', 'public', 'index.html');
     res.sendFile(indexPath);
@@ -46,7 +43,9 @@ export const setupRoutes = app => {
   setupMetricRoutes(app);
   setupMoodboardRoutes(app);
   setupAchievementRoutes(app);
-
+  // Ruta para la documentación Swagger
+  app.use('/api-docs', swaggerUi.serve);
+  app.get('/api-docs', swaggerUi.setup(swaggerFile));
   // Middlewares globales (deben ir al final)
   app.use(notFoundHandler);
   app.use(errorHandler);

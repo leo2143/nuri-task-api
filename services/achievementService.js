@@ -1,29 +1,21 @@
 import Achievement from '../models/achievementModel.js';
-import {
-  NotFoundResponseModel,
-  ErrorResponseModel,
-  BadRequestResponseModel,
-} from '../models/responseModel.js';
+import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
-import {
-  CreateAchievementDto,
-  UpdateAchievementDto,
-  AchievementFilterDto,
-} from '../models/dtos/achievements/index.js';
+import { CreateAchievementDto, UpdateAchievementDto, AchievementFilterDto } from '../models/dtos/achievements/index.js';
 import chalk from 'chalk';
 
 /**
- * Service to handle global achievement templates (Admin only)
+ * Servicio para gestionar plantillas globales de logros (solo administradores)
  * @class AchievementService
  */
 export class AchievementService {
   /**
-   * Gets all achievement templates with optional filters
+   * Obtiene todas las plantillas de logros con filtros opcionales
    * @static
    * @async
    * @function getAllAchievements
-   * @param {Object} [filters={}] - Search filters (type, isActive, search, sortBy, sortOrder)
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Response with achievement list or error
+   * @param {Object} [filters={}] - Filtros de búsqueda (type, isActive, search, sortBy, sortOrder)
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de plantillas o error
    */
   static async getAllAchievements(filters = {}) {
     try {
@@ -41,7 +33,11 @@ export class AchievementService {
       if (achievements.length === 0) {
         return new NotFoundResponseModel('No se encontraron plantillas de logros');
       }
-      return new SuccessResponseModel(achievements, achievements.length, 'Plantillas de logros obtenidas correctamente');
+      return new SuccessResponseModel(
+        achievements,
+        achievements.length,
+        'Plantillas de logros obtenidas correctamente'
+      );
     } catch (error) {
       console.error(chalk.red('Error al obtener plantillas de logros:', error));
       return new ErrorResponseModel('Error al obtener plantillas de logros');
@@ -49,12 +45,12 @@ export class AchievementService {
   }
 
   /**
-   * Gets a specific achievement template by ID
+   * Obtiene una plantilla de logro por ID
    * @static
    * @async
    * @function getAchievementById
-   * @param {string} achievementId - Achievement ID
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Response with achievement or error
+   * @param {string} achievementId - ID del logro
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la plantilla o error
    */
   static async getAchievementById(achievementId) {
     try {
@@ -70,17 +66,17 @@ export class AchievementService {
   }
 
   /**
-   * Creates a new achievement template (Admin only)
+   * Crea una nueva plantilla de logro (solo administradores)
    * @static
    * @async
    * @function createAchievement
-   * @param {Object} achievementData - Achievement data
-   * @param {string} achievementData.title - Achievement title
-   * @param {string} achievementData.description - Achievement description
-   * @param {number} achievementData.targetCount - Target count
-   * @param {string} achievementData.type - Achievement type
-   * @param {string} achievementData.reward - Achievement reward
-   * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Response with created achievement or error
+   * @param {Object} achievementData - Datos del logro
+   * @param {string} achievementData.title - Título del logro
+   * @param {string} achievementData.description - Descripción del logro
+   * @param {number} achievementData.targetCount - Cantidad objetivo
+   * @param {string} achievementData.type - Tipo de logro
+   * @param {string} achievementData.reward - Recompensa del logro
+   * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con la plantilla creada o error
    */
   static async createAchievement(achievementData) {
     try {
@@ -102,13 +98,13 @@ export class AchievementService {
   }
 
   /**
-   * Updates an existing achievement template (Admin only)
+   * Actualiza una plantilla de logro existente (solo administradores)
    * @static
    * @async
    * @function updateAchievement
-   * @param {string} achievementId - Achievement ID
-   * @param {Object} updateData - Data to update
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Response with updated achievement or error
+   * @param {string} achievementId - ID del logro
+   * @param {Object} updateData - Datos a actualizar
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la plantilla actualizada o error
    */
   static async updateAchievement(achievementId, updateData) {
     try {
@@ -138,12 +134,12 @@ export class AchievementService {
   }
 
   /**
-   * Deletes an achievement template (Admin only)
+   * Elimina una plantilla de logro (solo administradores)
    * @static
    * @async
    * @function deleteAchievement
-   * @param {string} achievementId - Achievement ID
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Response with deletion confirmation or error
+   * @param {string} achievementId - ID del logro
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con confirmación de eliminación o error
    */
   static async deleteAchievement(achievementId) {
     try {
@@ -161,12 +157,12 @@ export class AchievementService {
   }
 
   /**
-   * Gets achievement templates by type
+   * Obtiene plantillas de logros por tipo
    * @static
    * @async
    * @function getAchievementsByType
-   * @param {string} type - Achievement type (task/goal/metric/streak/comment)
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Response with filtered achievements or error
+   * @param {string} type - Tipo de logro (task/goal/metric/streak/comment)
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las plantillas filtradas o error
    */
   static async getAchievementsByType(type) {
     try {
@@ -181,7 +177,11 @@ export class AchievementService {
         return new NotFoundResponseModel(`No se encontraron plantillas de logros de tipo ${type}`);
       }
 
-      return new SuccessResponseModel(achievements, achievements.length, `Plantillas de logros de tipo ${type} obtenidas correctamente`);
+      return new SuccessResponseModel(
+        achievements,
+        achievements.length,
+        `Plantillas de logros de tipo ${type} obtenidas correctamente`
+      );
     } catch (error) {
       console.error(chalk.red('Error al obtener plantillas de logros por tipo:', error));
       return new ErrorResponseModel('Error al obtener plantillas de logros por tipo');
@@ -189,25 +189,25 @@ export class AchievementService {
   }
 
   /**
-   * Gets achievement statistics
+   * Obtiene estadísticas de plantillas de logros
    * @static
    * @async
    * @function getAchievementStats
-   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Response with statistics or error
+   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Respuesta con estadísticas o error
    */
   static async getAchievementStats() {
     try {
       const total = await Achievement.countDocuments();
       const active = await Achievement.countDocuments({ isActive: true });
       const inactive = await Achievement.countDocuments({ isActive: false });
-      
+
       const byType = await Achievement.aggregate([
         {
           $group: {
             _id: '$type',
-            count: { $sum: 1 }
-          }
-        }
+            count: { $sum: 1 },
+          },
+        },
       ]);
 
       const stats = {

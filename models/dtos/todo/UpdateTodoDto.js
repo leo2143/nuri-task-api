@@ -1,9 +1,13 @@
+import { CreateTodoDto } from './CreateTodoDto.js';
+
 /**
  * DTO para actualizar una tarea existente
  * @class UpdateTodoDto
+ * @extends CreateTodoDto
  * @description Define la estructura y validaciones para actualizar una tarea
+ * Hereda las validaciones de CreateTodoDto pero todos los campos son opcionales
  */
-export class UpdateTodoDto {
+export class UpdateTodoDto extends CreateTodoDto {
   /**
    * @param {Object} data - Datos a actualizar
    * @param {string} [data.title] - Título de la tarea
@@ -14,6 +18,10 @@ export class UpdateTodoDto {
    * @param {string} [data.GoalId] - ID de la meta asociada
    */
   constructor(data) {
+    // Llamamos super con objeto vacío para inicializar la clase padre
+    super({});
+
+    // Solo asignamos propiedades que están presentes
     if (data.title !== undefined) this.title = data.title;
     if (data.description !== undefined) this.description = data.description;
     if (data.priority !== undefined) this.priority = data.priority;
@@ -24,40 +32,24 @@ export class UpdateTodoDto {
 
   /**
    * Valida que los datos del DTO sean correctos
+   * Reutiliza los métodos de validación del padre
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
     const errors = [];
 
-    // Validar título si existe
-    if (this.title !== undefined) {
-      if (typeof this.title !== 'string' || this.title.trim() === '') {
-        errors.push('El título debe ser un string válido');
-      }
-    }
+    // Reutilizar métodos de validación del padre (sin requerir campos)
+    const titleError = this._validateTitle(false);
+    if (titleError) errors.push(titleError);
 
-    // Validar priority si existe
-    if (this.priority !== undefined) {
-      const validPriorities = ['low', 'medium', 'high'];
-      if (!validPriorities.includes(this.priority)) {
-        errors.push(`La prioridad debe ser una de: ${validPriorities.join(', ')}`);
-      }
-    }
+    const priorityError = this._validatePriority();
+    if (priorityError) errors.push(priorityError);
 
-    // Validar dueDate si existe
-    if (this.dueDate !== undefined && this.dueDate !== null) {
-      const date = new Date(this.dueDate);
-      if (isNaN(date.getTime())) {
-        errors.push('La fecha límite debe ser una fecha válida');
-      }
-    }
+    const dueDateError = this._validateDueDate();
+    if (dueDateError) errors.push(dueDateError);
 
-    // Validar completed si existe
-    if (this.completed !== undefined) {
-      if (typeof this.completed !== 'boolean') {
-        errors.push('El estado completado debe ser un booleano');
-      }
-    }
+    const completedError = this._validateCompleted();
+    if (completedError) errors.push(completedError);
 
     return {
       isValid: errors.length === 0,

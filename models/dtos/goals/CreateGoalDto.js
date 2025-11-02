@@ -31,49 +31,131 @@ export class CreateGoalDto {
   }
 
   /**
+   * Valida el título
+   * @param {boolean} required - Si el campo es requerido
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validateTitle(required = true) {
+    if (this.title === undefined) return null;
+
+    if (required && (!this.title || typeof this.title !== 'string' || this.title.trim() === '')) {
+      return 'El título es requerido y debe ser un string válido';
+    }
+
+    if (!required && this.title !== undefined) {
+      if (typeof this.title !== 'string' || this.title.trim() === '') {
+        return 'El título debe ser un string válido';
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Valida el status
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validateStatus() {
+    if (this.status === undefined) return null;
+
+    const validStatuses = ['active', 'paused', 'completed'];
+    if (!validStatuses.includes(this.status)) {
+      return `El estado debe ser uno de: ${validStatuses.join(', ')}`;
+    }
+
+    return null;
+  }
+
+  /**
+   * Valida la prioridad
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validatePriority() {
+    if (this.priority === undefined) return null;
+
+    const validPriorities = ['low', 'medium', 'high'];
+    if (!validPriorities.includes(this.priority)) {
+      return `La prioridad debe ser una de: ${validPriorities.join(', ')}`;
+    }
+
+    return null;
+  }
+
+  /**
+   * Valida la fecha límite
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validateDueDate() {
+    if (this.dueDate === undefined || this.dueDate === null) return null;
+
+    const date = new Date(this.dueDate);
+    if (isNaN(date.getTime())) {
+      return 'La fecha límite debe ser una fecha válida';
+    }
+
+    return null;
+  }
+
+  /**
+   * Valida los criterios SMART
+   * @param {boolean} required - Si el campo es requerido
+   * @returns {string[]} Array de mensajes de error
+   */
+  _validateSmart(required = true) {
+    const errors = [];
+
+    if (!this.smart) {
+      if (required) {
+        errors.push('Los criterios SMART son requeridos');
+      }
+      return errors;
+    }
+
+    if (typeof this.smart !== 'object') {
+      errors.push('Los criterios SMART son requeridos');
+      return errors;
+    }
+
+    const smartFields = ['specific', 'measurable', 'achievable', 'relevant', 'timeBound'];
+    smartFields.forEach(field => {
+      if (this.smart[field] !== undefined) {
+        if (typeof this.smart[field] !== 'string' || this.smart[field].trim() === '') {
+          errors.push(`El criterio SMART '${field}' debe ser un string válido`);
+        }
+      } else if (required) {
+        errors.push(`El criterio SMART '${field}' es requerido y debe ser un string válido`);
+      }
+    });
+
+    return errors;
+  }
+
+  /**
    * Valida que los datos del DTO sean correctos
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
     const errors = [];
 
-    // Validar título
-    if (!this.title || typeof this.title !== 'string' || this.title.trim() === '') {
-      errors.push('El título es requerido y debe ser un string válido');
-    }
+    // Validar título (requerido)
+    const titleError = this._validateTitle(true);
+    if (titleError) errors.push(titleError);
 
     // Validar status
-    const validStatuses = ['active', 'paused', 'completed'];
-    if (this.status && !validStatuses.includes(this.status)) {
-      errors.push(`El estado debe ser uno de: ${validStatuses.join(', ')}`);
-    }
+    const statusError = this._validateStatus();
+    if (statusError) errors.push(statusError);
 
     // Validar priority
-    const validPriorities = ['low', 'medium', 'high'];
-    if (this.priority && !validPriorities.includes(this.priority)) {
-      errors.push(`La prioridad debe ser una de: ${validPriorities.join(', ')}`);
-    }
+    const priorityError = this._validatePriority();
+    if (priorityError) errors.push(priorityError);
 
-    // Validar dueDate si existe
-    if (this.dueDate) {
-      const date = new Date(this.dueDate);
-      if (isNaN(date.getTime())) {
-        errors.push('La fecha límite debe ser una fecha válida');
-      }
-    }
+    // Validar dueDate
+    const dueDateError = this._validateDueDate();
+    if (dueDateError) errors.push(dueDateError);
 
     // Validar smart (requerido)
-    if (!this.smart || typeof this.smart !== 'object') {
-      errors.push('Los criterios SMART son requeridos');
-    } else {
-      // Validar cada campo de SMART
-      const smartFields = ['specific', 'measurable', 'achievable', 'relevant', 'timeBound'];
-      smartFields.forEach(field => {
-        if (!this.smart[field] || typeof this.smart[field] !== 'string' || this.smart[field].trim() === '') {
-          errors.push(`El criterio SMART '${field}' es requerido y debe ser un string válido`);
-        }
-      });
-    }
+    const smartErrors = this._validateSmart(true);
+    errors.push(...smartErrors);
 
     return {
       isValid: errors.length === 0,

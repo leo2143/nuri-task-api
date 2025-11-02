@@ -47,7 +47,6 @@ const userSchema = new mongoose.Schema({
  * @class User
  * @extends mongoose.Model
  * @description Modelo que representa un usuario en la base de datos
- * @example
  */
 const User = mongoose.model('User', userSchema);
 export default User;

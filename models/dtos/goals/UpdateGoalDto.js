@@ -1,9 +1,13 @@
+import { CreateGoalDto } from './CreateGoalDto.js';
+
 /**
  * DTO para actualizar una meta existente
  * @class UpdateGoalDto
+ * @extends CreateGoalDto
  * @description Define la estructura y validaciones para actualizar una meta
+ * Hereda las validaciones de CreateGoalDto pero todos los campos son opcionales
  */
-export class UpdateGoalDto {
+export class UpdateGoalDto extends CreateGoalDto {
   /**
    * @param {Object} data - Datos a actualizar
    * @param {string} [data.title] - Título de la meta
@@ -19,6 +23,9 @@ export class UpdateGoalDto {
    * @param {string} [data.smart.timeBound] - Criterio con tiempo límite
    */
   constructor(data) {
+    // Llamamos super con objeto vacío para inicializar la clase padre
+    super({});
+    
     // Solo incluir campos que estén presentes en data
     if (data.title !== undefined) this.title = data.title;
     if (data.description !== undefined) this.description = data.description;
@@ -31,58 +38,28 @@ export class UpdateGoalDto {
 
   /**
    * Valida que los datos del DTO sean correctos
+   * Reutiliza los métodos de validación del padre
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
     const errors = [];
 
-    // Validar título si existe
-    if (this.title !== undefined) {
-      if (typeof this.title !== 'string' || this.title.trim() === '') {
-        errors.push('El título debe ser un string válido');
-      }
-    }
+    // Reutilizar métodos de validación del padre (sin requerir campos)
+    const titleError = this._validateTitle(false);
+    if (titleError) errors.push(titleError);
 
-    // Validar status si existe
-    if (this.status !== undefined) {
-      const validStatuses = ['active', 'paused', 'completed'];
-      if (!validStatuses.includes(this.status)) {
-        errors.push(`El estado debe ser uno de: ${validStatuses.join(', ')}`);
-      }
-    }
+    const statusError = this._validateStatus();
+    if (statusError) errors.push(statusError);
 
-    // Validar priority si existe
-    if (this.priority !== undefined) {
-      const validPriorities = ['low', 'medium', 'high'];
-      if (!validPriorities.includes(this.priority)) {
-        errors.push(`La prioridad debe ser una de: ${validPriorities.join(', ')}`);
-      }
-    }
+    const priorityError = this._validatePriority();
+    if (priorityError) errors.push(priorityError);
 
-    // Validar dueDate si existe
-    if (this.dueDate !== undefined && this.dueDate !== null) {
-      const date = new Date(this.dueDate);
-      if (isNaN(date.getTime())) {
-        errors.push('La fecha límite debe ser una fecha válida');
-      }
-    }
+    const dueDateError = this._validateDueDate();
+    if (dueDateError) errors.push(dueDateError);
 
-    // Validar smart si existe
-    if (this.smart !== undefined) {
-      if (typeof this.smart !== 'object' || this.smart === null) {
-        errors.push('Los criterios SMART deben ser un objeto válido');
-      } else {
-        // Validar campos individuales de SMART si están presentes
-        const smartFields = ['specific', 'measurable', 'achievable', 'relevant', 'timeBound'];
-        smartFields.forEach(field => {
-          if (this.smart[field] !== undefined) {
-            if (typeof this.smart[field] !== 'string' || this.smart[field].trim() === '') {
-              errors.push(`El criterio SMART '${field}' debe ser un string válido`);
-            }
-          }
-        });
-      }
-    }
+    // Validar smart si existe (no requerido en update)
+    const smartErrors = this._validateSmart(false);
+    errors.push(...smartErrors);
 
     return {
       isValid: errors.length === 0,

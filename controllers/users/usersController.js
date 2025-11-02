@@ -24,14 +24,14 @@ export class UsersController {
   static async createUser(req, res) {
     const userData = req.body;
     const user = await UserService.createUser(userData);
-    res.json(user);
+    res.status(user.status).json(user);
   }
 
   static async updateUser(req, res) {
     const id = req.params.id;
     const userData = req.body;
     const user = await UserService.updateUser(id, userData);
-    res.json(user);
+    res.status(user.status).json(user);
   }
 
   /**
@@ -63,13 +63,13 @@ export class UsersController {
   static async getUserById(req, res) {
     const id = req.params.id;
     const user = await UserService.getUserById(id);
-    res.json(user);
+    res.status(user.status).json(user);
   }
 
   static async deleteUser(req, res) {
     const id = req.params.id;
     const user = await UserService.deleteUser(id);
-    res.json(user);
+    res.status(user.status).json(user);
   }
 
   /**
@@ -88,14 +88,14 @@ export class UsersController {
   static async loginUser(req, res) {
     const { email, password } = req.body;
     const result = await UserService.loginUser(email, password);
-    res.json(result);
+    res.status(result.status).json(result);
   }
   static async changePassword(req, res) {
     try {
       const userId = req.userId;
       const { oldPassword, newPassword } = req.body;
       const result = await UserService.changePassword(userId, oldPassword, newPassword);
-      res.json(result);
+      res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en changePassword:', error);
       res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });

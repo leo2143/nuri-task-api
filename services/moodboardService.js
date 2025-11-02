@@ -1,15 +1,10 @@
 import Moodboard from '../models/moodboardModel.js';
-import {
-  NotFoundResponseModel,
-  ErrorResponseModel,
-  BadRequestResponseModel,
-} from '../models/responseModel.js';
+import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import {
   CreateMoodboardDto,
   UpdateMoodboardDto,
   AddImageDto,
-  UpdateImageDto,
   AddPhraseDto,
   UpdatePhraseDto,
 } from '../models/dtos/moodboard/index.js';
@@ -78,20 +73,6 @@ export class MoodboardService {
    * @param {Array} [moodboardData.phrases=[]] - Array de frases inspiradoras
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con el moodboard creado o error
-   * @example
-   * const moodboard = await MoodboardService.createMoodboard({
-   *   title: 'Mi Moodboard',
-   *   images: [
-   *     {
-   *       imageUrl: 'https://example.com/image1.jpg',
-   *       imageAlt: 'Imagen 1',
-   *       imagePositionNumber: 1
-   *     }
-   *   ],
-   *   phrases: [
-   *     { phrase: 'Nunca te rindas' }
-   *   ]
-   * }, userId);
    */
   static async createMoodboard(moodboardData, userId) {
     try {
@@ -340,10 +321,6 @@ export class MoodboardService {
    * @param {string} phraseData.phrase - Texto de la frase (requerido)
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el moodboard actualizado o error
-   * @example
-   * const result = await MoodboardService.addPhrase(moodboardId, {
-   *   phrase: 'Nunca te rindas'
-   * }, userId);
    */
   static async addPhrase(id, phraseData, userId) {
     try {

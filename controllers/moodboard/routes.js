@@ -1,5 +1,5 @@
 import { MoodboardController } from './moodboardController.js';
-import { validarToken } from '../../middlewares/authMiddleware.js';
+import { validateToken } from '../../middlewares/authMiddleware.js';
 
 /**
  * Función para configurar las rutas de moodboards
@@ -9,104 +9,231 @@ import { validarToken } from '../../middlewares/authMiddleware.js';
  * @description Configura las rutas de moodboards protegidas con autenticación JWT
  */
 export const setupMoodboardRoutes = app => {
-  // ==================== RUTAS CRUD BÁSICAS ====================
+  app.get('/api/moodboards', validateToken, (req, res) => {
+    // #swagger.tags = ['Moodboards']
+    // #swagger.summary = 'Obtiene todos los moodboards del usuario'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MoodboardController.getAllMoodboards(req, res);
+  });
 
-  /**
-   * @route GET /api/moodboards
-   * @description Obtiene todos los moodboards del usuario autenticado
-   * @access Privado (requiere token JWT)
-   */
-  app.get('/api/moodboards', validarToken, MoodboardController.getAllMoodboards);
+  app.get('/api/moodboards/:id', validateToken, (req, res) => {
+    // #swagger.tags = ['Moodboards']
+    // #swagger.summary = 'Obtiene un moodboard por su ID'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID del moodboard',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MoodboardController.getMoodboardById(req, res);
+  });
 
-  /**
-   * @route GET /api/moodboards/:id
-   * @description Obtiene un moodboard específico por ID
-   * @access Privado (requiere token JWT)
-   */
-  app.get('/api/moodboards/:id', validarToken, MoodboardController.getMoodboardById);
+  app.post('/api/moodboards', validateToken, (req, res) => {
+    // #swagger.tags = ['Moodboards']
+    // #swagger.summary = 'Crea un nuevo moodboard'
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Datos del moodboard',
+         required: true,
+         schema: {
+           title: 'Metas 2025',
+           images: [],
+           phrases: []
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MoodboardController.createMoodboard(req, res);
+  });
 
-  /**
-   * @route POST /api/moodboards
-   * @description Crea un nuevo moodboard
-   * @access Privado (requiere token JWT)
-   * @body {string} title - Título del moodboard (requerido)
-   * @body {Array} [images] - Array de imágenes
-   * @body {Array} [phrases] - Array de frases
-   */
-  app.post('/api/moodboards', validarToken, MoodboardController.createMoodboard);
+  app.put('/api/moodboards/:id', validateToken, (req, res) => {
+    // #swagger.tags = ['Moodboards']
+    // #swagger.summary = 'Actualiza un moodboard existente'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID del moodboard',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MoodboardController.updateMoodboard(req, res);
+  });
 
-  /**
-   * @route PUT /api/moodboards/:id
-   * @description Actualiza un moodboard existente
-   * @access Privado (requiere token JWT)
-   */
-  app.put('/api/moodboards/:id', validarToken, MoodboardController.updateMoodboard);
+  app.delete('/api/moodboards/:id', validateToken, (req, res) => {
+    // #swagger.tags = ['Moodboards']
+    // #swagger.summary = 'Elimina un moodboard'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID del moodboard',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MoodboardController.deleteMoodboard(req, res);
+  });
 
-  /**
-   * @route DELETE /api/moodboards/:id
-   * @description Elimina un moodboard
-   * @access Privado (requiere token JWT)
-   */
-  app.delete('/api/moodboards/:id', validarToken, MoodboardController.deleteMoodboard);
+  app.post('/api/moodboards/:id/images', validateToken, (req, res) => {
+    // #swagger.tags = ['Moodboards']
+    // #swagger.summary = 'Agrega una imagen al moodboard (máximo 6)'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID del moodboard',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Datos de la imagen',
+         required: true,
+         schema: {
+           imageUrl: 'https://example.com/image.jpg',
+           imageAlt: 'Descripción',
+           imagePositionNumber: 1
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MoodboardController.addImage(req, res);
+  });
 
-  // ==================== RUTAS PARA IMÁGENES ====================
+  app.delete('/api/moodboards/:id/images/:imageId', validateToken, (req, res) => {
+    // #swagger.tags = ['Moodboards']
+    // #swagger.summary = 'Elimina una imagen del moodboard'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID del moodboard',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['imageId'] = {
+         in: 'path',
+         description: 'ID de la imagen',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MoodboardController.removeImage(req, res);
+  });
 
-  /**
-   * @route POST /api/moodboards/:id/images
-   * @description Agrega una imagen al moodboard (máximo 6 imágenes)
-   * @access Privado (requiere token JWT)
-   * @body {string} imageUrl - URL de la imagen
-   * @body {string} imageAlt - Texto alternativo
-   * @body {number} imagePositionNumber - Posición de la imagen
-   */
-  app.post('/api/moodboards/:id/images', validarToken, MoodboardController.addImage);
+  app.put('/api/moodboards/:id/images/:imageId', validateToken, (req, res) => {
+    // #swagger.tags = ['Moodboards']
+    // #swagger.summary = 'Actualiza una imagen del moodboard'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID del moodboard',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['imageId'] = {
+         in: 'path',
+         description: 'ID de la imagen',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MoodboardController.updateImage(req, res);
+  });
 
-  /**
-   * @route DELETE /api/moodboards/:id/images/:imageId
-   * @description Elimina una imagen del moodboard
-   * @access Privado (requiere token JWT)
-   */
-  app.delete('/api/moodboards/:id/images/:imageId', validarToken, MoodboardController.removeImage);
+  app.post('/api/moodboards/:id/phrases', validateToken, (req, res) => {
+    // #swagger.tags = ['Moodboards']
+    // #swagger.summary = 'Agrega una frase motivacional al moodboard'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID del moodboard',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Datos de la frase',
+         required: true,
+         schema: {
+           phrase: 'El éxito es la suma de pequeños esfuerzos'
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MoodboardController.addPhrase(req, res);
+  });
 
-  /**
-   * @route PUT /api/moodboards/:id/images/:imageId
-   * @description Actualiza una imagen del moodboard
-   * @access Privado (requiere token JWT)
-   */
-  app.put('/api/moodboards/:id/images/:imageId', validarToken, MoodboardController.updateImage);
+  app.delete('/api/moodboards/:id/phrases/:phraseId', validateToken, (req, res) => {
+    // #swagger.tags = ['Moodboards']
+    // #swagger.summary = 'Elimina una frase del moodboard'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID del moodboard',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['phraseId'] = {
+         in: 'path',
+         description: 'ID de la frase',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MoodboardController.removePhrase(req, res);
+  });
 
-  // ==================== RUTAS PARA FRASES ====================
+  app.put('/api/moodboards/:id/phrases/:phraseId', validateToken, (req, res) => {
+    // #swagger.tags = ['Moodboards']
+    // #swagger.summary = 'Actualiza una frase del moodboard'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID del moodboard',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['phraseId'] = {
+         in: 'path',
+         description: 'ID de la frase',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Nueva frase',
+         required: true,
+         schema: {
+           phrase: 'Cada día es una nueva oportunidad'
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MoodboardController.updatePhrase(req, res);
+  });
 
-  /**
-   * @route POST /api/moodboards/:id/phrases
-   * @description Agrega una frase al moodboard
-   * @access Privado (requiere token JWT)
-   * @body {string} phrase - Texto de la frase
-   */
-  app.post('/api/moodboards/:id/phrases', validarToken, MoodboardController.addPhrase);
-
-  /**
-   * @route DELETE /api/moodboards/:id/phrases/:phraseId
-   * @description Elimina una frase del moodboard
-   * @access Privado (requiere token JWT)
-   */
-  app.delete('/api/moodboards/:id/phrases/:phraseId', validarToken, MoodboardController.removePhrase);
-
-  /**
-   * @route PUT /api/moodboards/:id/phrases/:phraseId
-   * @description Actualiza una frase del moodboard
-   * @access Privado (requiere token JWT)
-   * @body {string} phrase - Nuevo texto de la frase
-   */
-  app.put('/api/moodboards/:id/phrases/:phraseId', validarToken, MoodboardController.updatePhrase);
-
-  // ==================== RUTAS DE BÚSQUEDA ====================
-
-  /**
-   * @route GET /api/moodboards/search
-   * @description Busca moodboards por título
-   * @access Privado (requiere token JWT)
-   * @query {string} title - Término de búsqueda
-   */
-  app.get('/api/moodboards/search', validarToken, MoodboardController.searchByTitle);
+  app.get('/api/moodboards/search', validateToken, (req, res) => {
+    // #swagger.tags = ['Moodboards']
+    // #swagger.summary = 'Busca moodboards por título'
+    /* #swagger.parameters['title'] = {
+         in: 'query',
+         description: 'Término de búsqueda',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return MoodboardController.searchByTitle(req, res);
+  });
 };

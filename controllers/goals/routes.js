@@ -1,5 +1,5 @@
 import { GoalController } from './goalController.js';
-import { validarToken } from '../../middlewares/authMiddleware.js';
+import { validateToken } from '../../middlewares/authMiddleware.js';
 
 /**
  * Función para configurar las rutas de metas (goals)
@@ -9,17 +9,143 @@ import { validarToken } from '../../middlewares/authMiddleware.js';
  * @description Configura todas las rutas relacionadas con metas, todas requieren autenticación
  */
 export const setupGoalRoutes = app => {
-  // Rutas básicas CRUD
-  app.get('/api/goals', validarToken, GoalController.getAllGoals);
-  app.get('/api/goals/active', validarToken, GoalController.getActiveGoals);
-  app.get('/api/goals/paused', validarToken, GoalController.getPausedGoals);
-  app.get('/api/goals/completed', validarToken, GoalController.getCompletedGoals);
-  app.get('/api/goals/:id', validarToken, GoalController.getGoalById);
-  app.post('/api/goals', validarToken, GoalController.createGoal);
-  app.put('/api/goals/:id', validarToken, GoalController.updateGoal);
-  app.delete('/api/goals/:id', validarToken, GoalController.deleteGoal);
+  app.get('/api/goals', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Obtiene todas las metas del usuario'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.getAllGoals(req, res);
+  });
 
-  // Rutas específicas para métricas y comentarios
-  app.post('/api/goals/:id/comments', validarToken, GoalController.addComment);
-  app.get('/api/goals/:id/parent', validarToken, GoalController.getGoalsByParentGoalId);
+  app.get('/api/goals/active', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Obtiene todas las metas activas'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.getActiveGoals(req, res);
+  });
+
+  app.get('/api/goals/paused', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Obtiene todas las metas pausadas'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.getPausedGoals(req, res);
+  });
+
+  app.get('/api/goals/completed', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Obtiene todas las metas completadas'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.getCompletedGoals(req, res);
+  });
+
+  app.get('/api/goals/:id', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Obtiene una meta por su ID'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la meta',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.getGoalById(req, res);
+  });
+
+  app.post('/api/goals', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Crea una nueva meta'
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Datos de la meta',
+         required: true,
+         schema: {
+           title: 'Aprender Node.js',
+           description: 'Dominar backend con Node.js',
+           status: 'active',
+           dueDate: '2025-12-31T23:59:59.000Z'
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.createGoal(req, res);
+  });
+
+  app.put('/api/goals/:id', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Actualiza una meta existente'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la meta',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.updateGoal(req, res);
+  });
+
+  app.delete('/api/goals/:id', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Elimina una meta'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la meta',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.deleteGoal(req, res);
+  });
+
+  app.post('/api/goals/:id/comments', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Agrega un comentario a una meta'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la meta',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Datos del comentario',
+         required: true,
+         schema: {
+           text: 'Avancé 50% esta semana',
+           author: 'Juan Pérez'
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.addComment(req, res);
+  });
+
+  app.get('/api/goals/:id/parent', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Obtiene las submetas de una meta padre'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la meta padre',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.getGoalsByParentGoalId(req, res);
+  });
 };

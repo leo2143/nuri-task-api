@@ -6,117 +6,26 @@
     "GoalId": {
       "$oid": "68d1e7f577ec3fe8073cef21"
     },
-    "currentWeek": "2024-W04",
     "currentProgress": 60,
-    "totalCompletedTasks": 15,
-    "totalTasks": 25,
-    "missingTasks": 10,
-    "estimatedTimeInvested": 48,
-    "qualityScore": 4.5,
-    "averageWeeklyProgress": 15,
-    "progressTrend": "improving",
-    "taskCompletionRate": 3.75,
     "currentStreak": 4,
     "bestStreak": 4,
-    "efficiency": 1.25,
-    "projectedCompletionDate": "2024-02-19T00:00:00.000Z",
-    "expectedProgress": 55,
-    "progressDeviation": 5,
-    "onTimeCompletionRate": 85,
-    "overdueTasks": 2,
-    "healthStatus": "good",
-    "milestones": [
-      {
-        "name": "Setup y configuración inicial",
-        "targetProgress": 20,
-        "description": "Configurar el entorno de desarrollo",
-        "achieved": true,
-        "achievedAt": "2024-01-08T00:00:00.000Z"
-      },
-      {
-        "name": "API básica funcionando",
-        "targetProgress": 50,
-        "description": "Implementar CRUD completo",
-        "achieved": true,
-        "achievedAt": "2024-01-15T00:00:00.000Z"
-      },
-      {
-        "name": "Autenticación JWT",
-        "targetProgress": 70,
-        "description": "Sistema de auth completo",
-        "achieved": false
-      }
-    ],
-    "blockers": [
-      {
-        "description": "Problemas con la conexión a MongoDB Atlas",
-        "severity": "medium",
-        "resolved": true,
-        "resolvedAt": "2024-01-10T00:00:00.000Z",
-        "createdAt": "2024-01-08T00:00:00.000Z"
-      }
-    ],
-    "weeklyWins": [
-      {
-        "description": "Completé la integración con MongoDB",
-        "week": "2024-W04",
-        "date": "2024-01-22T00:00:00.000Z"
-      },
-      {
-        "description": "Implementé autenticación JWT exitosamente",
-        "week": "2024-W03",
-        "date": "2024-01-15T00:00:00.000Z"
-      }
-    ],
-    "taskBreakdown": {
-      "high": 5,
-      "medium": 10,
-      "low": 10
-    },
-    "alerts": [
-      {
-        "type": "info",
-        "message": "Hito 'API básica funcionando' alcanzado",
-        "acknowledged": true,
-        "createdAt": "2024-01-15T00:00:00.000Z"
-      }
-    ],
+    "notes": "Excelente progreso esta semana. Implementé autenticación JWT exitosamente y la API está tomando forma.",
     "history": [
       {
-        "week": "2024-W01",
         "progress": 15,
-        "totalCompletedTasks": 3,
-        "totalTasks": 25,
-        "missingTasks": 22,
-        "timeInvested": 10,
-        "notes": "Buen inicio, completé el setup del proyecto",
-        "mood": "motivated",
-        "achievements": ["Configuré Node.js y Express", "Primera API funcionando"],
         "date": "2024-01-01T00:00:00.000Z"
       },
       {
-        "week": "2024-W02",
         "progress": 30,
-        "totalCompletedTasks": 7,
-        "totalTasks": 25,
-        "missingTasks": 18,
-        "timeInvested": 12,
-        "notes": "Avancé con Express y middleware básicos",
-        "mood": "motivated",
-        "achievements": ["Implementé middleware de errores", "Creé rutas básicas"],
         "date": "2024-01-08T00:00:00.000Z"
       },
       {
-        "week": "2024-W03",
         "progress": 45,
-        "totalCompletedTasks": 11,
-        "totalTasks": 25,
-        "missingTasks": 14,
-        "timeInvested": 14,
-        "notes": "Implementé autenticación con JWT",
-        "mood": "motivated",
-        "achievements": ["JWT funcionando", "Middleware de autenticación"],
         "date": "2024-01-15T00:00:00.000Z"
+      },
+      {
+        "progress": 60,
+        "date": "2024-01-22T00:00:00.000Z"
       }
     ],
     "lastUpdated": "2024-01-22T00:00:00.000Z",
@@ -131,83 +40,22 @@
     "GoalId": {
       "$oid": "68d1e7f577ec3fe8073cef22"
     },
-    "currentWeek": "2024-W03",
     "currentProgress": 50,
-    "totalCompletedTasks": 10,
-    "totalTasks": 20,
-    "missingTasks": 10,
-    "estimatedTimeInvested": 32,
-    "qualityScore": 4.8,
-    "averageWeeklyProgress": 16.67,
-    "progressTrend": "improving",
-    "taskCompletionRate": 3.33,
     "currentStreak": 3,
     "bestStreak": 3,
-    "efficiency": 1.56,
-    "projectedCompletionDate": "2024-02-05T00:00:00.000Z",
-    "expectedProgress": 45,
-    "progressDeviation": 5,
-    "onTimeCompletionRate": 90,
-    "overdueTasks": 1,
-    "healthStatus": "excellent",
-    "milestones": [
-      {
-        "name": "Diseño y wireframes",
-        "targetProgress": 25,
-        "description": "Completar diseños en Figma",
-        "achieved": true,
-        "achievedAt": "2024-01-08T00:00:00.000Z"
-      },
-      {
-        "name": "Layout responsive",
-        "targetProgress": 60,
-        "description": "Portafolio responsive en todos los dispositivos",
-        "achieved": false
-      }
-    ],
-    "blockers": [],
-    "weeklyWins": [
-      {
-        "description": "Agregué animaciones con Framer Motion",
-        "week": "2024-W03",
-        "date": "2024-01-15T00:00:00.000Z"
-      },
-      {
-        "description": "Sección de proyectos completada",
-        "week": "2024-W02",
-        "date": "2024-01-08T00:00:00.000Z"
-      }
-    ],
-    "taskBreakdown": {
-      "high": 4,
-      "medium": 8,
-      "low": 8
-    },
-    "alerts": [],
+    "notes": "El diseño va muy bien. Agregué animaciones con Framer Motion y la sección de proyectos está completada.",
     "history": [
       {
-        "week": "2024-W01",
         "progress": 20,
-        "totalCompletedTasks": 4,
-        "totalTasks": 20,
-        "missingTasks": 16,
-        "timeInvested": 12,
-        "notes": "Diseñé la estructura y wireframes",
-        "mood": "motivated",
-        "achievements": ["Wireframes completados", "Paleta de colores definida"],
         "date": "2024-01-01T00:00:00.000Z"
       },
       {
-        "week": "2024-W02",
         "progress": 35,
-        "totalCompletedTasks": 7,
-        "totalTasks": 20,
-        "missingTasks": 13,
-        "timeInvested": 10,
-        "notes": "Desarrollé el layout principal con React",
-        "mood": "motivated",
-        "achievements": ["Header y navegación listos", "Hero section implementada"],
         "date": "2024-01-08T00:00:00.000Z"
+      },
+      {
+        "progress": 50,
+        "date": "2024-01-15T00:00:00.000Z"
       }
     ],
     "lastUpdated": "2024-01-15T00:00:00.000Z",
@@ -222,85 +70,18 @@
     "GoalId": {
       "$oid": "68d1e7f577ec3fe8073cef23"
     },
-    "currentWeek": "2024-W02",
     "currentProgress": 18,
-    "totalCompletedTasks": 5,
-    "totalTasks": 30,
-    "missingTasks": 25,
-    "estimatedTimeInvested": 15,
-    "qualityScore": 3.5,
-    "averageWeeklyProgress": 9,
-    "progressTrend": "stagnant",
-    "taskCompletionRate": 2.5,
     "currentStreak": 0,
     "bestStreak": 2,
-    "efficiency": 1.2,
-    "projectedCompletionDate": "2024-05-12T00:00:00.000Z",
-    "expectedProgress": 30,
-    "progressDeviation": -12,
-    "onTimeCompletionRate": 70,
-    "overdueTasks": 5,
-    "healthStatus": "at-risk",
-    "milestones": [
-      {
-        "name": "Fundamentos de React",
-        "targetProgress": 30,
-        "description": "Dominar conceptos básicos",
-        "achieved": false
-      },
-      {
-        "name": "Hooks avanzados",
-        "targetProgress": 60,
-        "description": "useContext, useReducer, custom hooks",
-        "achieved": false
-      }
-    ],
-    "blockers": [
-      {
-        "description": "Falta de tiempo por otros proyectos",
-        "severity": "high",
-        "resolved": false,
-        "createdAt": "2024-01-08T00:00:00.000Z"
-      }
-    ],
-    "weeklyWins": [
-      {
-        "description": "Entendí cómo funcionan los hooks",
-        "week": "2024-W02",
-        "date": "2024-01-08T00:00:00.000Z"
-      }
-    ],
-    "taskBreakdown": {
-      "high": 10,
-      "medium": 12,
-      "low": 8
-    },
-    "alerts": [
-      {
-        "type": "warning",
-        "message": "Meta atrasada más del 10% del progreso esperado",
-        "acknowledged": false,
-        "createdAt": "2024-01-08T00:00:00.000Z"
-      },
-      {
-        "type": "warning",
-        "message": "Sin progreso en la última semana",
-        "acknowledged": false,
-        "createdAt": "2024-01-08T00:00:00.000Z"
-      }
-    ],
+    "notes": "Esta semana no pude avanzar mucho por otros proyectos. Voy a retomar con más fuerza la próxima semana.",
     "history": [
       {
-        "week": "2024-W01",
         "progress": 10,
-        "totalCompletedTasks": 3,
-        "totalTasks": 30,
-        "missingTasks": 27,
-        "timeInvested": 8,
-        "notes": "Empecé con los conceptos básicos",
-        "mood": "neutral",
-        "achievements": ["Instalé React", "Primer componente creado"],
         "date": "2024-01-01T00:00:00.000Z"
+      },
+      {
+        "progress": 18,
+        "date": "2024-01-08T00:00:00.000Z"
       }
     ],
     "lastUpdated": "2024-01-08T00:00:00.000Z",
@@ -315,104 +96,22 @@
     "GoalId": {
       "$oid": "68d1e7f577ec3fe8073cef24"
     },
-    "currentWeek": "2024-W03",
     "currentProgress": 20,
-    "totalCompletedTasks": 8,
-    "totalTasks": 40,
-    "missingTasks": 32,
-    "estimatedTimeInvested": 24,
-    "qualityScore": 4.0,
-    "averageWeeklyProgress": 6.67,
-    "progressTrend": "improving",
-    "taskCompletionRate": 2.67,
     "currentStreak": 3,
     "bestStreak": 3,
-    "efficiency": 0.83,
-    "projectedCompletionDate": "2024-04-29T00:00:00.000Z",
-    "expectedProgress": 25,
-    "progressDeviation": -5,
-    "onTimeCompletionRate": 75,
-    "overdueTasks": 3,
-    "healthStatus": "good",
-    "milestones": [
-      {
-        "name": "Fundamentos de AWS",
-        "targetProgress": 25,
-        "description": "EC2, S3, IAM básico",
-        "achieved": true,
-        "achievedAt": "2024-01-15T00:00:00.000Z"
-      },
-      {
-        "name": "Servicios de red",
-        "targetProgress": 50,
-        "description": "VPC, Load Balancers, Route 53",
-        "achieved": false
-      },
-      {
-        "name": "Certificación preparada",
-        "targetProgress": 100,
-        "description": "Listo para el examen",
-        "achieved": false
-      }
-    ],
-    "blockers": [
-      {
-        "description": "Costos de AWS para práctica",
-        "severity": "medium",
-        "resolved": true,
-        "resolvedAt": "2024-01-10T00:00:00.000Z",
-        "createdAt": "2024-01-05T00:00:00.000Z"
-      }
-    ],
-    "weeklyWins": [
-      {
-        "description": "Configuré mi primera VPC desde cero",
-        "week": "2024-W03",
-        "date": "2024-01-15T00:00:00.000Z"
-      },
-      {
-        "description": "Completé laboratorio de S3 y políticas",
-        "week": "2024-W02",
-        "date": "2024-01-08T00:00:00.000Z"
-      }
-    ],
-    "taskBreakdown": {
-      "high": 15,
-      "medium": 15,
-      "low": 10
-    },
-    "alerts": [
-      {
-        "type": "info",
-        "message": "Hito 'Fundamentos de AWS' alcanzado",
-        "acknowledged": true,
-        "createdAt": "2024-01-15T00:00:00.000Z"
-      }
-    ],
+    "notes": "Configuré mi primera VPC desde cero. Los laboratorios de AWS están siendo muy útiles para entender los servicios.",
     "history": [
       {
-        "week": "2024-W01",
         "progress": 5,
-        "totalCompletedTasks": 2,
-        "totalTasks": 40,
-        "missingTasks": 38,
-        "timeInvested": 6,
-        "notes": "Empecé con los fundamentos de AWS",
-        "mood": "challenged",
-        "achievements": ["Creé cuenta de AWS", "Primer EC2 lanzado"],
         "date": "2024-01-01T00:00:00.000Z"
       },
       {
-        "week": "2024-W02",
         "progress": 12,
-        "totalCompletedTasks": 5,
-        "totalTasks": 40,
-        "missingTasks": 35,
-        "timeInvested": 10,
-        "notes": "Estudié EC2 y S3",
-        "mood": "neutral",
-        "achievements": ["Laboratorio de S3", "Políticas IAM básicas"],
         "date": "2024-01-08T00:00:00.000Z"
+      },
+      {
+        "progress": 20,
+        "date": "2024-01-15T00:00:00.000Z"
       }
     ],
     "lastUpdated": "2024-01-15T00:00:00.000Z",
@@ -427,56 +126,16 @@
     "GoalId": {
       "$oid": "68d1e7f577ec3fe8073cef25"
     },
-    "currentWeek": "2024-W01",
     "currentProgress": 100,
-    "totalCompletedTasks": 20,
-    "totalTasks": 20,
-    "missingTasks": 0,
-    "estimatedTimeInvested": 120,
-    "qualityScore": 5.0,
-    "averageWeeklyProgress": 100,
-    "progressTrend": "improving",
-    "taskCompletionRate": 20,
     "currentStreak": 1,
     "bestStreak": 1,
-    "efficiency": 0.83,
-    "projectedCompletionDate": "2024-01-01T00:00:00.000Z",
-    "expectedProgress": 100,
-    "progressDeviation": 0,
-    "onTimeCompletionRate": 100,
-    "overdueTasks": 0,
-    "healthStatus": "excellent",
-    "milestones": [
+    "notes": "¡Meta completada! Ahora me siento mucho más seguro leyendo documentación técnica en inglés.",
+    "history": [
       {
-        "name": "Meta completada",
-        "targetProgress": 100,
-        "description": "Dominio del inglés técnico",
-        "achieved": true,
-        "achievedAt": "2024-01-01T00:00:00.000Z"
-      }
-    ],
-    "blockers": [],
-    "weeklyWins": [
-      {
-        "description": "¡Meta completada exitosamente!",
-        "week": "2024-W01",
+        "progress": 100,
         "date": "2024-01-01T00:00:00.000Z"
       }
     ],
-    "taskBreakdown": {
-      "high": 0,
-      "medium": 0,
-      "low": 0
-    },
-    "alerts": [
-      {
-        "type": "info",
-        "message": "¡Felicidades! Meta completada al 100%",
-        "acknowledged": true,
-        "createdAt": "2024-01-01T00:00:00.000Z"
-      }
-    ],
-    "history": [],
     "lastUpdated": "2024-01-01T00:00:00.000Z",
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z",
@@ -489,115 +148,26 @@
     "GoalId": {
       "$oid": "68d1e7f577ec3fe8073cef26"
     },
-    "currentWeek": "2024-W04",
     "currentProgress": 40,
-    "totalCompletedTasks": 12,
-    "totalTasks": 30,
-    "missingTasks": 18,
-    "estimatedTimeInvested": 40,
-    "qualityScore": 4.2,
-    "averageWeeklyProgress": 10,
-    "progressTrend": "improving",
-    "taskCompletionRate": 3,
     "currentStreak": 4,
     "bestStreak": 4,
-    "efficiency": 1.0,
-    "projectedCompletionDate": "2024-02-26T00:00:00.000Z",
-    "expectedProgress": 40,
-    "progressDeviation": 0,
-    "onTimeCompletionRate": 80,
-    "overdueTasks": 3,
-    "healthStatus": "good",
-    "milestones": [
-      {
-        "name": "Setup inicial",
-        "targetProgress": 15,
-        "description": "Entorno de desarrollo configurado",
-        "achieved": true,
-        "achievedAt": "2024-01-08T00:00:00.000Z"
-      },
-      {
-        "name": "Navegación básica",
-        "targetProgress": 35,
-        "description": "Stack navigator implementado",
-        "achieved": true,
-        "achievedAt": "2024-01-15T00:00:00.000Z"
-      },
-      {
-        "name": "Autenticación",
-        "targetProgress": 60,
-        "description": "Firebase Auth integrado",
-        "achieved": false
-      }
-    ],
-    "blockers": [
-      {
-        "description": "Problemas con dependencias de React Native",
-        "severity": "medium",
-        "resolved": true,
-        "resolvedAt": "2024-01-12T00:00:00.000Z",
-        "createdAt": "2024-01-10T00:00:00.000Z"
-      }
-    ],
-    "weeklyWins": [
-      {
-        "description": "Firebase Auth funcionando perfectamente",
-        "week": "2024-W04",
-        "date": "2024-01-22T00:00:00.000Z"
-      },
-      {
-        "description": "Navegación entre pantallas implementada",
-        "week": "2024-W03",
-        "date": "2024-01-15T00:00:00.000Z"
-      },
-      {
-        "description": "Primeras pantallas diseñadas",
-        "week": "2024-W02",
-        "date": "2024-01-08T00:00:00.000Z"
-      }
-    ],
-    "taskBreakdown": {
-      "high": 8,
-      "medium": 12,
-      "low": 10
-    },
-    "alerts": [],
+    "notes": "Firebase Auth está funcionando perfectamente. La navegación entre pantallas quedó muy fluida.",
     "history": [
       {
-        "week": "2024-W01",
         "progress": 8,
-        "totalCompletedTasks": 2,
-        "totalTasks": 30,
-        "missingTasks": 28,
-        "timeInvested": 8,
-        "notes": "Configuré el entorno de desarrollo",
-        "mood": "motivated",
-        "achievements": ["Expo configurado", "Primera app corriendo"],
         "date": "2024-01-01T00:00:00.000Z"
       },
       {
-        "week": "2024-W02",
         "progress": 15,
-        "totalCompletedTasks": 4,
-        "totalTasks": 30,
-        "missingTasks": 26,
-        "timeInvested": 10,
-        "notes": "Desarrollé las primeras pantallas de la app",
-        "mood": "motivated",
-        "achievements": ["Login screen", "Home screen"],
         "date": "2024-01-08T00:00:00.000Z"
       },
       {
-        "week": "2024-W03",
         "progress": 28,
-        "totalCompletedTasks": 8,
-        "totalTasks": 30,
-        "missingTasks": 22,
-        "timeInvested": 12,
-        "notes": "Implementé navegación entre pantallas",
-        "mood": "motivated",
-        "achievements": ["Stack Navigator", "Tab Navigator"],
         "date": "2024-01-15T00:00:00.000Z"
+      },
+      {
+        "progress": 40,
+        "date": "2024-01-22T00:00:00.000Z"
       }
     ],
     "lastUpdated": "2024-01-22T00:00:00.000Z",
@@ -612,120 +182,26 @@
     "GoalId": {
       "$oid": "68d1e7f577ec3fe8073cef27"
     },
-    "currentWeek": "2024-W04",
     "currentProgress": 22,
-    "totalCompletedTasks": 6,
-    "totalTasks": 25,
-    "missingTasks": 19,
-    "estimatedTimeInvested": 35,
-    "qualityScore": 4.3,
-    "averageWeeklyProgress": 5.5,
-    "progressTrend": "improving",
-    "taskCompletionRate": 1.5,
     "currentStreak": 4,
     "bestStreak": 4,
-    "efficiency": 0.63,
-    "projectedCompletionDate": "2024-04-15T00:00:00.000Z",
-    "expectedProgress": 28,
-    "progressDeviation": -6,
-    "onTimeCompletionRate": 75,
-    "overdueTasks": 2,
-    "healthStatus": "good",
-    "milestones": [
-      {
-        "name": "Primer PR aceptado",
-        "targetProgress": 20,
-        "description": "Primera contribución exitosa",
-        "achieved": true,
-        "achievedAt": "2024-01-22T00:00:00.000Z"
-      },
-      {
-        "name": "5 PRs aceptados",
-        "targetProgress": 50,
-        "description": "Cinco contribuciones exitosas",
-        "achieved": false
-      },
-      {
-        "name": "Contribuidor regular",
-        "targetProgress": 100,
-        "description": "Contribuir mensualmente a proyectos",
-        "achieved": false
-      }
-    ],
-    "blockers": [
-      {
-        "description": "Esperando review de un PR grande",
-        "severity": "low",
-        "resolved": false,
-        "createdAt": "2024-01-20T00:00:00.000Z"
-      }
-    ],
-    "weeklyWins": [
-      {
-        "description": "¡Mi primer PR fue aceptado!",
-        "week": "2024-W04",
-        "date": "2024-01-22T00:00:00.000Z"
-      },
-      {
-        "description": "Resolví 2 issues menores",
-        "week": "2024-W04",
-        "date": "2024-01-22T00:00:00.000Z"
-      },
-      {
-        "description": "Envié mi primer PR",
-        "week": "2024-W03",
-        "date": "2024-01-15T00:00:00.000Z"
-      }
-    ],
-    "taskBreakdown": {
-      "high": 5,
-      "medium": 10,
-      "low": 10
-    },
-    "alerts": [
-      {
-        "type": "info",
-        "message": "¡Hito alcanzado! Primer PR aceptado",
-        "acknowledged": false,
-        "createdAt": "2024-01-22T00:00:00.000Z"
-      }
-    ],
+    "notes": "¡Mi primer PR fue aceptado! Resolví 2 issues menores y me siento cada vez más cómodo contribuyendo a proyectos open source.",
     "history": [
       {
-        "week": "2024-W01",
         "progress": 3,
-        "totalCompletedTasks": 1,
-        "totalTasks": 25,
-        "missingTasks": 24,
-        "timeInvested": 6,
-        "notes": "Identifiqué proyectos interesantes para contribuir",
-        "mood": "motivated",
-        "achievements": ["Lista de proyectos creada", "Issues identificados"],
         "date": "2024-01-01T00:00:00.000Z"
       },
       {
-        "week": "2024-W02",
         "progress": 8,
-        "totalCompletedTasks": 2,
-        "totalTasks": 25,
-        "missingTasks": 23,
-        "timeInvested": 10,
-        "notes": "Hice mi primer fork y estudié el código",
-        "mood": "challenged",
-        "achievements": ["Fork realizado", "Código analizado"],
         "date": "2024-01-08T00:00:00.000Z"
       },
       {
-        "week": "2024-W03",
         "progress": 15,
-        "totalCompletedTasks": 4,
-        "totalTasks": 25,
-        "missingTasks": 21,
-        "timeInvested": 12,
-        "notes": "Envié mi primer pull request para corrección de documentación",
-        "mood": "motivated",
-        "achievements": ["Primer PR enviado", "Documentación mejorada"],
         "date": "2024-01-15T00:00:00.000Z"
+      },
+      {
+        "progress": 22,
+        "date": "2024-01-22T00:00:00.000Z"
       }
     ],
     "lastUpdated": "2024-01-22T00:00:00.000Z",

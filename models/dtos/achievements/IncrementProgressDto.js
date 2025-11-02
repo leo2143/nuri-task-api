@@ -1,25 +1,25 @@
 /**
- * DTO for incrementing user achievement progress
+ * DTO para incrementar el progreso de un logro de usuario
  * @class IncrementProgressDto
- * @description Defines the structure and validations for incrementing progress on an achievement
+ * @description Define la estructura y validaciones para incrementar el progreso de un logro
  */
 export class IncrementProgressDto {
   /**
-   * @param {Object} data - Progress data
-   * @param {number} [data.amount] - Amount to increment (default: 1)
+   * @param {Object} data - Datos del progreso
+   * @param {number} [data.amount] - Cantidad a incrementar (por defecto: 1)
    */
   constructor(data = {}) {
     this.amount = data.amount !== undefined ? data.amount : 1;
   }
 
   /**
-   * Validates that the DTO data is correct
-   * @returns {Object} Object with isValid and errors
+   * Valida que los datos del DTO sean correctos
+   * @returns {Object} Objeto con isValid y errores
    */
   validate() {
     const errors = [];
 
-    // Validate amount
+    // Validar amount
     if (typeof this.amount !== 'number' || this.amount < 1) {
       errors.push('El monto debe ser un número mayor o igual a 1');
     }
@@ -31,8 +31,8 @@ export class IncrementProgressDto {
   }
 
   /**
-   * Converts the DTO to a plain object
-   * @returns {Object} Plain object with the data
+   * Convierte el DTO a un objeto plano
+   * @returns {Object} Objeto plano con los datos
    */
   toPlainObject() {
     return {
@@ -40,4 +40,3 @@ export class IncrementProgressDto {
     };
   }
 }
-

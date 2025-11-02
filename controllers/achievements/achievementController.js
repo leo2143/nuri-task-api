@@ -1,21 +1,19 @@
 import { AchievementService } from '../../services/achievementService.js';
 
 /**
- * Controller to handle HTTP requests related to achievement templates (Admin only)
+ * Controlador para manejar las peticiones HTTP relacionadas con plantillas de logros (solo administradores)
  * @class AchievementController
  */
 export class AchievementController {
   /**
-   * Gets all achievement templates with optional filters
+   * Obtiene todas las plantillas de logros con filtros opcionales
    * @static
    * @async
    * @function getAllAchievements
-   * @param {Object} req - Express request object
-   * @param {Object} req.query - Query parameters (type, isActive, search, sortBy, sortOrder)
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
-   * @example
-   * GET /api/admin/achievements?type=task&search=completar&sortBy=targetCount&sortOrder=asc
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} req.query - Parámetros de consulta (type, isActive, search, sortBy, sortOrder)
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAllAchievements(req, res) {
     const filters = {
@@ -24,114 +22,112 @@ export class AchievementController {
       sortBy: req.query.sortBy,
       sortOrder: req.query.sortOrder,
     };
-    
-    // Only add isActive filter if explicitly provided
+
     if (req.query.isActive !== undefined) {
       filters.isActive = req.query.isActive === 'true';
     }
-    
+
     const result = await AchievementService.getAllAchievements(filters);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
-   * Gets a specific achievement template by ID
+   * Obtiene una plantilla de logro por ID
    * @static
    * @async
    * @function getAchievementById
-   * @param {Object} req - Express request object
-   * @param {Object} req.params - URL parameters
-   * @param {string} req.params.id - Achievement ID
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} req.params - Parámetros de URL
+   * @param {string} req.params.id - ID del logro
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAchievementById(req, res) {
     const { id } = req.params;
     const result = await AchievementService.getAchievementById(id);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
-   * Creates a new achievement template (Admin only)
+   * Crea una nueva plantilla de logro (solo administradores)
    * @static
    * @async
    * @function createAchievement
-   * @param {Object} req - Express request object
-   * @param {Object} req.body - Achievement data
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} req.body - Datos del logro
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async createAchievement(req, res) {
     const achievementData = req.body;
     const result = await AchievementService.createAchievement(achievementData);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
-   * Updates an existing achievement template (Admin only)
+   * Actualiza una plantilla de logro existente (solo administradores)
    * @static
    * @async
    * @function updateAchievement
-   * @param {Object} req - Express request object
-   * @param {Object} req.params - URL parameters
-   * @param {string} req.params.id - Achievement ID
-   * @param {Object} req.body - Data to update
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} req.params - Parámetros de URL
+   * @param {string} req.params.id - ID del logro
+   * @param {Object} req.body - Datos a actualizar
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async updateAchievement(req, res) {
     const { id } = req.params;
     const updateData = req.body;
     const result = await AchievementService.updateAchievement(id, updateData);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
-   * Deletes an achievement template (Admin only)
+   * Elimina una plantilla de logro (solo administradores)
    * @static
    * @async
    * @function deleteAchievement
-   * @param {Object} req - Express request object
-   * @param {Object} req.params - URL parameters
-   * @param {string} req.params.id - Achievement ID
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} req.params - Parámetros de URL
+   * @param {string} req.params.id - ID del logro
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async deleteAchievement(req, res) {
     const { id } = req.params;
     const result = await AchievementService.deleteAchievement(id);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
-   * Gets achievements by type
+   * Obtiene logros por tipo
    * @static
    * @async
    * @function getAchievementsByType
-   * @param {Object} req - Express request object
-   * @param {Object} req.params - URL parameters
-   * @param {string} req.params.type - Achievement type
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} req.params - Parámetros de URL
+   * @param {string} req.params.type - Tipo de logro
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAchievementsByType(req, res) {
     const { type } = req.params;
     const result = await AchievementService.getAchievementsByType(type);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
-   * Gets achievement template statistics
+   * Obtiene estadísticas de plantillas de logros
    * @static
    * @async
    * @function getAchievementStats
-   * @param {Object} req - Express request object
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAchievementStats(req, res) {
     const result = await AchievementService.getAchievementStats();
-    res.json(result);
+    res.status(result.status).json(result);
   }
 }
-

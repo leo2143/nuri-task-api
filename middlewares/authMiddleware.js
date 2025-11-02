@@ -4,11 +4,11 @@ import { ErrorResponseModel } from '../models/responseModel.js';
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'tu_clave_secreta_super_segura';
+const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
 
 /**
  * Middleware para validar tokens JWT en rutas protegidas
- * @function validarToken
+ * @function validateToken
  * @param {Object} req - Objeto request de Express
  * @param {Object} req.headers - Headers de la petición
  * @param {string} req.headers.authorization - Token JWT en formato "Bearer <token>"
@@ -16,31 +16,23 @@ const JWT_SECRET = process.env.JWT_SECRET || 'tu_clave_secreta_super_segura';
  * @param {Function} next - Función para continuar al siguiente middleware
  * @returns {void} No retorna valor, continúa o envía respuesta de error
  * @description Valida el token JWT del header Authorization y agrega la información del usuario al request
- * @example
  */
-export const validarToken = (req, res, next) => {
+export const validateToken = (req, res, next) => {
   const token = req.headers.authorization;
-
-  if (!token) {
-    return res.status(401).json(new ErrorResponseModel('No se pasó el token'));
-  }
-
   try {
-    const tokenLimpio = token.split(' ')[1];
-
-    const decoded = jwt.verify(tokenLimpio, JWT_SECRET);
-
-    req.userId = decoded.userId;
-    req.user = decoded;
-
+    const decoded = verifyJwt(req, token);
+    if (!decoded) {
+      return res.status(401).json(new ErrorResponseModel('No se pasó el token'));
+    }
     next();
   } catch (error) {
     return res.status(403).json(new ErrorResponseModel('Token inválido'));
   }
 };
+
 /**
  * Middleware para validar tokens JWT y permisos de administrador
- * @function validarAdminToken
+ * @function validateAdminToken
  * @param {Object} req - Objeto request de Express
  * @param {Object} req.headers - Headers de la petición
  * @param {string} req.headers.authorization - Token JWT en formato "Bearer <token>"
@@ -48,40 +40,37 @@ export const validarToken = (req, res, next) => {
  * @param {Function} next - Función para continuar al siguiente middleware
  * @returns {void} No retorna valor, continúa o envía respuesta de error
  * @description Valida el token JWT y verifica que el usuario tenga permisos de administrador
- * @example
- * // Usar en rutas que requieren permisos de admin
- * app.delete('/api/admin/users/:id', validarAdminToken, deleteUser);
  */
-export const validarAdminToken = (req, res, next) => {
+export const validateAdminToken = (req, res, next) => {
   const token = req.headers.authorization;
-
-  if (!token) {
-    return res.status(401).json(new ErrorResponseModel('No se pasó el token'));
-  }
-
   try {
-    const tokenLimpio = token.split(' ')[1];
-
-    const decoded = jwt.verify(tokenLimpio, JWT_SECRET);
-
-    // Agregar información del usuario al request
-    req.userId = decoded.userId;
-    req.user = decoded;
-
-    // Verificar si el usuario es administrador
+    const decoded = verifyJwt(req, token);
+    if (!decoded) {
+      return res.status(401).json(new ErrorResponseModel('No se pasó el token'));
+    }
     if (!decoded.isAdmin) {
       return res.status(403).json(new ErrorResponseModel('Acceso denegado. Se requieren permisos de administrador'));
     }
-
     next();
   } catch (error) {
     return res.status(401).json(new ErrorResponseModel('Token inválido o expirado'));
   }
 };
 
+const verifyJwt = (req, token) => {
+  if (!token) {
+    return null;
+  }
+  const tokenLimpio = token.split(' ')[1];
+  const decoded = jwt.verify(tokenLimpio, JWT_SECRET);
+  req.userId = decoded.userId;
+  req.user = decoded;
+  return decoded;
+};
+
 /**
  * Middleware opcional para rutas que pueden ser públicas o privadas
- * @function validarTokenOpcional
+ * @function validateOptionalToken
  * @param {Object} req - Objeto request de Express
  * @param {Object} req.headers - Headers de la petición
  * @param {string} [req.headers.authorization] - Token JWT opcional en formato "Bearer <token>"
@@ -89,27 +78,19 @@ export const validarAdminToken = (req, res, next) => {
  * @param {Function} next - Función para continuar al siguiente middleware
  * @returns {void} No retorna valor, siempre continúa al siguiente middleware
  * @description Valida el token JWT si está presente, pero no falla si no hay token
- * @example
  */
-export const validarTokenOpcional = (req, res, next) => {
+export const validateOptionalToken = (req, res, next) => {
   const token = req.headers.authorization;
-
-  if (!token) {
-    req.userId = null;
-    req.user = null;
-    return next();
-  }
-
   try {
-    const tokenLimpio = token.split(' ')[1];
-    const decoded = jwt.verify(tokenLimpio, JWT_SECRET);
-
-    req.userId = decoded.userId;
-    req.user = decoded;
-    next();
+    const decoded = verifyJwt(req, token);
+    if (!decoded) {
+      req.userId = null;
+      req.user = null;
+    }
+    return next();
   } catch (error) {
     req.userId = null;
     req.user = null;
-    next();
+    return next();
   }
 };

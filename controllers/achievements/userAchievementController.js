@@ -1,131 +1,117 @@
 import { UserAchievementService } from '../../services/userAchievementService.js';
 
 /**
- * Controller to handle HTTP requests related to user progress on achievements
+ * Controlador para manejar las peticiones HTTP relacionadas con el progreso de usuario en logros
  * @class UserAchievementController
  */
 export class UserAchievementController {
   /**
-   * Gets all achievements with user progress
+   * Obtiene todos los logros con el progreso del usuario
    * @static
    * @async
    * @function getAllAchievementsWithProgress
-   * @param {Object} req - Express request object
-   * @param {string} req.userId - User ID (added by authentication middleware)
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
-   * @example
-   * GET /api/user/achievements
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAllAchievementsWithProgress(req, res) {
     const userId = req.userId;
     const result = await UserAchievementService.getAllAchievementsWithProgress(userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
-   * Gets user progress on all achievements with optional status filter
+   * Obtiene el progreso del usuario en todos los logros con filtro opcional por estado
    * @static
    * @async
    * @function getUserProgress
-   * @param {Object} req - Express request object
-   * @param {string} req.userId - User ID (added by authentication middleware)
-   * @param {Object} req.query - Query parameters
-   * @param {string} [req.query.status] - Filter by status (locked/unlocked/completed)
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
-   * @example
-   * GET /api/user/achievements/progress?status=completed
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
+   * @param {Object} req.query - Parámetros de consulta
+   * @param {string} [req.query.status] - Filtrar por estado (locked/unlocked/completed)
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getUserProgress(req, res) {
     const userId = req.userId;
     const status = req.query.status;
     const result = await UserAchievementService.getUserProgress(userId, status);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
-   * Gets user progress on a specific achievement
+   * Obtiene el progreso del usuario en un logro específico
    * @static
    * @async
    * @function getUserAchievementProgress
-   * @param {Object} req - Express request object
-   * @param {string} req.userId - User ID (added by authentication middleware)
-   * @param {Object} req.params - URL parameters
-   * @param {string} req.params.id - Achievement ID
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
-   * @example
-   * GET /api/user/achievements/:id/progress
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
+   * @param {Object} req.params - Parámetros de URL
+   * @param {string} req.params.id - ID del logro
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getUserAchievementProgress(req, res) {
     const userId = req.userId;
     const { id } = req.params;
     const result = await UserAchievementService.getUserAchievementProgress(userId, id);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
-   * Increments progress on an achievement
+   * Incrementa el progreso en un logro
    * @static
    * @async
    * @function incrementProgress
-   * @param {Object} req - Express request object
-   * @param {string} req.userId - User ID (added by authentication middleware)
-   * @param {Object} req.params - URL parameters
-   * @param {string} req.params.id - Achievement ID
-   * @param {Object} req.body - Request body
-   * @param {number} [req.body.amount=1] - Amount to increment
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
-   * @example
-   * POST /api/user/achievements/:id/progress
-   * Body: { "amount": 1 }
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
+   * @param {Object} req.params - Parámetros de URL
+   * @param {string} req.params.id - ID del logro
+   * @param {Object} req.body - Cuerpo de la petición
+   * @param {number} [req.body.amount=1] - Cantidad a incrementar
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async incrementProgress(req, res) {
     const userId = req.userId;
     const { id } = req.params;
     const amount = req.body.amount || 1;
     const result = await UserAchievementService.incrementProgress(userId, id, amount);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
-   * Gets user achievement statistics
+   * Obtiene estadísticas de logros del usuario
    * @static
    * @async
    * @function getUserStats
-   * @param {Object} req - Express request object
-   * @param {string} req.userId - User ID (added by authentication middleware)
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
-   * @example
-   * GET /api/user/achievements/stats
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getUserStats(req, res) {
     const userId = req.userId;
     const result = await UserAchievementService.getUserStats(userId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 
   /**
-   * Resets user progress on an achievement (Admin only)
+   * Reinicia el progreso del usuario en un logro (solo administradores)
    * @static
    * @async
    * @function resetProgress
-   * @param {Object} req - Express request object
-   * @param {Object} req.params - URL parameters
-   * @param {string} req.params.userId - User ID
-   * @param {string} req.params.achievementId - Achievement ID
-   * @param {Object} res - Express response object
-   * @returns {Promise<void>} No return value, sends HTTP response
-   * @example
-   * DELETE /api/admin/users/:userId/achievements/:achievementId
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} req.params - Parámetros de URL
+   * @param {string} req.params.userId - ID del usuario
+   * @param {string} req.params.achievementId - ID del logro
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async resetProgress(req, res) {
     const { userId, achievementId } = req.params;
     const result = await UserAchievementService.resetProgress(userId, achievementId);
-    res.json(result);
+    res.status(result.status).json(result);
   }
 }
-

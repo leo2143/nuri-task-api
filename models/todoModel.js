@@ -81,15 +81,6 @@ const todoSchema = new mongoose.Schema(
  * @class Todo
  * @extends mongoose.Model
  * @description Modelo que representa una tarea en la base de datos
- * @example
- * // Crear una nueva tarea
- * const todo = new Todo({
- *   title: 'Aprender Node.js',
- *   description: 'Estudiar conceptos básicos',
- *   priority: 'high',
- *   userId: '64f8a1b2c3d4e5f6a7b8c9d0'
- * });
- * await todo.save();
  */
 const Todo = mongoose.model('Todo', todoSchema);
 export default Todo;

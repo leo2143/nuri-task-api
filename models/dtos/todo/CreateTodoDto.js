@@ -23,35 +23,89 @@ export class CreateTodoDto {
   }
 
   /**
+   * Valida el título
+   * @param {boolean} required - Si el campo es requerido
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validateTitle(required = true) {
+    if (this.title === undefined) return null;
+
+    if (required && (!this.title || typeof this.title !== 'string' || this.title.trim() === '')) {
+      return 'El título es requerido y debe ser un string válido';
+    }
+
+    if (!required && this.title !== undefined) {
+      if (typeof this.title !== 'string' || this.title.trim() === '') {
+        return 'El título debe ser un string válido';
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Valida la prioridad
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validatePriority() {
+    if (this.priority === undefined) return null;
+
+    const validPriorities = ['low', 'medium', 'high'];
+    if (!validPriorities.includes(this.priority)) {
+      return `La prioridad debe ser una de: ${validPriorities.join(', ')}`;
+    }
+
+    return null;
+  }
+
+  /**
+   * Valida la fecha límite
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validateDueDate() {
+    if (this.dueDate === undefined || this.dueDate === null) return null;
+
+    const date = new Date(this.dueDate);
+    if (isNaN(date.getTime())) {
+      return 'La fecha límite debe ser una fecha válida';
+    }
+
+    return null;
+  }
+
+  /**
+   * Valida el estado completado
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validateCompleted() {
+    if (this.completed === undefined) return null;
+
+    if (typeof this.completed !== 'boolean') {
+      return 'El estado completado debe ser un booleano';
+    }
+
+    return null;
+  }
+
+  /**
    * Valida que los datos del DTO sean correctos
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
     const errors = [];
 
-    // Validar título
-    if (!this.title || typeof this.title !== 'string' || this.title.trim() === '') {
-      errors.push('El título es requerido y debe ser un string válido');
-    }
+    // Usar métodos reutilizables
+    const titleError = this._validateTitle(true);
+    if (titleError) errors.push(titleError);
 
-    // Validar priority
-    const validPriorities = ['low', 'medium', 'high'];
-    if (this.priority && !validPriorities.includes(this.priority)) {
-      errors.push(`La prioridad debe ser una de: ${validPriorities.join(', ')}`);
-    }
+    const priorityError = this._validatePriority();
+    if (priorityError) errors.push(priorityError);
 
-    // Validar dueDate si existe
-    if (this.dueDate) {
-      const date = new Date(this.dueDate);
-      if (isNaN(date.getTime())) {
-        errors.push('La fecha límite debe ser una fecha válida');
-      }
-    }
+    const dueDateError = this._validateDueDate();
+    if (dueDateError) errors.push(dueDateError);
 
-    // Validar completed
-    if (typeof this.completed !== 'boolean') {
-      errors.push('El estado completado debe ser un booleano');
-    }
+    const completedError = this._validateCompleted();
+    if (completedError) errors.push(completedError);
 
     return {
       isValid: errors.length === 0,
