@@ -1,14 +1,32 @@
 import swaggerAutogen from 'swagger-autogen';
 
+// Detectar el host durante el build
+const getHost = () => {
+  // Si está en Vercel, usar la URL de producción o la URL del deployment
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  }
+  if (process.env.VERCEL_URL) {
+    return process.env.VERCEL_URL;
+  }
+  // Por defecto, localhost
+  return 'localhost:3000';
+};
+
+const isVercel = process.env.VERCEL === '1';
+
+console.log('🔧 Build Swagger con host:', getHost());
+console.log('🔧 Entorno:', isVercel ? 'Vercel' : 'Local');
+
 const doc = {
   info: {
     title: 'Nuri Task API',
     version: '1.0.0',
     description: 'API REST para la gestión de tareas, metas, métricas y logros personales',
   },
-  host: process.env.VERCEL_URL || 'localhost:3000',
+  host: getHost(),
   basePath: '/',
-  schemes: process.env.VERCEL_URL ? ['https'] : ['http'],
+  schemes: isVercel ? ['https'] : ['http'],
   consumes: ['application/json'],
   produces: ['application/json'],
   tags: [
