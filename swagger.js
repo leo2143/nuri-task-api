@@ -42,5 +42,8 @@ const endpointsFiles = [
 ];
 
 swaggerAutogen(outputFile, endpointsFiles, doc).then(() => {
-  console.log('Documentación Swagger generada correctamente');
+  console.log('✅ Documentación Swagger generada correctamente');
+
+  // Importar y ejecutar el servidor después de generar swagger
+  import('./index.js');
 });

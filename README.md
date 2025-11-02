@@ -210,6 +210,16 @@ Documentación interactiva disponible en:
 http://localhost:3000/api-docs
 ```
 
+#### ⚠️ Solución de Problemas con Swagger en Vercel
+
+Durante el despliegue en Vercel, `swagger-ui-express` presentaba problemas en entornos serverless (error: `SwaggerUIBundle is not defined`). La solución implementada fue servir Swagger UI como archivos estáticos locales en lugar de depender del paquete:
+
+1. **Archivos descargados**: CSS, JS y assets de Swagger UI se descargan durante el build (`npm run prebuild`)
+2. **Servidos estáticamente**: Los archivos se sirven desde `public/swagger-ui/`
+3. **JSON dinámico**: El `swagger.json` se genera y sirve dinámicamente desde Express
+
+Esta solución está basada en el enfoque documentado por [Vishal Kumar Singh](https://www.linkedin.com/pulse/solving-swaggeruibundle-defined-error-express-swagger-kumar-singh-p71xc/) y garantiza compatibilidad con funciones Lambda de Vercel.
+
 ### Endpoints Principales
 
 #### 🔐 Autenticación
@@ -280,17 +290,6 @@ DELETE /api/moodboards/:id          # Eliminar
 2. API valida y genera JWT token
 3. Cliente incluye token en header `Authorization: Bearer <token>`
 
-**Ejemplo con Fetch:**
-
-```javascript
-fetch('http://localhost:3000/api/todos', {
-  headers: {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  },
-});
-```
-
 ### Recuperación de Contraseña
 
 1. Usuario solicita: `POST /api/users/forgot-password`
@@ -308,8 +307,6 @@ npm run dev            # Modo desarrollo (con nodemon)
 
 # Documentación
 npm run swagger        # Generar Swagger
-npm run docs           # Generar JSDoc
-npm run docs:serve     # Servir JSDoc en :8080
 
 # Code Quality
 npm run format         # Formatear con Prettier
@@ -419,6 +416,6 @@ ISC License - Copyright (c) 2024 Leonardo Orellana
 
 **[⬆ Volver arriba](#-nuri-task-api)**
 
-Hecho por Leonardo Orellana
+Hecho por Leonardo Orellana y Figueredo Sofia
 
 </div>

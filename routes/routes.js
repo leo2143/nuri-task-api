@@ -8,7 +8,7 @@ import { notFoundHandler, errorHandler, healthCheck } from '../middlewares/error
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readFileSync } from 'fs';
-import swaggerUi from 'swagger-ui-express';
+import express from 'express';
 
 // Para obtener __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -40,32 +40,19 @@ export const setupRoutes = app => {
   setupMoodboardRoutes(app);
   setupAchievementRoutes(app);
 
-  // Endpoint para servir el swagger.json dinámicamente con host correcto
-  app.get('/swagger.json', (req, res) => {
-    const protocol = req.protocol;
-    const host = req.get('host');
-    const dynamicSwagger = {
-      ...swaggerFile,
-      host: host,
-      schemes: [protocol],
-    };
-    res.json(dynamicSwagger);
+  // Servir archivos estáticos de Swagger UI
+  app.use('/swagger-ui', express.static(join(__dirname, '..', 'public', 'swagger-ui')));
+
+  // Servir el archivo swagger.json dinámicamente
+  app.get('/api-docs/swagger.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.json(swaggerFile);
   });
 
-  // Ruta para la documentación Swagger
-  app.use(
-    '/api-docs',
-    swaggerUi.serveFiles(swaggerFile, {
-      swaggerOptions: {
-        url: '/swagger.json',
-      },
-    }),
-    swaggerUi.setup(swaggerFile, {
-      swaggerOptions: {
-        url: '/swagger.json',
-      },
-    })
-  );
+  // Redirigir /api-docs a la UI de Swagger
+  app.get('/api-docs', (req, res) => {
+    res.redirect('/swagger-ui/');
+  });
 
   // Middlewares globales (deben ir al final)
   app.use(notFoundHandler);

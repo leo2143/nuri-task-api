@@ -11,3 +11,4 @@ yarn.lock
 resources/mail-template.html
 resources/mail-template-confirmation.html
 services/emailService.js
+public/swagger-ui/index.html
