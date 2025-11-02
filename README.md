@@ -402,14 +402,39 @@ ISC License - Copyright (c) 2024 Leonardo Orellana
 
 ---
 
-## 🙏 Agradecimientos
+## 📚 Referencias y Documentación
 
-- [Express.js](https://expressjs.com/) - Framework web
-- [MongoDB](https://www.mongodb.com/) - Base de datos
-- [Mongoose](https://mongoosejs.com/) - ODM
-- [JWT](https://jwt.io/) - Autenticación
-- [Nodemailer](https://nodemailer.com/) - Email service
-- [Swagger](https://swagger.io/) - Documentación API
+Este proyecto se desarrolló basándose en documentación oficial y recursos de la comunidad:
+
+### **Tecnologías Core**
+
+- [Express.js](https://expressjs.com/) - Framework web para Node.js
+- [MongoDB](https://www.mongodb.com/) - Base de datos NoSQL
+- [Mongoose](https://mongoosejs.com/) - ODM para MongoDB
+- [JWT](https://jwt.io/) - Autenticación basada en tokens
+- [Nodemailer](https://nodemailer.com/) - Servicio de envío de emails
+
+### **Documentación API**
+
+- [Swagger UI](https://swagger.io/) - Framework de documentación OpenAPI
+- [swagger-ui-dist](https://github.com/swagger-api/swagger-ui/tree/master/dist) - Distribución de archivos estáticos de Swagger UI
+- [swagger-autogen](https://github.com/davibaltar/swagger-autogen) - Generación automática de documentación Swagger
+
+### **Despliegue en Vercel**
+
+- [Vercel Documentation](https://vercel.com/docs) - Documentación oficial de Vercel
+- [Vercel Environment Variables](https://vercel.com/docs/projects/environment-variables/system-environment-variables) - Variables de entorno del sistema
+- [Vercel Build Step](https://vercel.com/docs/build-step) - Proceso de build en Vercel
+
+### **Solución de Problemas**
+
+- [Solving SwaggerUIBundle Error in Express](https://www.linkedin.com/pulse/solving-swaggeruibundle-defined-error-express-swagger-kumar-singh-p71xc/) - Artículo de Vishal Kumar Singh sobre cómo servir Swagger UI en entornos serverless
+
+### **Mejores Prácticas**
+
+- [Express Best Practices](https://expressjs.com/en/advanced/best-practice-security.html) - Seguridad en Express
+- [MongoDB Schema Design](https://www.mongodb.com/docs/manual/core/data-modeling-introduction/) - Diseño de esquemas en MongoDB
+- [JWT Best Practices](https://tools.ietf.org/html/rfc8725) - RFC 8725 - Mejores prácticas de JWT
 
 ---
 

@@ -1,14 +1,38 @@
 import swaggerAutogen from 'swagger-autogen';
 
+// Detectar el host durante el build
+const getHost = () => {
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  }
+  if (process.env.VERCEL_URL) {
+    return process.env.VERCEL_URL;
+  }
+  return 'localhost:3000';
+};
+
+const isVercel = process.env.VERCEL === '1';
+
+console.log('==========================================');
+console.log('🚀 INICIANDO GENERACIÓN DE SWAGGER');
+console.log('==========================================');
+console.log('🔧 Host detectado:', getHost());
+console.log('🔧 Entorno:', isVercel ? 'Vercel' : 'Local');
+console.log('🔧 VERCEL:', process.env.VERCEL);
+console.log('🔧 VERCEL_URL:', process.env.VERCEL_URL);
+console.log('🔧 VERCEL_PROJECT_PRODUCTION_URL:', process.env.VERCEL_PROJECT_PRODUCTION_URL);
+console.log('🔧 Schemes:', isVercel ? 'https' : 'http');
+console.log('==========================================');
+
 const doc = {
   info: {
     title: 'Nuri Task API',
     version: '1.0.0',
     description: 'API REST para la gestión de tareas, metas, métricas y logros personales',
   },
-  host: process.env.VERCEL_URL || 'localhost:3000',
+  host: getHost(),
   basePath: '/',
-  schemes: process.env.VERCEL_URL ? ['https'] : ['http'],
+  schemes: isVercel ? ['https'] : ['http'],
   consumes: ['application/json'],
   produces: ['application/json'],
   tags: [
@@ -42,8 +66,15 @@ const endpointsFiles = [
 ];
 
 swaggerAutogen(outputFile, endpointsFiles, doc).then(() => {
-  console.log('✅ Documentación Swagger generada correctamente');
+  console.log('==========================================');
+  console.log('✅ SWAGGER GENERADO EXITOSAMENTE');
+  console.log('📄 Archivo:', outputFile);
+  console.log('🌐 Host final:', doc.host);
+  console.log('🔒 Schemes:', doc.schemes);
+  console.log('==========================================');
 
-  // Importar y ejecutar el servidor después de generar swagger
-  import('./index.js');
+  // Importar y ejecutar el servidor después de generar swagger (solo en dev local)
+  if (!process.env.VERCEL) {
+    import('./index.js');
+  }
 });
