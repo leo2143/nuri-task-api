@@ -434,7 +434,6 @@ Este proyecto se desarrolló basándose en documentación oficial y recursos de 
 
 - [Express Best Practices](https://expressjs.com/en/advanced/best-practice-security.html) - Seguridad en Express
 - [MongoDB Schema Design](https://www.mongodb.com/docs/manual/core/data-modeling-introduction/) - Diseño de esquemas en MongoDB
-- [JWT Best Practices](https://tools.ietf.org/html/rfc8725) - RFC 8725 - Mejores prácticas de JWT
 
 ---
 
