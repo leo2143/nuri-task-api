@@ -302,7 +302,10 @@ export class MetricService {
    */
   static async getMetricDashboard(metricId, userId) {
     try {
-      const metric = await Metrics.findById(metricId).populate('GoalId', 'title description status dueDate createdAt');
+      const metric = await Metrics.findById(metricId).populate(
+        'GoalId',
+        'title description status dueDate createdAt userId'
+      );
 
       if (!metric) {
         return new NotFoundResponseModel('Métrica no encontrada');
