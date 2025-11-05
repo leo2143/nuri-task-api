@@ -60,6 +60,7 @@ const todoSchema = new mongoose.Schema(
     GoalId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Goal',
+      default: null,
     },
     priority: {
       type: String,

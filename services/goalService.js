@@ -17,7 +17,7 @@ export class GoalService {
    * @param {string} userId - ID del usuario autenticado
    * @param {Object} [filters={}] - Filtros de búsqueda (status, priority, search, dueDateFrom, dueDateTo, sortBy, sortOrder)
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista resumida de metas o error
-   * @description Devuelve solo información mínima (id, title, status, priority, dueDate, dates)
+   * @description Devuelve solo información mínima (id, title, status, priority, dueDate, parentGoalId, dates)
    * Para información completa incluyendo SMART, comentarios y métricas, usar getGoalById
    */
   static async getAllGoals(userId, filters = {}) {
@@ -32,7 +32,7 @@ export class GoalService {
       const query = { userId, ...filterDto.toMongoQuery() };
       const sort = filterDto.toMongoSort();
 
-      const goals = await Goal.find(query).sort(sort);
+      const goals = await Goal.find(query).populate('parentGoalId', 'title').sort(sort);
       if (goals.length === 0) {
         return new NotFoundResponseModel('No se encontraron metas para este usuario');
       }
@@ -55,10 +55,14 @@ export class GoalService {
    * @param {string} goalId - ID de la meta
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la meta o error
+   * @description Incluye populate de userId (User) y parentGoalId (Goal)
+   * El metricsId se devuelve como ID para que el frontend lo busque en el endpoint de métricas
    */
   static async getGoalById(goalId, userId) {
     try {
-      const goal = await Goal.findOne({ _id: goalId, userId });
+      const goal = await Goal.findOne({ _id: goalId, userId })
+        .populate('userId', 'name email avatar')
+        .populate('parentGoalId', 'description');
       if (!goal) {
         return new NotFoundResponseModel('Meta no encontrada');
       }

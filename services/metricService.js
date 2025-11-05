@@ -51,17 +51,24 @@ export class MetricService {
    * @param {string} id - ID de la métrica
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la métrica o error
+   * @description Incluye populate de GoalId con populate anidado de userId
    */
   static async getMetricById(id, userId) {
     try {
-      const metric = await Metrics.findById(id).populate('GoalId', 'title description status userId');
+      const metric = await Metrics.findById(id).populate({
+        path: 'GoalId',
+        populate: {
+          path: 'userId',
+          select: 'name email avatar',
+        },
+      });
 
       if (!metric) {
         return new NotFoundResponseModel('Métrica no encontrada');
       }
 
       // Verificar que la métrica pertenece a una meta del usuario
-      if (metric.GoalId.userId.toString() !== userId) {
+      if (metric.GoalId.userId._id.toString() !== userId) {
         return new NotFoundResponseModel('Métrica no encontrada');
       }
 

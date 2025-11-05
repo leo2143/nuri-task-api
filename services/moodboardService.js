@@ -46,10 +46,12 @@ export class MoodboardService {
    * @param {string} id - ID del moodboard
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el moodboard o error
+   * @description Incluye populate de userId (User) para obtener información completa
    */
   static async getMoodboardById(id, userId) {
     try {
-      const moodboard = await Moodboard.findOne({ _id: id, userId });
+      const moodboard = await Moodboard.findOne({ _id: id, userId })
+        .populate('userId', 'name email avatar');
 
       if (!moodboard) {
         return new NotFoundResponseModel('Moodboard no encontrado');
