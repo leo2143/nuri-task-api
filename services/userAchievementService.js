@@ -58,6 +58,7 @@ export class UserAchievementService {
    * @param {string} userId - ID del usuario
    * @param {string} [status] - Filtrar por estado (locked/unlocked/completed)
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el progreso del usuario
+   * @description Incluye populate de userId (User) y achievementId (Achievement)
    */
   static async getUserProgress(userId, status = null) {
     try {
@@ -70,7 +71,10 @@ export class UserAchievementService {
         query.status = status;
       }
 
-      const userAchievements = await UserAchievement.find(query).populate('achievementId').sort({ updatedAt: -1 });
+      const userAchievements = await UserAchievement.find(query)
+        .populate('userId', 'name email avatar')
+        .populate('achievementId')
+        .sort({ updatedAt: -1 });
 
       if (userAchievements.length === 0) {
         return new NotFoundResponseModel('No se encontró progreso de logros');
@@ -95,10 +99,13 @@ export class UserAchievementService {
    * @param {string} userId - ID del usuario
    * @param {string} achievementId - ID del logro
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el progreso del usuario
+   * @description Incluye populate de userId (User) y achievementId (Achievement)
    */
   static async getUserAchievementProgress(userId, achievementId) {
     try {
-      const userAchievement = await UserAchievement.findOne({ userId, achievementId }).populate('achievementId');
+      const userAchievement = await UserAchievement.findOne({ userId, achievementId })
+        .populate('userId', 'name email avatar')
+        .populate('achievementId');
 
       if (!userAchievement) {
         // Si no existe progreso, devolver valores por defecto
