@@ -433,6 +433,57 @@
         ]
       }
     },
+    "/api/todos/{id}/state": {
+      "patch": {
+        "tags": [
+          "Todos"
+        ],
+        "summary": "Actualiza solo el estado de una tarea",
+        "description": "Actualiza únicamente el campo completed",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "ID de la tarea"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Estado de completado",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "completed": {
+                  "type": "boolean",
+                  "example": true
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/todos/{id}/comments": {
       "post": {
         "tags": [

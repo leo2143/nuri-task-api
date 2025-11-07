@@ -55,27 +55,27 @@ const goalSchema = new mongoose.Schema(
     smart: {
       specific: {
         type: String,
-        required: true,
+        required: false,
         trim: true,
       },
       measurable: {
         type: String,
-        required: true,
+        required: false,
         trim: true,
       },
       achievable: {
         type: String,
-        required: true,
+        required: false,
         trim: true,
       },
       relevant: {
         type: String,
-        required: true,
+        required: false,
         trim: true,
       },
       timeBound: {
         type: String,
-        required: true,
+        required: false,
         trim: true,
       },
     },

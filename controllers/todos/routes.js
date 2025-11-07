@@ -118,6 +118,30 @@ export const setupTodoRoutes = app => {
     return TodoController.updateTodo(req, res);
   });
 
+  app.patch('/api/todos/:id/state', validateToken, (req, res) => {
+    // #swagger.tags = ['Todos']
+    // #swagger.summary = 'Actualiza solo el estado de una tarea'
+    // #swagger.description = 'Actualiza únicamente el campo completed'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la tarea',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Estado de completado',
+         required: true,
+         schema: {
+           completed: true
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return TodoController.updateTodoState(req, res);
+  });
+
   app.delete('/api/todos/:id', validateToken, (req, res) => {
     // #swagger.tags = ['Todos']
     // #swagger.summary = 'Elimina una tarea'

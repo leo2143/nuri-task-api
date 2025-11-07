@@ -167,6 +167,49 @@ export class TodoService {
   }
 
   /**
+   * Actualiza solo el estado (completed) de una tarea
+   * Más eficiente que el update general ya que solo modifica un campo
+   * @static
+   * @async
+   * @function updateTodoState
+   * @param {string} id - ID de la tarea
+   * @param {boolean} completed - Nuevo estado de completado (true/false)
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea actualizada o error
+   */
+  static async updateTodoState(id, completed, userId) {
+    try {
+      // Validar que el parámetro completed sea un booleano
+      if (typeof completed !== 'boolean') {
+        return new BadRequestResponseModel('El campo completed debe ser un booleano (true/false)');
+      }
+
+      // Actualizar solo el campo completed
+      const todo = await Todo.findOneAndUpdate(
+        { _id: id, userId },
+        { completed },
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
+
+      if (!todo) {
+        return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
+      }
+
+      return new SuccessResponseModel(
+        todo,
+        1,
+        `Tarea ${completed ? 'completada' : 'marcada como pendiente'} correctamente`
+      );
+    } catch (error) {
+      console.error(chalk.red('Error al actualizar el estado:', error));
+      return new ErrorResponseModel('Error al actualizar el estado de la tarea');
+    }
+  }
+
+  /**
    * Elimina una tarea del usuario autenticado
    * @static
    * @async
