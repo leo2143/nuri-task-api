@@ -61,7 +61,6 @@ const endpointsFiles = [
 swaggerAutogen(outputFile, endpointsFiles, doc).then(() => {
   console.log('==========================================');
   console.log('     SWAGGER GENERADO EXITOSAMENTE');
-
   console.log('==========================================');
 
   // Importar y ejecutar el servidor después de generar swagger (solo en dev local)

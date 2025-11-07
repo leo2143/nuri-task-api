@@ -73,6 +73,27 @@ export class TodoController {
     res.status(result.status).json(result);
   }
 
+  /**
+   * Actualiza solo el estado (completed) de una tarea
+   * @static
+   * @async
+   * @function updateTodoState
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.params.id - ID de la tarea
+   * @param {Object} req.body - Datos del estado
+   * @param {boolean} req.body.completed - Nuevo estado de completado (true/false)
+   * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   */
+  static async updateTodoState(req, res) {
+    const id = req.params.id;
+    const { completed } = req.body;
+    const userId = req.userId;
+    const result = await TodoService.updateTodoState(id, completed, userId);
+    res.status(result.status).json(result);
+  }
+
   static async getByTitle(req, res) {
     const title = req.params.title;
     const userId = req.userId;
