@@ -1,136 +1,177 @@
 import mongoose from 'mongoose';
 
 /**
- * Esquema de Mongoose para el modelo de Metric simplificado
- * @typedef {Object} MetricSchema
- * @property {mongoose.Types.ObjectId} GoalId - ID de la meta (requerido, único)
- * @property {number} currentProgress - Progreso actual (0-100)
- * @property {number} currentStreak - Racha actual de semanas con progreso
+ * Esquema de Mongoose para métricas generales del usuario
+ * @typedef {Object} MetricsSchema
+ * @property {mongoose.Types.ObjectId} userId - ID del usuario (requerido, único)
+ * @property {number} currentStreak - Racha actual de días consecutivos
  * @property {number} bestStreak - Mejor racha histórica
- * @property {string} notes - Notas opcionales del usuario
- * @property {Array} history - Historial de progreso con fecha
- * @property {Date} lastUpdated - Fecha de última actualización
- * @property {Date} createdAt - Fecha de creación (automático)
- * @property {Date} updatedAt - Fecha de última actualización (automático)
+ * @property {number} totalTasksCompleted - Total de tareas completadas
+ * @property {number} totalGoalsCompleted - Total de metas completadas
+ * @property {Date} lastActivityDate - Fecha de la última actividad
+ * @property {Array} history - Historial de actividad diaria
  */
 
-/**
- * Esquema de metrica para la base de datos MongoDB
- * Define la estructura y validaciones para los documentos de metrica
- * Cada meta tiene UNA métrica que se actualiza con el progreso
- * Enfoque motivacional: muestra avance y favorece constancia, sin evaluar rendimiento
- * @constant {mongoose.Schema} metricsSchema
- */
 const metricsSchema = new mongoose.Schema(
   {
-    GoalId: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Goal',
+      ref: 'User',
       required: true,
-      unique: true, // Una métrica por meta
-    },
-    currentProgress: {
-      type: Number,
-      min: 0,
-      max: 100,
-      default: 0,
+      unique: true, // Una métrica por usuario
     },
     currentStreak: {
       type: Number,
       default: 0,
+      min: 0,
     },
     bestStreak: {
       type: Number,
       default: 0,
+      min: 0,
     },
-    notes: {
-      type: String,
-      trim: true,
-      default: '',
+    totalTasksCompleted: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
-    // Historial simplificado: solo progreso y fecha
+    totalGoalsCompleted: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    lastActivityDate: {
+      type: Date,
+      default: null,
+    },
+    // Historial simplificado: un registro por día con actividad
     history: [
       {
-        progress: {
-          type: Number,
-          min: 0,
-          max: 100,
-          required: true,
-        },
         date: {
           type: Date,
-          default: Date.now,
+          required: true,
+        },
+        tasksCompleted: {
+          type: Number,
+          default: 0,
         },
       },
     ],
-    lastUpdated: {
-      type: Date,
-      default: Date.now,
-    },
   },
   {
     timestamps: true,
   }
 );
 
-// ========== MÉTODOS DEL ESQUEMA ==========
+// ========== MÉTODOS HELPER PRIVADOS ==========
 
 /**
- * Actualiza la racha actual de progreso
- * Solo cuenta semanas con progreso > 0
- * @method updateStreak
+ * Calcula la diferencia en días entre hoy y la última actividad
+ * @private
+ * @method _getDaysSinceLastActivity
+ * @returns {Object} { today: Date, lastActivity: Date, diffDays: number }
  */
-metricsSchema.methods.updateStreak = function () {
-  if (this.history.length === 0) {
-    this.currentStreak = 0;
+metricsSchema.methods._getDaysSinceLastActivity = function () {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (!this.lastActivityDate) {
+    return { today, lastActivity: null, diffDays: null };
+  }
+
+  const lastActivity = new Date(this.lastActivityDate);
+  lastActivity.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.floor((today - lastActivity) / (1000 * 60 * 60 * 24));
+
+  return { today, lastActivity, diffDays };
+};
+
+// ========== MÉTODOS PÚBLICOS ==========
+
+/**
+ * Actualiza métricas cuando se completa una tarea
+ * @method onTaskCompleted
+ */
+metricsSchema.methods.onTaskCompleted = function () {
+  // Incrementar contador total
+  this.totalTasksCompleted++;
+
+  const { today, diffDays } = this._getDaysSinceLastActivity();
+
+  // Si no hay actividad previa, iniciar racha
+  if (diffDays === null) {
+    this.currentStreak = 1;
+    this.bestStreak = 1;
+    this.lastActivityDate = new Date();
+    this.history.push({ date: today, tasksCompleted: 1 });
     return;
   }
 
-  let streak = 0;
-  // Contar desde el final del historial hacia atrás
-  for (let i = this.history.length - 1; i >= 0; i--) {
-    if (this.history[i].progress > 0) {
-      streak++;
-    } else {
-      break;
+  // Verificar si la racha expiro
+  const streakExpired = this.checkStreakExpiration();
+
+  if (diffDays === 0) {
+    // misma fecha - incrementar contador del día
+    const todayRecord = this.history.find(h => h.date.toDateString() === today.toDateString());
+    if (todayRecord) {
+      todayRecord.tasksCompleted++;
     }
+  } else if (diffDays === 1) {
+    // Día consecutivo - incrementar racha
+    this.currentStreak++;
+    this.history.push({ date: today, tasksCompleted: 1 });
+
+    // Actualizar mejor racha si es necesario
+    if (this.currentStreak > this.bestStreak) {
+      this.bestStreak = this.currentStreak;
+    }
+  } else if (streakExpired) {
+    // Racha expiró (ya fue reseteada a 0 por checkStreakExpiration)
+    // Reiniciar a 1 por esta nueva actividad
+    this.currentStreak = 1;
+    this.history.push({ date: today, tasksCompleted: 1 });
   }
 
-  this.currentStreak = streak;
-
-  // Actualizar mejor racha si es necesario
-  if (streak > this.bestStreak) {
-    this.bestStreak = streak;
-  }
+  this.lastActivityDate = new Date();
 };
 
-// ========== HOOKS PRE-SAVE ==========
+/**
+ * Actualiza métricas cuando se completa una meta
+ * @method onGoalCompleted
+ */
+metricsSchema.methods.onGoalCompleted = function () {
+  this.totalGoalsCompleted++;
+};
 
 /**
- * Hook pre-save para actualizar rachas automáticamente
+ * Verifica si la racha sigue activa
+ * @method checkStreakExpiration
+ * @returns {boolean} true si la racha expiró
  */
-metricsSchema.pre('save', function (next) {
-  // Actualizar rachas si hay progreso
-  if (this.currentProgress > 0) {
-    this.updateStreak();
+metricsSchema.methods.checkStreakExpiration = function () {
+  const { diffDays } = this._getDaysSinceLastActivity();
+
+  if (diffDays === null) return false;
+
+  // Si pasó más de 1 día, la racha se rompió
+  if (diffDays > 1) {
+    this.currentStreak = 0;
+    return true;
   }
 
-  // Actualizar lastUpdated
-  this.lastUpdated = new Date();
-
-  next();
-});
+  return false;
+};
 
 // Configurar para que los virtuals se incluyan en JSON y Object
 metricsSchema.set('toJSON', { virtuals: true });
 metricsSchema.set('toObject', { virtuals: true });
 
 /**
- * Modelo de Métrica para MongoDB
- * @class Metric
+ * Modelo de Metrics para MongoDB
+ * @class Metrics
  * @extends mongoose.Model
- * @description Modelo que representa una métrica única por meta en la base de datos
- * Enfoque motivacional: sin evaluaciones negativas ni comparaciones con ideales
+ * @description Modelo que representa las métricas generales de actividad de un usuario
  */
 const Metrics = mongoose.model('Metrics', metricsSchema);
 export default Metrics;

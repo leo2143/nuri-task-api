@@ -114,6 +114,40 @@
           "response": []
         },
         {
+          "name": "update todo state (completed)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"completed\": true\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{localhost}}/api/todos/:id/state",
+              "host": ["{{localhost}}"],
+              "path": ["api", "todos", ":id", "state"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "68d1e7f577ec3fe8073cef11"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "delete todo",
           "request": {
             "auth": {
@@ -443,76 +477,37 @@
       "name": "metrics",
       "item": [
         {
-          "name": "history",
-          "item": [
-            {
-              "name": "add history entry",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": {
-                    "token": "{{token_auth}}"
-                  }
-                },
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n    \"progress\": 65,\r\n    \"date\": \"2025-11-01T10:00:00.000Z\"\r\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{localhost}}/api/metrics/:id/history",
-                  "host": ["{{localhost}}"],
-                  "path": ["api", "metrics", ":id", "history"],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "68f426bb63e5a138787a108a"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
+          "name": "get my metrics",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/metrics"
+          },
+          "response": []
         },
         {
-          "name": "dashboard",
-          "item": [
-            {
-              "name": "get dashboard",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": {
-                    "token": "{{token_auth}}"
-                  }
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{localhost}}/api/metrics/:id/dashboard",
-                  "host": ["{{localhost}}"],
-                  "path": ["api", "metrics", ":id", "dashboard"],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "68f426bb63e5a138787a108a"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
+          "name": "get dashboard",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": {
+                "token": "{{token_auth}}"
+              }
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{localhost}}/api/metrics/dashboard"
+          },
+          "response": []
         },
         {
-          "name": "create metric",
+          "name": "check and update streaks",
           "request": {
             "auth": {
               "type": "bearer",
@@ -522,130 +517,7 @@
             },
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"GoalId\": \"68f4269f63e5a138787a1086\",\r\n    \"currentProgress\": 0,\r\n    \"notes\": \"Comenzando seguimiento de la meta\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{localhost}}/api/metrics"
-          },
-          "response": []
-        },
-        {
-          "name": "all metrics",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "GET",
-            "header": [],
-            "url": "{{localhost}}/api/metrics"
-          },
-          "response": []
-        },
-        {
-          "name": "get metric by id",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{localhost}}/api/metrics/:id",
-              "host": ["{{localhost}}"],
-              "path": ["api", "metrics", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "68f426bb63e5a138787a108a"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "get metric by goal id",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{localhost}}/api/goals/:goalId/metrics",
-              "host": ["{{localhost}}"],
-              "path": ["api", "goals", ":goalId", "metrics"],
-              "variable": [
-                {
-                  "key": "goalId",
-                  "value": "68d1e7f577ec3fe8073cef21"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "update metric",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "PUT",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"currentProgress\": 75,\r\n    \"notes\": \"Excelente progreso esta semana. Completé 3 módulos importantes.\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{localhost}}/api/metrics/:id",
-              "host": ["{{localhost}}"],
-              "path": ["api", "metrics", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "68f426bb63e5a138787a108a"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "delete metric",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "DELETE",
-            "header": [],
-            "url": "{{localhost}}/api/metrics/68f426bb63e5a138787a108a"
+            "url": "{{localhost}}/api/metrics/check-streaks"
           },
           "response": []
         }

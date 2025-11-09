@@ -964,7 +964,7 @@
           "Goals"
         ],
         "summary": "Obtiene todas las metas del usuario",
-        "description": "",
+        "description": "Retorna todas las metas con campos de tracking (totalTasks, completedTasks, progress)",
         "parameters": [
           {
             "name": "status",
@@ -1026,7 +1026,7 @@
           "Goals"
         ],
         "summary": "Crea una nueva meta",
-        "description": "",
+        "description": "Crea una nueva meta con campos de tracking inicializados en 0",
         "parameters": [
           {
             "name": "authorization",
@@ -1062,6 +1062,78 @@
           }
         ],
         "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/goals/catalogs": {
+      "get": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "Obtiene lista catalog de metas (solo id y título)",
+        "description": "Retorna solo id y título de las metas, ideal para dropdowns y selects",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista catalog de metas obtenida correctamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "status": {
+                  "type": "number",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Lista simple de metas obtenida correctamente"
+                },
+                "count": {
+                  "type": "number",
+                  "example": 3
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "example": "507f1f77bcf86cd799439013"
+                      },
+                      "title": {
+                        "type": "string",
+                        "example": "Crear portafolio"
+                      }
+                    }
+                  }
+                }
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          },
           "401": {
             "description": "Unauthorized"
           },
@@ -1169,7 +1241,7 @@
           "Goals"
         ],
         "summary": "Obtiene una meta por su ID",
-        "description": "",
+        "description": "Retorna meta con userId y parentGoalId poblados, incluye campos de tracking",
         "parameters": [
           {
             "name": "id",
@@ -1359,337 +1431,81 @@
       }
     },
     "/api/metrics": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "summary": "Obtiene las métricas generales del usuario autenticado",
+        "description": "Retorna rachas, totales de tareas/metas completadas y historial de actividad",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/metrics/dashboard": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "summary": "Obtiene el dashboard motivacional del usuario",
+        "description": "Incluye métricas, mensajes motivacionales y estadísticas",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/metrics/check-streaks": {
       "post": {
         "tags": [
           "Metrics"
         ],
-        "summary": "Crea una nueva métrica para una meta",
-        "description": "",
+        "summary": "Verifica y actualiza las rachas del usuario",
+        "description": "Comprueba si las rachas han expirado y las actualiza",
         "parameters": [
           {
             "name": "authorization",
             "in": "header",
             "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "description": "Datos de la métrica",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "GoalId": {
-                  "type": "string",
-                  "example": "507f1f77bcf86cd799439012"
-                },
-                "currentProgress": {
-                  "type": "number",
-                  "example": 0
-                },
-                "notes": {
-                  "type": "string",
-                  "example": "Comenzando seguimiento"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "Metrics"
-        ],
-        "summary": "Obtiene todas las métricas del usuario",
-        "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/metrics/{id}": {
-      "get": {
-        "tags": [
-          "Metrics"
-        ],
-        "summary": "Obtiene una métrica por su ID",
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID de la métrica"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "Metrics"
-        ],
-        "summary": "Actualiza una métrica existente",
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID de la métrica"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "description": "Datos a actualizar",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "currentProgress": {
-                  "type": "number",
-                  "example": 85
-                },
-                "notes": {
-                  "type": "string",
-                  "example": "Completé 3 módulos esta semana"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "Metrics"
-        ],
-        "summary": "Elimina una métrica",
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID de la métrica"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/goals/{goalId}/metrics": {
-      "get": {
-        "tags": [
-          "Metrics"
-        ],
-        "summary": "Obtiene la métrica de una meta específica",
-        "description": "",
-        "parameters": [
-          {
-            "name": "goalId",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID de la meta"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/metrics/{id}/dashboard": {
-      "get": {
-        "tags": [
-          "Metrics"
-        ],
-        "summary": "Obtiene el dashboard motivacional de una métrica",
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID de la métrica"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/metrics/{id}/history": {
-      "post": {
-        "tags": [
-          "Metrics"
-        ],
-        "summary": "Agrega una entrada al historial de la métrica",
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID de la métrica"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "description": "Datos del historial",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "progress": {
-                  "type": "number",
-                  "example": 65
-                },
-                "date": {
-                  "type": "string",
-                  "example": "2025-11-01T10:00:00.000Z"
-                }
-              }
-            }
           }
         ],
         "responses": {

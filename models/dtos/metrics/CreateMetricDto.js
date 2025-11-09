@@ -1,71 +1,84 @@
 /**
- * DTO para crear una nueva métrica (simplificado - enfoque motivacional)
+ * DTO para crear métricas generales del usuario
  * @class CreateMetricDto
- * @description Define la estructura y validaciones para crear una métrica
+ * @description Define la estructura y validaciones para crear Metrics
+ * ⚠️ NOTA: Las métricas se crean automáticamente al registrar un usuario.
+ * Este DTO se usa principalmente para testing o migración de datos.
  */
 export class CreateMetricDto {
   /**
-   * @param {Object} data - Datos de la métrica
-   * @param {string} data.GoalId - ID de la meta (requerido)
-   * @param {number} [data.currentProgress=0] - Progreso actual (0-100)
-   * @param {string} [data.notes=''] - Notas opcionales del usuario
+   * @param {Object} data - Datos de las métricas del usuario
+   * @param {string} data.userId - ID del usuario (requerido)
+   * @param {number} [data.currentStreak=0] - Racha actual de días consecutivos
+   * @param {number} [data.bestStreak=0] - Mejor racha histórica
+   * @param {number} [data.totalTasksCompleted=0] - Total de tareas completadas
+   * @param {number} [data.totalGoalsCompleted=0] - Total de metas completadas
+   * @param {Date|string|null} [data.lastActivityDate=null] - Fecha de última actividad
+   * @param {Array} [data.history=[]] - Historial de actividad diaria
    */
   constructor(data) {
-    // Campos requeridos
-    this.GoalId = data.GoalId;
+    // Campo requerido
+    this.userId = data.userId;
 
-    // Campos opcionales
-    this.currentProgress = data.currentProgress !== undefined ? data.currentProgress : 0;
-    this.notes = data.notes || '';
-
-    // Campos iniciales
-    this.currentStreak = 0;
-    this.bestStreak = 0;
-    this.history = [];
-    this.lastUpdated = new Date();
+    // Campos opcionales con valores por defecto
+    this.currentStreak = data.currentStreak !== undefined ? data.currentStreak : 0;
+    this.bestStreak = data.bestStreak !== undefined ? data.bestStreak : 0;
+    this.totalTasksCompleted = data.totalTasksCompleted !== undefined ? data.totalTasksCompleted : 0;
+    this.totalGoalsCompleted = data.totalGoalsCompleted !== undefined ? data.totalGoalsCompleted : 0;
+    this.lastActivityDate = data.lastActivityDate || null;
+    this.history = data.history || [];
   }
 
   /**
-   * Valida GoalId
+   * Valida userId
    * @param {boolean} required - Si el campo es requerido
    * @returns {string|null} Mensaje de error o null si es válido
    */
-  _validateGoalId(required = true) {
-    if (this.GoalId === undefined) return null;
+  _validateUserId(required = true) {
+    if (this.userId === undefined) return null;
 
-    if (required && (!this.GoalId || typeof this.GoalId !== 'string' || this.GoalId.trim() === '')) {
-      return 'El ID de la meta es requerido y debe ser un string válido';
+    if (required && (!this.userId || typeof this.userId !== 'string' || this.userId.trim() === '')) {
+      return 'El ID del usuario es requerido y debe ser un string válido';
     }
 
     return null;
   }
 
   /**
-   * Valida currentProgress
+   * Valida un campo numérico positivo
+   * @param {string} fieldName - Nombre del campo
+   * @param {number} value - Valor a validar
    * @returns {string|null} Mensaje de error o null si es válido
    */
-  _validateCurrentProgress() {
-    if (this.currentProgress === undefined) return null;
+  _validatePositiveNumber(fieldName, value) {
+    if (value === undefined) return null;
 
-    if (typeof this.currentProgress !== 'number') {
-      return 'El progreso debe ser un número';
+    if (typeof value !== 'number') {
+      return `El campo ${fieldName} debe ser un número`;
     }
-    if (this.currentProgress < 0 || this.currentProgress > 100) {
-      return 'El progreso debe estar entre 0 y 100';
+    if (value < 0) {
+      return `El campo ${fieldName} debe ser mayor o igual a 0`;
     }
 
     return null;
   }
 
   /**
-   * Valida notes
+   * Valida el historial
    * @returns {string|null} Mensaje de error o null si es válido
    */
-  _validateNotes() {
-    if (this.notes === undefined) return null;
+  _validateHistory() {
+    if (!this.history || !Array.isArray(this.history)) {
+      return 'El historial debe ser un array';
+    }
 
-    if (this.notes && typeof this.notes !== 'string') {
-      return 'Las notas deben ser un string';
+    for (const entry of this.history) {
+      if (!entry.date || !entry.tasksCompleted) {
+        return 'Cada entrada del historial debe tener date y tasksCompleted';
+      }
+      if (typeof entry.tasksCompleted !== 'number' || entry.tasksCompleted < 0) {
+        return 'El campo tasksCompleted debe ser un número positivo';
+      }
     }
 
     return null;
@@ -78,16 +91,26 @@ export class CreateMetricDto {
   validate() {
     const errors = [];
 
-    // Validar campos requeridos
-    const goalIdError = this._validateGoalId(true);
-    if (goalIdError) errors.push(goalIdError);
+    // Validar userId (requerido)
+    const userIdError = this._validateUserId(true);
+    if (userIdError) errors.push(userIdError);
 
-    // Validar campos opcionales
-    const progressError = this._validateCurrentProgress();
-    if (progressError) errors.push(progressError);
+    // Validar campos numéricos
+    const streakError = this._validatePositiveNumber('currentStreak', this.currentStreak);
+    if (streakError) errors.push(streakError);
 
-    const notesError = this._validateNotes();
-    if (notesError) errors.push(notesError);
+    const bestStreakError = this._validatePositiveNumber('bestStreak', this.bestStreak);
+    if (bestStreakError) errors.push(bestStreakError);
+
+    const tasksError = this._validatePositiveNumber('totalTasksCompleted', this.totalTasksCompleted);
+    if (tasksError) errors.push(tasksError);
+
+    const goalsError = this._validatePositiveNumber('totalGoalsCompleted', this.totalGoalsCompleted);
+    if (goalsError) errors.push(goalsError);
+
+    // Validar historial
+    const historyError = this._validateHistory();
+    if (historyError) errors.push(historyError);
 
     return {
       isValid: errors.length === 0,
@@ -101,13 +124,13 @@ export class CreateMetricDto {
    */
   toPlainObject() {
     return {
-      GoalId: this.GoalId.trim(),
-      currentProgress: this.currentProgress,
-      notes: this.notes.trim(),
+      userId: this.userId.trim(),
       currentStreak: this.currentStreak,
       bestStreak: this.bestStreak,
+      totalTasksCompleted: this.totalTasksCompleted,
+      totalGoalsCompleted: this.totalGoalsCompleted,
+      lastActivityDate: this.lastActivityDate,
       history: this.history,
-      lastUpdated: this.lastUpdated,
     };
   }
 }

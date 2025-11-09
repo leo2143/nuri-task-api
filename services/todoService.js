@@ -1,4 +1,6 @@
 import Todo from '../models/todoModel.js';
+import Goal from '../models/goalsModel.js';
+import { MetricsService } from './metricsService.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import { CreateTodoDto, UpdateTodoDto, TodoFilterDto, AddCommentDto, MinTodoDto } from '../models/dtos/todo/index.js';
@@ -123,6 +125,24 @@ export class TodoService {
       });
 
       const savedTodo = await todo.save();
+
+      // Si la tarea está asociada a un goal, actualizar sus contadores
+      if (savedTodo.GoalId) {
+        try {
+          const goal = await Goal.findById(savedTodo.GoalId);
+          if (goal) {
+            await goal.updateTaskCount();
+            await goal.save();
+            console.log(
+              chalk.blue(`Goal actualizado: ${goal.completedTasks}/${goal.totalTasks} tareas (${goal.progress}%)`)
+            );
+          }
+        } catch (goalError) {
+          console.error(chalk.yellow('Error al actualizar progreso del goal:', goalError));
+          // No fallar la operación principal
+        }
+      }
+
       return new CreatedResponseModel(savedTodo, 'Tarea creada correctamente');
     } catch (error) {
       console.error(chalk.red('Error al crear tarea:', error));
@@ -149,14 +169,54 @@ export class TodoService {
         return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
+      const currentTodo = await Todo.findOne({ _id: id, userId });
+      if (!currentTodo) {
+        return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
+      }
+
+      const oldGoalId = currentTodo.GoalId?.toString();
+      const newGoalId = todoData.GoalId?.toString();
+
       const cleanData = updateDto.toPlainObject();
       const todo = await Todo.findOneAndUpdate({ _id: id, userId }, cleanData, {
         new: true,
         runValidators: true,
       });
 
-      if (!todo) {
-        return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
+      if (oldGoalId !== newGoalId) {
+        if (oldGoalId) {
+          try {
+            const oldGoal = await Goal.findById(oldGoalId);
+            if (oldGoal) {
+              await oldGoal.updateTaskCount();
+              await oldGoal.save();
+              console.log(
+                chalk.blue(
+                  `Goal anterior actualizado: ${oldGoal.completedTasks}/${oldGoal.totalTasks} tareas (${oldGoal.progress}%)`
+                )
+              );
+            }
+          } catch (goalError) {
+            console.error(chalk.yellow('Error al actualizar goal anterior:', goalError));
+          }
+        }
+
+        if (newGoalId) {
+          try {
+            const newGoal = await Goal.findById(newGoalId);
+            if (newGoal) {
+              await newGoal.updateTaskCount();
+              await newGoal.save();
+              console.log(
+                chalk.blue(
+                  `Goal nuevo actualizado: ${newGoal.completedTasks}/${newGoal.totalTasks} tareas (${newGoal.progress}%)`
+                )
+              );
+            }
+          } catch (goalError) {
+            console.error(chalk.yellow('Error al actualizar goal nuevo:', goalError));
+          }
+        }
       }
 
       return new SuccessResponseModel(todo, 1, 'Tarea actualizada correctamente');
@@ -168,7 +228,7 @@ export class TodoService {
 
   /**
    * Actualiza solo el estado (completed) de una tarea
-   * Más eficiente que el update general ya que solo modifica un campo
+   * Actualiza métricas del usuario y progreso del goal automáticamente
    * @static
    * @async
    * @function updateTodoState
@@ -184,22 +244,43 @@ export class TodoService {
         return new BadRequestResponseModel('El campo completed debe ser un booleano (true/false)');
       }
 
-      // Actualizar solo el campo completed
-      const todo = await Todo.findOneAndUpdate(
-        { _id: id, userId },
-        { completed },
-        {
-          new: true,
-          runValidators: true,
-        }
-      );
+      const existingTodo = await Todo.findOne({ _id: id, userId });
 
-      if (!todo) {
+      if (!existingTodo) {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
       }
 
+      const wasCompleted = existingTodo.completed;
+
+      existingTodo.completed = completed;
+      await existingTodo.save();
+
+      if (!wasCompleted && completed === true) {
+        try {
+          await MetricsService.recordTaskCompleted(userId);
+        } catch (metricsError) {
+          console.error(chalk.yellow('Error al actualizar métricas del usuario:', metricsError));
+        }
+      }
+
+      //actualizar progreso de la meta (goal)
+      if (existingTodo.GoalId) {
+        try {
+          const goal = await Goal.findById(existingTodo.GoalId);
+          if (goal) {
+            await goal.updateTaskCount();
+            await goal.save();
+            console.log(
+              chalk.blue(`Goal actualizado: ${goal.completedTasks}/${goal.totalTasks} tareas (${goal.progress}%)`)
+            );
+          }
+        } catch (goalError) {
+          console.error(chalk.yellow('Error al actualizar progreso del goal:', goalError));
+        }
+      }
+
       return new SuccessResponseModel(
-        todo,
+        existingTodo,
         1,
         `Tarea ${completed ? 'completada' : 'marcada como pendiente'} correctamente`
       );
@@ -220,10 +301,30 @@ export class TodoService {
    */
   static async deleteTodo(id, userId) {
     try {
-      const todo = await Todo.findOneAndDelete({ _id: id, userId });
+      const todo = await Todo.findOne({ _id: id, userId });
       if (!todo) {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
       }
+
+      const goalId = todo.GoalId;
+
+      await Todo.findByIdAndDelete(id);
+
+      if (goalId) {
+        try {
+          const goal = await Goal.findById(goalId);
+          if (goal) {
+            await goal.updateTaskCount();
+            await goal.save();
+            console.log(
+              chalk.blue(`Goal actualizado: ${goal.completedTasks}/${goal.totalTasks} tareas (${goal.progress}%)`)
+            );
+          }
+        } catch (goalError) {
+          console.error(chalk.yellow('Error al actualizar progreso del goal:', goalError));
+        }
+      }
+
       return new SuccessResponseModel(todo, 1, 'Tarea eliminada correctamente');
     } catch (error) {
       console.error(chalk.red('Error al eliminar tarea:', error));
@@ -315,7 +416,6 @@ export class TodoService {
    */
   static async addCommentToTodo(todoId, commentData, userId) {
     try {
-      // Validar datos del comentario usando DTO
       const commentDto = new AddCommentDto(commentData);
       const validation = commentDto.validate();
 
@@ -323,14 +423,12 @@ export class TodoService {
         return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
-      // Buscar la tarea
       const todo = await Todo.findOne({ _id: todoId, userId });
 
       if (!todo) {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + todoId);
       }
 
-      // Agregar el comentario
       const newComment = commentDto.toPlainObject();
       todo.comments.push(newComment);
 
