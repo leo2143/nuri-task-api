@@ -15,6 +15,7 @@ export class MinGoalDto {
     this.priority = goal.priority;
     this.dueDate = goal.dueDate;
     this.parentGoalId = goal.parentGoalId || null;
+    this.progress = goal.progress || 0;
     this.createdAt = goal.createdAt;
     this.updatedAt = goal.updatedAt;
   }
@@ -41,6 +42,7 @@ export class MinGoalDto {
       priority: this.priority,
       dueDate: this.dueDate,
       parentGoalId: this.parentGoalId,
+      progress: this.progress,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

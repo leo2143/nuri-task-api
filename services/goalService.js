@@ -1,7 +1,14 @@
 import Goal from '../models/goalsModel.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
-import { CreateGoalDto, UpdateGoalDto, AddCommentDto, GoalFilterDto, MinGoalDto } from '../models/dtos/goals/index.js';
+import {
+  CreateGoalDto,
+  UpdateGoalDto,
+  AddCommentDto,
+  GoalFilterDto,
+  MinGoalDto,
+  CatalogGoalDto,
+} from '../models/dtos/goals/index.js';
 import chalk from 'chalk';
 
 /**
@@ -56,7 +63,6 @@ export class GoalService {
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la meta o error
    * @description Incluye populate de userId (User) y parentGoalId (Goal)
-   * El metricsId se devuelve como ID para que el frontend lo busque en el endpoint de métricas
    */
   static async getGoalById(goalId, userId) {
     try {
@@ -102,6 +108,24 @@ export class GoalService {
         userId,
       });
       const savedGoal = await goal.save();
+
+      if (savedGoal.parentGoalId) {
+        try {
+          const parentGoal = await Goal.findById(savedGoal.parentGoalId);
+          if (parentGoal) {
+            await parentGoal.updateSubGoalCount();
+            await parentGoal.save();
+            console.log(
+              chalk.blue(
+                `Meta padre actualizada: ${parentGoal.completedSubGoals}/${parentGoal.totalSubGoals} sub-metas`
+              )
+            );
+          }
+        } catch (parentError) {
+          console.error(chalk.yellow('Error al actualizar contadores de meta padre:', parentError));
+        }
+      }
+
       return new CreatedResponseModel(savedGoal, 'Meta creada correctamente');
     } catch (error) {
       console.error(chalk.red('Error al crear meta:', error));
@@ -128,15 +152,36 @@ export class GoalService {
         return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
+      // Obtener la meta actual para verificar cambios
+      const currentGoal = await Goal.findOne({ _id: goalId, userId });
+      if (!currentGoal) {
+        return new NotFoundResponseModel('Meta no encontrada');
+      }
+
       const cleanData = updateDto.toPlainObject();
       const goal = await Goal.findOneAndUpdate({ _id: goalId, userId }, cleanData, {
         new: true,
         runValidators: true,
       });
 
-      if (!goal) {
-        return new NotFoundResponseModel('Meta no encontrada');
+      if (cleanData.status === 'completed' && currentGoal.status !== 'completed' && goal.parentGoalId) {
+        try {
+          const parentGoal = await Goal.findById(goal.parentGoalId);
+          if (parentGoal) {
+            await parentGoal.updateSubGoalCount();
+            await parentGoal.save();
+            console.log(
+              chalk.blue(
+                `Meta padre actualizada: ${parentGoal.completedSubGoals}/${parentGoal.totalSubGoals} sub-metas`
+              )
+            );
+          }
+        } catch (parentError) {
+          console.error(chalk.yellow('Error al actualizar contadores de meta padre:', parentError));
+          // No fallar la operación principal
+        }
       }
+
       return new SuccessResponseModel(goal, 1, 'Meta actualizada correctamente');
     } catch (error) {
       console.error(chalk.red('Error al actualizar meta:', error));
@@ -155,10 +200,37 @@ export class GoalService {
    */
   static async deleteGoal(goalId, userId) {
     try {
-      const goal = await Goal.findOneAndDelete({ _id: goalId, userId });
+      const goal = await Goal.findOne({ _id: goalId, userId });
+
       if (!goal) {
         return new NotFoundResponseModel('Meta no encontrada');
       }
+
+      // Guardar el parentGoalId antes de eliminar
+      const parentGoalId = goal.parentGoalId;
+
+      // Eliminar la meta
+      await Goal.findByIdAndDelete(goalId);
+
+      // Si tenía una meta padre, actualizar sus contadores
+      if (parentGoalId) {
+        try {
+          const parentGoal = await Goal.findById(parentGoalId);
+          if (parentGoal) {
+            await parentGoal.updateSubGoalCount();
+            await parentGoal.save();
+            console.log(
+              chalk.blue(
+                `Meta padre actualizada: ${parentGoal.completedSubGoals}/${parentGoal.totalSubGoals} sub-metas`
+              )
+            );
+          }
+        } catch (parentError) {
+          console.error(chalk.yellow('Error al actualizar contadores de meta padre:', parentError));
+          // No fallar la operación principal
+        }
+      }
+
       return new SuccessResponseModel({ id: goalId }, 1, 'Meta eliminada correctamente');
     } catch (error) {
       console.error(chalk.red('Error al eliminar meta:', error));
@@ -248,6 +320,32 @@ export class GoalService {
     } catch (error) {
       console.error(chalk.red('Error al agregar comentario:', error));
       return new ErrorResponseModel('Error al agregar comentario');
+    }
+  }
+
+  /**
+   * Obtiene lista catalog de metas (solo id y título) del usuario autenticado
+   * @static
+   * @async
+   * @function getCatalogGoals
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con lista catalog de metas
+   * @description Útilzado para selects
+   */
+  static async getCatalogGoals(userId) {
+    try {
+      const goals = await Goal.find({ userId }).select('_id title').sort({ createdAt: -1 });
+
+      if (goals.length === 0) {
+        return new NotFoundResponseModel('No se encontraron metas para este usuario');
+      }
+
+      const catalogGoals = CatalogGoalDto.fromArray(goals);
+
+      return new SuccessResponseModel(catalogGoals, catalogGoals.length, 'Catalogo de metas obtenida correctamente');
+    } catch (error) {
+      console.error(chalk.red('Error al obtener lista simple de metas:', error));
+      return new ErrorResponseModel('Error al obtener lista simple de metas');
     }
   }
 }

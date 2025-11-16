@@ -12,10 +12,35 @@ export const setupGoalRoutes = app => {
   app.get('/api/goals', validateToken, (req, res) => {
     // #swagger.tags = ['Goals']
     // #swagger.summary = 'Obtiene todas las metas del usuario'
+    // #swagger.description = 'Retorna todas las metas con campos de tracking (totalTasks, completedTasks, progress)'
     /* #swagger.security = [{
          "bearerAuth": []
     }] */
     return GoalController.getAllGoals(req, res);
+  });
+
+  app.get('/api/goals/catalogs', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Obtiene lista catalog de metas (solo id y título)'
+    // #swagger.description = 'Retorna solo id y título de las metas, ideal para dropdowns y selects'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    /* #swagger.responses[200] = {
+         description: 'Lista catalog de metas obtenida correctamente',
+         schema: {
+           success: true,
+           status: 200,
+           message: 'Lista simple de metas obtenida correctamente',
+           count: 3,
+           data: [
+             { id: '507f1f77bcf86cd799439011', title: 'Aprender Node.js' },
+             { id: '507f1f77bcf86cd799439012', title: 'Dominar React' },
+             { id: '507f1f77bcf86cd799439013', title: 'Crear portafolio' }
+           ]
+         }
+    } */
+    return GoalController.getCatalogGoals(req, res);
   });
 
   app.get('/api/goals/active', validateToken, (req, res) => {
@@ -48,6 +73,7 @@ export const setupGoalRoutes = app => {
   app.get('/api/goals/:id', validateToken, (req, res) => {
     // #swagger.tags = ['Goals']
     // #swagger.summary = 'Obtiene una meta por su ID'
+    // #swagger.description = 'Retorna meta con userId y parentGoalId poblados, incluye campos de tracking'
     /* #swagger.parameters['id'] = {
          in: 'path',
          description: 'ID de la meta',
@@ -63,6 +89,7 @@ export const setupGoalRoutes = app => {
   app.post('/api/goals', validateToken, (req, res) => {
     // #swagger.tags = ['Goals']
     // #swagger.summary = 'Crea una nueva meta'
+    // #swagger.description = 'Crea una nueva meta con campos de tracking inicializados en 0'
     /* #swagger.parameters['body'] = {
          in: 'body',
          description: 'Datos de la meta',
