@@ -156,15 +156,17 @@ mongod --dbpath=/ruta/a/tu/carpeta/datos
 **Opción B - MongoDB Atlas (Cloud):**
 Actualiza `MONGO_URI` en `.env` con tu URI de conexión de Atlas.
 
-### 5. (Opcional) Importar datos de prueba
+### 5. (Opcional) Datos de prueba
 
-```bash
-mongoimport --db nuri-task-db --collection users --file resources/moongo-scripts/users-data.json --jsonArray
-mongoimport --db nuri-task-db --collection todos --file resources/moongo-scripts/todos-data.json --jsonArray
-mongoimport --db nuri-task-db --collection goals --file resources/moongo-scripts/goals-data.json --jsonArray
-mongoimport --db nuri-task-db --collection metrics --file resources/moongo-scripts/metrics-data.json --jsonArray
-mongoimport --db nuri-task-db --collection achievements --file resources/moongo-scripts/achievements-data.json --jsonArray
-```
+El proyecto incluye archivos JSON con datos de ejemplo en la carpeta `resources/moongo-scripts/`:
+
+- `users-data.json` - Usuarios de ejemplo
+- `todos-data.json` - Tareas de ejemplo
+- `goals-data.json` - Metas de ejemplo
+- `metrics-data.json` - Métricas de ejemplo
+- `achievements-data.json` - Logros del sistema
+
+Estos archivos pueden ser importados a MongoDB si se desea trabajar con datos de prueba.
 
 ### 6. Iniciar el servidor
 
