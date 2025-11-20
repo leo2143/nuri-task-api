@@ -56,6 +56,7 @@ Celebramos tus progresos y te acompañamos en el camino, con mensajes cálidos y
 - [🌐 Despliegue](#-despliegue)
 - [📧 Sistema de Correos](#-sistema-de-correos)
 - [📊 Datos de Prueba](#-datos-de-prueba)
+- [🔮 Mejoras Futuras](#-mejoras-futuras)
 - [📄 Licencia](#-licencia)
 
 ---
@@ -422,6 +423,14 @@ mongoimport --db nuri-task-db --collection metrics \
 mongoimport --db nuri-task-db --collection achievements \
   --file resources/moongo-scripts/achievements-data.json --jsonArray
 ```
+
+---
+
+## 🔮 Mejoras Futuras
+
+### Funcionalidades Pendientes
+
+- **Paginado**: Implementación de paginado para las búsquedas en general (todos, goals, achievements, etc.)
 
 ---
 
