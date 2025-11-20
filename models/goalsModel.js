@@ -84,7 +84,6 @@ const goalSchema = new mongoose.Schema(
       ref: 'Goal',
       default: null,
     },
-    // Tracking de submetas
     totalSubGoals: {
       type: Number,
       default: 0,
@@ -95,7 +94,6 @@ const goalSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
-    // Tracking de tareas
     totalTasks: {
       type: Number,
       default: 0,
@@ -106,7 +104,6 @@ const goalSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
-    // Progreso calculado
     progress: {
       type: Number,
       min: 0,
@@ -173,8 +170,6 @@ goalSchema.methods.updateSubGoalCount = async function () {
   this.completedSubGoals = subGoals.filter(g => g.status === 'completed').length;
 };
 
-// ========== VIRTUALS ==========
-
 /**
  * Calcula el progreso basado en tareas completadas
  * @virtual calculatedProgress
@@ -185,9 +180,8 @@ goalSchema.virtual('calculatedProgress').get(function () {
   return Math.round((this.completedTasks / this.totalTasks) * 100);
 });
 
-// Configurar para que los virtuals se incluyan en JSON y Object
-goalSchema.set('toJSON', { virtuals: true });
-goalSchema.set('toObject', { virtuals: true });
+goalSchema.set('toJSON', { versionKey: false });
+goalSchema.set('toObject', { versionKey: false });
 
 /**
  * Modelo de Goal para MongoDB

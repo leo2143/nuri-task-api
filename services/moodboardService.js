@@ -50,8 +50,7 @@ export class MoodboardService {
    */
   static async getMoodboardById(id, userId) {
     try {
-      const moodboard = await Moodboard.findOne({ _id: id, userId })
-        .populate('userId', 'name email avatar');
+      const moodboard = await Moodboard.findOne({ _id: id, userId }).populate('userId', 'name email avatar');
 
       if (!moodboard) {
         return new NotFoundResponseModel('Moodboard no encontrado');

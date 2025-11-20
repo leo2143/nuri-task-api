@@ -17,7 +17,7 @@ export class UpdateMoodboardDto extends CreateMoodboardDto {
   constructor(data) {
     // Llamamos super con objeto vacío para inicializar la clase padre
     super({});
-    
+
     if (data.title !== undefined) this.title = data.title;
     if (data.images !== undefined) this.images = data.images;
     if (data.phrases !== undefined) this.phrases = data.phrases;

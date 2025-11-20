@@ -90,7 +90,9 @@ export class MetricsService {
       await metrics.save();
 
       console.log(
-        chalk.green(`Métricas actualizadas: ${metrics.totalTasksCompleted} tareas | Racha: ${metrics.currentStreak} días`)
+        chalk.green(
+          `Métricas actualizadas: ${metrics.totalTasksCompleted} tareas | Racha: ${metrics.currentStreak} días`
+        )
       );
 
       return new SuccessResponseModel(metrics, 1, 'Tarea registrada en métricas correctamente');
@@ -229,4 +231,3 @@ export class MetricsService {
     }
   }
 }
-

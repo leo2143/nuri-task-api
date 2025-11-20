@@ -5,34 +5,36 @@ import { CreateGoalDto } from './CreateGoalDto.js';
  * @class UpdateGoalDto
  * @extends CreateGoalDto
  * @description Define la estructura y validaciones para actualizar una meta
- * Hereda las validaciones de CreateGoalDto pero todos los campos son opcionales
+ * Requiere title y smart completos, los demás campos son opcionales
  */
 export class UpdateGoalDto extends CreateGoalDto {
   /**
    * @param {Object} data - Datos a actualizar
-   * @param {string} [data.title] - Título de la meta
+   * @param {string} data.title - Título de la meta (requerido)
    * @param {string} [data.description] - Descripción de la meta
    * @param {string} [data.status] - Estado de la meta (active/paused/completed)
    * @param {string} [data.priority] - Prioridad de la meta (low/medium/high)
    * @param {Date|string} [data.dueDate] - Fecha límite de la meta
-   * @param {Object} [data.smart] - Criterios SMART
-   * @param {string} [data.smart.specific] - Criterio específico
-   * @param {string} [data.smart.measurable] - Criterio medible
-   * @param {string} [data.smart.achievable] - Criterio alcanzable
-   * @param {string} [data.smart.relevant] - Criterio relevante
-   * @param {string} [data.smart.timeBound] - Criterio con tiempo límite
+   * @param {Object} data.smart - Criterios SMART (requerido)
+   * @param {string} data.smart.specific - Criterio específico (requerido)
+   * @param {string} data.smart.measurable - Criterio medible (requerido)
+   * @param {string} data.smart.achievable - Criterio alcanzable (requerido)
+   * @param {string} data.smart.relevant - Criterio relevante (requerido)
+   * @param {string} data.smart.timeBound - Criterio con tiempo límite (requerido)
    */
   constructor(data) {
     // Llamamos super con objeto vacío para inicializar la clase padre
     super({});
-    
-    // Solo incluir campos que estén presentes en data
-    if (data.title !== undefined) this.title = data.title;
+
+    // Campos requeridos
+    this.title = data.title;
+    this.smart = data.smart;
+
+    // Campos opcionales - solo incluir si están presentes en data
     if (data.description !== undefined) this.description = data.description;
     if (data.status !== undefined) this.status = data.status;
     if (data.priority !== undefined) this.priority = data.priority;
     if (data.dueDate !== undefined) this.dueDate = data.dueDate;
-    if (data.smart !== undefined) this.smart = data.smart;
     if (data.parentGoalId !== undefined) this.parentGoalId = data.parentGoalId;
   }
 
@@ -44,10 +46,14 @@ export class UpdateGoalDto extends CreateGoalDto {
   validate() {
     const errors = [];
 
-    // Reutilizar métodos de validación del padre (sin requerir campos)
-    const titleError = this._validateTitle(false);
+    // Campos requeridos
+    const titleError = this._validateTitle(true); // REQUERIDO
     if (titleError) errors.push(titleError);
 
+    const smartErrors = this._validateSmart(true); // REQUERIDO
+    errors.push(...smartErrors);
+
+    // Campos opcionales
     const statusError = this._validateStatus();
     if (statusError) errors.push(statusError);
 
@@ -56,10 +62,6 @@ export class UpdateGoalDto extends CreateGoalDto {
 
     const dueDateError = this._validateDueDate();
     if (dueDateError) errors.push(dueDateError);
-
-    // Validar smart si existe (no requerido en update)
-    const smartErrors = this._validateSmart(false);
-    errors.push(...smartErrors);
 
     return {
       isValid: errors.length === 0,

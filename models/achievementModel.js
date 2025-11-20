@@ -1,22 +1,22 @@
 import mongoose from 'mongoose';
 
 /**
- * Mongoose Schema for the Achievement model (Global Template)
+ * Esquema de Mongoose para el modelo de Achievement (Plantilla Global)
  * @typedef {Object} AchievementSchema
- * @property {string} title - Achievement title (required)
- * @property {string} description - Achievement description (required)
- * @property {number} targetCount - Target count to unlock/complete the achievement (required)
- * @property {string} reward - Achievement reward
- * @property {string} type - Achievement type (required) - Values: 'task', 'goal', 'metric', 'streak', 'comment'
- * @property {boolean} isActive - Whether the achievement is active (default: true)
- * @property {Date} createdAt - Creation timestamp (auto-generated)
- * @property {Date} updatedAt - Last update timestamp (auto-generated)
+ * @property {string} title - Título del logro (requerido)
+ * @property {string} description - Descripción del logro (requerido)
+ * @property {number} targetCount - Conteo objetivo para desbloquear/completar el logro (requerido)
+ * @property {string} reward - Recompensa del logro
+ * @property {string} type - Tipo de logro (requerido) - Valores: 'task', 'goal', 'metric', 'streak', 'comment'
+ * @property {boolean} isActive - Si el logro está activo (default: true)
+ * @property {Date} createdAt - Fecha de creación (automático)
+ * @property {Date} updatedAt - Fecha de última actualización (automático)
  */
 
 /**
- * Achievement schema for MongoDB database
- * Defines the structure and validations for global achievement templates
- * Only admins can create, update, or delete achievements
+ * Esquema de logro para la base de datos MongoDB
+ * Define la estructura y validaciones para las plantillas globales de logros
+ * Solo los administradores pueden crear, actualizar o eliminar logros
  * @constant {mongoose.Schema} achievementSchema
  */
 const achievementSchema = new mongoose.Schema(
@@ -59,11 +59,11 @@ const achievementSchema = new mongoose.Schema(
 );
 
 /**
- * Achievement Model for MongoDB (Global Templates)
+ * Modelo de Achievement para MongoDB (Plantillas Globales)
  * @class Achievement
  * @extends mongoose.Model
- * @description Model representing a global achievement template in the database
- * These are managed by admins and serve as templates for all users
+ * @description Modelo que representa una plantilla global de logro en la base de datos
+ * Son administrados por administradores y sirven como plantillas para todos los usuarios
  */
 const Achievement = mongoose.model('Achievement', achievementSchema);
 export default Achievement;

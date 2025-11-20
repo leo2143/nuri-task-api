@@ -20,7 +20,7 @@ export class UpdateAchievementDto extends CreateAchievementDto {
   constructor(data) {
     // Llamamos super con objeto vacío para inicializar la clase padre
     super({});
-    
+
     // Solo incluir campos que estén presentes en data
     if (data.title !== undefined) this.title = data.title;
     if (data.description !== undefined) this.description = data.description;

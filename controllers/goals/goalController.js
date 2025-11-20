@@ -213,4 +213,25 @@ export class GoalController {
     const result = await GoalService.getCatalogGoals(userId);
     res.status(result.status).json(result);
   }
+
+  /**
+   * Agrega una submeta a una meta padre
+   * @static
+   * @async
+   * @function addSubgoal
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.params.id - ID de la meta padre (la meta que estás viendo)
+   * @param {Object} req.body - Datos
+   * @param {string} req.body.subgoalId - ID de la meta que será submeta
+   * @param {string} req.userId - ID del usuario
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>}
+   */
+  static async addSubgoal(req, res) {
+    const parentGoalId = req.params.id;
+    const { subgoalId } = req.body;
+    const userId = req.userId;
+    const result = await GoalService.addSubgoal(parentGoalId, subgoalId, userId);
+    res.status(result.status).json(result);
+  }
 }
