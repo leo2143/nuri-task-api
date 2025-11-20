@@ -216,6 +216,8 @@ FRONTEND_URL=http://localhost:5173
 2. Genera **contraseña de aplicación**: https://myaccount.google.com/security
 3. Usa esa contraseña en `EMAIL_PASSWORD`
 
+> ⚠️ **Importante:** Para usar el servicio de recuperación de contraseña ("Me olvidé la contraseña"), se requiere una cuenta de Gmail con inicio de sesión de aplicación configurado. Es fundamental utilizar los datos especificados en el archivo `.env` con las credenciales correctas de Gmail.
+
 ### MongoDB
 
 **Opción 1 - Local:**
@@ -427,14 +429,6 @@ mongoimport --db nuri-task-db --collection achievements \
 
 ISC License - Copyright (c) 2024 Leonardo Orellana
 
----
-
-## 👨‍💻 Autor
-
-**Leonardo Orellana**
-
----
-
 ## 📚 Referencias y Documentación
 
 Este proyecto se desarrolló basándose en documentación oficial y recursos de la comunidad:
@@ -469,6 +463,10 @@ Este proyecto se desarrolló basándose en documentación oficial y recursos de 
 - [MongoDB Schema Design](https://www.mongodb.com/docs/manual/core/data-modeling-introduction/) - Diseño de esquemas en MongoDB
 
 ---
+
+el proyecto tambien se encuentra ya desplegado y funcional en vercel
+https://nuri-task-app.vercel.app/login
+https://nuri-task-api.vercel.app
 
 <div align="center">
 
