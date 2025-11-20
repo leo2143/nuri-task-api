@@ -58,6 +58,7 @@ Celebramos tus progresos y te acompañamos en el camino, con mensajes cálidos y
 - [📊 Datos de Prueba](#-datos-de-prueba)
 - [🔮 Mejoras Futuras](#-mejoras-futuras)
 - [📄 Licencia](#-licencia)
+- [🌐 Enlaces del Proyecto](#-enlaces-del-proyecto)
 
 ---
 
@@ -473,9 +474,20 @@ Este proyecto se desarrolló basándose en documentación oficial y recursos de 
 
 ---
 
-el proyecto tambien se encuentra ya desplegado y funcional en vercel
-https://nuri-task-app.vercel.app/login
-https://nuri-task-api.vercel.app
+## 🌐 Enlaces del Proyecto
+
+### Proyecto Desplegado en Vercel
+
+- **Frontend:** https://nuri-task-app.vercel.app/login
+- **Backend API:** https://nuri-task-api.vercel.app
+- **Documentación API:** https://nuri-task-api.vercel.app/api-docs
+
+### Repositorios en GitHub
+
+- **Frontend:** https://github.com/leo2143/nuri-task-app
+- **Backend:** https://github.com/leo2143/nuri-task-api
+
+---
 
 <div align="center">
 
