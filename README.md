@@ -11,8 +11,41 @@ Nuri Task API es una solución backend robusta diseñada para ayudar a los usuar
 
 ---
 
+## 💚 La Visión
+
+**Nuri Task** no es una app más de listas. Es una aplicación creada para ayudarte a construir hábitos y cumplir tus metas de una forma **emocionalmente acompañada, sin presión y sin culpas**.
+
+### ¿Qué hace diferente a Nuri?
+
+Descubrimos que el verdadero problema no es la falta de disciplina, sino la **falta de motivación emocional**. Por eso **Nuri** —tu pequeño compañero— está diseñado para guiarte con calidez en cada paso.
+
+**El propósito de Nuri es:**
+
+🌱 **Acompañarte, no exigirte**
+
+La idea no es que hagas más cosas, sino que te sientas mejor haciéndolas.
+
+🎯 **Ayudarte a crear hábitos sostenibles**
+
+Crear metas, dividirlas en pequeñas tareas manejables, marcar tus avances y recibir apoyo emocional.
+
+💚 **Hacer el proceso amable y disfrutable**
+
+Un espacio donde no te sientes solo, donde no se te juzga por fallar, y donde cada acción tiene un sentido.
+
+✨ **Darte una experiencia más humana**
+
+Celebramos tus progresos y te acompañamos en el camino, con mensajes cálidos y motivadores.
+
+### 📖 Estado Actual del Proyecto
+
+> **Nota:** Este proyecto está en **etapa inicial de desarrollo**. La visión completa de Nuri (con acompañamiento emocional, mensajes motivadores y experiencia personalizada) aún no está completamente implementada. Actualmente cuenta con las funcionalidades base técnicas.
+
+---
+
 ## 📋 Tabla de Contenidos
 
+- [💚 La Visión](#-la-visión)
 - [✨ Características](#-características)
 - [🏗️ Arquitectura](#️-arquitectura)
 - [🚀 Inicio Rápido](#-inicio-rápido)
@@ -23,7 +56,9 @@ Nuri Task API es una solución backend robusta diseñada para ayudar a los usuar
 - [🌐 Despliegue](#-despliegue)
 - [📧 Sistema de Correos](#-sistema-de-correos)
 - [📊 Datos de Prueba](#-datos-de-prueba)
+- [🔮 Mejoras Futuras](#-mejoras-futuras)
 - [📄 Licencia](#-licencia)
+- [🌐 Enlaces del Proyecto](#-enlaces-del-proyecto)
 
 ---
 
@@ -182,6 +217,8 @@ FRONTEND_URL=http://localhost:5173
 1. Activa **verificación en dos pasos** en Google
 2. Genera **contraseña de aplicación**: https://myaccount.google.com/security
 3. Usa esa contraseña en `EMAIL_PASSWORD`
+
+> ⚠️ **Importante:** Para usar el servicio de recuperación de contraseña ("Me olvidé la contraseña"), se requiere una cuenta de Gmail con inicio de sesión de aplicación configurado. Es fundamental utilizar los datos especificados en el archivo `.env` con las credenciales correctas de Gmail.
 
 ### MongoDB
 
@@ -390,17 +427,17 @@ mongoimport --db nuri-task-db --collection achievements \
 
 ---
 
+## 🔮 Mejoras Futuras
+
+### Funcionalidades Pendientes
+
+- **Paginado**: Implementación de paginado para las búsquedas en general (todos, goals, achievements, etc.)
+
+---
+
 ## 📄 Licencia
 
 ISC License - Copyright (c) 2024 Leonardo Orellana
-
----
-
-## 👨‍💻 Autor
-
-**Leonardo Orellana**
-
----
 
 ## 📚 Referencias y Documentación
 
@@ -434,6 +471,21 @@ Este proyecto se desarrolló basándose en documentación oficial y recursos de 
 
 - [Express Best Practices](https://expressjs.com/en/advanced/best-practice-security.html) - Seguridad en Express
 - [MongoDB Schema Design](https://www.mongodb.com/docs/manual/core/data-modeling-introduction/) - Diseño de esquemas en MongoDB
+
+---
+
+## 🌐 Enlaces del Proyecto
+
+### Proyecto Desplegado en Vercel
+
+- **Frontend:** https://nuri-task-app.vercel.app/login
+- **Backend API:** https://nuri-task-api.vercel.app
+- **Documentación API:** https://nuri-task-api.vercel.app/api-docs
+
+### Repositorios en GitHub
+
+- **Frontend:** https://github.com/leo2143/nuri-task-app
+- **Backend:** https://github.com/leo2143/nuri-task-api
 
 ---
 

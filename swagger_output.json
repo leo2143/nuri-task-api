@@ -37,9 +37,7 @@
       "description": "Progreso personal de logros"
     }
   ],
-  "schemes": [
-    "http"
-  ],
+  "schemes": ["http"],
   "securityDefinitions": {
     "bearerAuth": {
       "type": "apiKey",
@@ -48,12 +46,8 @@
       "description": "Token JWT en formato: Bearer {token}"
     }
   },
-  "consumes": [
-    "application/json"
-  ],
-  "produces": [
-    "application/json"
-  ],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
   "paths": {
     "/health": {
       "get": {
@@ -78,9 +72,7 @@
     "/api-docs/swagger.json": {
       "get": {
         "description": "",
-        "produces": [
-          "application/json"
-        ],
+        "produces": ["application/json"],
         "responses": {
           "200": {
             "description": "OK"
@@ -100,9 +92,7 @@
     },
     "/api/todos": {
       "get": {
-        "tags": [
-          "Todos"
-        ],
+        "tags": ["Todos"],
         "summary": "Obtiene todas las tareas del usuario",
         "description": "Retorna una lista de todas las tareas del usuario autenticado con filtros opcionales",
         "parameters": [
@@ -145,9 +135,7 @@
         ]
       },
       "post": {
-        "tags": [
-          "Todos"
-        ],
+        "tags": ["Todos"],
         "summary": "Crea una nueva tarea",
         "description": "Crea una nueva tarea para el usuario autenticado",
         "parameters": [
@@ -201,9 +189,7 @@
     },
     "/api/todos/completed": {
       "get": {
-        "tags": [
-          "Todos"
-        ],
+        "tags": ["Todos"],
         "summary": "Obtiene todas las tareas completadas",
         "description": "",
         "parameters": [
@@ -230,9 +216,7 @@
     },
     "/api/todos/pending": {
       "get": {
-        "tags": [
-          "Todos"
-        ],
+        "tags": ["Todos"],
         "summary": "Obtiene todas las tareas pendientes",
         "description": "",
         "parameters": [
@@ -259,9 +243,7 @@
     },
     "/api/todos/{id}": {
       "get": {
-        "tags": [
-          "Todos"
-        ],
+        "tags": ["Todos"],
         "summary": "Obtiene una tarea por su ID",
         "description": "",
         "parameters": [
@@ -293,9 +275,7 @@
         ]
       },
       "put": {
-        "tags": [
-          "Todos"
-        ],
+        "tags": ["Todos"],
         "summary": "Actualiza una tarea existente",
         "description": "",
         "parameters": [
@@ -327,9 +307,7 @@
         ]
       },
       "delete": {
-        "tags": [
-          "Todos"
-        ],
+        "tags": ["Todos"],
         "summary": "Elimina una tarea",
         "description": "",
         "parameters": [
@@ -363,9 +341,7 @@
     },
     "/api/todos/title/{title}": {
       "get": {
-        "tags": [
-          "Todos"
-        ],
+        "tags": ["Todos"],
         "summary": "Busca una tarea por título",
         "description": "",
         "parameters": [
@@ -399,9 +375,7 @@
     },
     "/api/goals/{goalId}/todos": {
       "get": {
-        "tags": [
-          "Todos"
-        ],
+        "tags": ["Todos"],
         "summary": "Obtiene todas las tareas de una meta específica",
         "description": "",
         "parameters": [
@@ -435,9 +409,7 @@
     },
     "/api/todos/{id}/state": {
       "patch": {
-        "tags": [
-          "Todos"
-        ],
+        "tags": ["Todos"],
         "summary": "Actualiza solo el estado de una tarea",
         "description": "Actualiza únicamente el campo completed",
         "parameters": [
@@ -486,9 +458,7 @@
     },
     "/api/todos/{id}/comments": {
       "post": {
-        "tags": [
-          "Todos"
-        ],
+        "tags": ["Todos"],
         "summary": "Agrega un comentario a una tarea",
         "description": "",
         "parameters": [
@@ -544,9 +514,7 @@
     },
     "/api/users/login": {
       "post": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Inicia sesión de usuario",
         "description": "",
         "parameters": [
@@ -579,9 +547,7 @@
     },
     "/api/users": {
       "post": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Registra un nuevo usuario",
         "description": "",
         "parameters": [
@@ -616,9 +582,7 @@
         }
       },
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Obtiene todos los usuarios (solo admin)",
         "description": "",
         "parameters": [
@@ -653,9 +617,7 @@
     },
     "/api/users/forgot-password": {
       "post": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Solicita recuperación de contraseña",
         "description": "",
         "parameters": [
@@ -687,9 +649,7 @@
     },
     "/api/users/verify-reset-token/{token}": {
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Verifica si el token de recuperación es válido",
         "description": "",
         "parameters": [
@@ -713,9 +673,7 @@
     },
     "/api/users/reset-password": {
       "post": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Restablece la contraseña con el token",
         "description": "",
         "parameters": [
@@ -751,9 +709,7 @@
     },
     "/api/users/change-password": {
       "put": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Cambia la contraseña del usuario autenticado",
         "description": "",
         "parameters": [
@@ -802,9 +758,7 @@
     },
     "/api/users/{id}": {
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Obtiene un usuario por ID (solo admin)",
         "description": "",
         "parameters": [
@@ -836,9 +790,7 @@
         ]
       },
       "put": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Actualiza un usuario (solo admin)",
         "description": "",
         "parameters": [
@@ -870,9 +822,7 @@
         ]
       },
       "delete": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Elimina un usuario (solo admin)",
         "description": "",
         "parameters": [
@@ -906,9 +856,7 @@
     },
     "/api/admin/users/{id}/reset-password": {
       "put": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Resetea la contraseña de un usuario (solo admin)",
         "description": "",
         "parameters": [
@@ -960,9 +908,7 @@
     },
     "/api/goals": {
       "get": {
-        "tags": [
-          "Goals"
-        ],
+        "tags": ["Goals"],
         "summary": "Obtiene todas las metas del usuario",
         "description": "Retorna todas las metas con campos de tracking (totalTasks, completedTasks, progress)",
         "parameters": [
@@ -1022,9 +968,7 @@
         ]
       },
       "post": {
-        "tags": [
-          "Goals"
-        ],
+        "tags": ["Goals"],
         "summary": "Crea una nueva meta",
         "description": "Crea una nueva meta con campos de tracking inicializados en 0",
         "parameters": [
@@ -1078,9 +1022,7 @@
     },
     "/api/goals/catalogs": {
       "get": {
-        "tags": [
-          "Goals"
-        ],
+        "tags": ["Goals"],
         "summary": "Obtiene lista catalog de metas (solo id y título)",
         "description": "Retorna solo id y título de las metas, ideal para dropdowns y selects",
         "parameters": [
@@ -1150,9 +1092,7 @@
     },
     "/api/goals/active": {
       "get": {
-        "tags": [
-          "Goals"
-        ],
+        "tags": ["Goals"],
         "summary": "Obtiene todas las metas activas",
         "description": "",
         "parameters": [
@@ -1179,9 +1119,7 @@
     },
     "/api/goals/paused": {
       "get": {
-        "tags": [
-          "Goals"
-        ],
+        "tags": ["Goals"],
         "summary": "Obtiene todas las metas pausadas",
         "description": "",
         "parameters": [
@@ -1208,9 +1146,7 @@
     },
     "/api/goals/completed": {
       "get": {
-        "tags": [
-          "Goals"
-        ],
+        "tags": ["Goals"],
         "summary": "Obtiene todas las metas completadas",
         "description": "",
         "parameters": [
@@ -1237,9 +1173,7 @@
     },
     "/api/goals/{id}": {
       "get": {
-        "tags": [
-          "Goals"
-        ],
+        "tags": ["Goals"],
         "summary": "Obtiene una meta por su ID",
         "description": "Retorna meta con userId y parentGoalId poblados, incluye campos de tracking",
         "parameters": [
@@ -1271,9 +1205,7 @@
         ]
       },
       "put": {
-        "tags": [
-          "Goals"
-        ],
+        "tags": ["Goals"],
         "summary": "Actualiza completamente una meta",
         "description": "Actualiza una meta completa. DEBES enviar TODOS los campos requeridos (title, description, status, priority, dueDate, smart). Si cambia el status, actualiza automáticamente el progreso de metas padre.",
         "parameters": [
@@ -1388,9 +1320,7 @@
         ]
       },
       "delete": {
-        "tags": [
-          "Goals"
-        ],
+        "tags": ["Goals"],
         "summary": "Elimina una meta",
         "description": "",
         "parameters": [
@@ -1424,9 +1354,7 @@
     },
     "/api/goals/{id}/comments": {
       "post": {
-        "tags": [
-          "Goals"
-        ],
+        "tags": ["Goals"],
         "summary": "Agrega un comentario a una meta",
         "description": "",
         "parameters": [
@@ -1479,9 +1407,7 @@
     },
     "/api/goals/{id}/parent": {
       "get": {
-        "tags": [
-          "Goals"
-        ],
+        "tags": ["Goals"],
         "summary": "Obtiene las submetas de una meta padre",
         "description": "",
         "parameters": [
@@ -1515,9 +1441,7 @@
     },
     "/api/goals/{id}/subgoals": {
       "patch": {
-        "tags": [
-          "Goals"
-        ],
+        "tags": ["Goals"],
         "summary": "Agrega una submeta a una meta padre",
         "description": "Convierte una meta existente en submeta de la meta especificada en la URL",
         "parameters": [
@@ -1566,9 +1490,7 @@
     },
     "/api/metrics": {
       "get": {
-        "tags": [
-          "Metrics"
-        ],
+        "tags": ["Metrics"],
         "summary": "Obtiene las métricas generales del usuario autenticado",
         "description": "Retorna rachas, totales de tareas/metas completadas y historial de actividad",
         "parameters": [
@@ -1598,9 +1520,7 @@
     },
     "/api/metrics/dashboard": {
       "get": {
-        "tags": [
-          "Metrics"
-        ],
+        "tags": ["Metrics"],
         "summary": "Obtiene el dashboard motivacional del usuario",
         "description": "Incluye métricas, mensajes motivacionales y estadísticas",
         "parameters": [
@@ -1630,9 +1550,7 @@
     },
     "/api/metrics/check-streaks": {
       "post": {
-        "tags": [
-          "Metrics"
-        ],
+        "tags": ["Metrics"],
         "summary": "Verifica y actualiza las rachas del usuario",
         "description": "Comprueba si las rachas han expirado y las actualiza",
         "parameters": [
@@ -1662,9 +1580,7 @@
     },
     "/api/moodboards": {
       "get": {
-        "tags": [
-          "Moodboards"
-        ],
+        "tags": ["Moodboards"],
         "summary": "Obtiene todos los moodboards del usuario",
         "description": "",
         "parameters": [
@@ -1692,9 +1608,7 @@
         ]
       },
       "post": {
-        "tags": [
-          "Moodboards"
-        ],
+        "tags": ["Moodboards"],
         "summary": "Crea un nuevo moodboard",
         "description": "",
         "parameters": [
@@ -1749,9 +1663,7 @@
     },
     "/api/moodboards/{id}": {
       "get": {
-        "tags": [
-          "Moodboards"
-        ],
+        "tags": ["Moodboards"],
         "summary": "Obtiene un moodboard por su ID",
         "description": "",
         "parameters": [
@@ -1786,9 +1698,7 @@
         ]
       },
       "put": {
-        "tags": [
-          "Moodboards"
-        ],
+        "tags": ["Moodboards"],
         "summary": "Actualiza un moodboard existente",
         "description": "",
         "parameters": [
@@ -1823,9 +1733,7 @@
         ]
       },
       "delete": {
-        "tags": [
-          "Moodboards"
-        ],
+        "tags": ["Moodboards"],
         "summary": "Elimina un moodboard",
         "description": "",
         "parameters": [
@@ -1862,9 +1770,7 @@
     },
     "/api/moodboards/{id}/images": {
       "post": {
-        "tags": [
-          "Moodboards"
-        ],
+        "tags": ["Moodboards"],
         "summary": "Agrega una imagen al moodboard (máximo 6)",
         "description": "",
         "parameters": [
@@ -1924,9 +1830,7 @@
     },
     "/api/moodboards/{id}/images/{imageId}": {
       "delete": {
-        "tags": [
-          "Moodboards"
-        ],
+        "tags": ["Moodboards"],
         "summary": "Elimina una imagen del moodboard",
         "description": "",
         "parameters": [
@@ -1968,9 +1872,7 @@
         ]
       },
       "put": {
-        "tags": [
-          "Moodboards"
-        ],
+        "tags": ["Moodboards"],
         "summary": "Actualiza una imagen del moodboard",
         "description": "",
         "parameters": [
@@ -2014,9 +1916,7 @@
     },
     "/api/moodboards/{id}/phrases": {
       "post": {
-        "tags": [
-          "Moodboards"
-        ],
+        "tags": ["Moodboards"],
         "summary": "Agrega una frase motivacional al moodboard",
         "description": "",
         "parameters": [
@@ -2068,9 +1968,7 @@
     },
     "/api/moodboards/{id}/phrases/{phraseId}": {
       "delete": {
-        "tags": [
-          "Moodboards"
-        ],
+        "tags": ["Moodboards"],
         "summary": "Elimina una frase del moodboard",
         "description": "",
         "parameters": [
@@ -2112,9 +2010,7 @@
         ]
       },
       "put": {
-        "tags": [
-          "Moodboards"
-        ],
+        "tags": ["Moodboards"],
         "summary": "Actualiza una frase del moodboard",
         "description": "",
         "parameters": [
@@ -2173,9 +2069,7 @@
     },
     "/api/moodboards/search": {
       "get": {
-        "tags": [
-          "Moodboards"
-        ],
+        "tags": ["Moodboards"],
         "summary": "Busca moodboards por título",
         "description": "",
         "parameters": [
@@ -2212,9 +2106,7 @@
     },
     "/api/achievements": {
       "get": {
-        "tags": [
-          "Achievements"
-        ],
+        "tags": ["Achievements"],
         "summary": "Obtiene todos los logros (solo admin)",
         "description": "",
         "parameters": [
@@ -2264,9 +2156,7 @@
         ]
       },
       "post": {
-        "tags": [
-          "Achievements"
-        ],
+        "tags": ["Achievements"],
         "summary": "Crea un nuevo logro (solo admin)",
         "description": "",
         "parameters": [
@@ -2328,9 +2218,7 @@
     },
     "/api/achievements/stats": {
       "get": {
-        "tags": [
-          "Achievements"
-        ],
+        "tags": ["Achievements"],
         "summary": "Obtiene estadísticas globales de logros (solo admin)",
         "description": "",
         "parameters": [
@@ -2357,9 +2245,7 @@
     },
     "/api/achievements/type/{type}": {
       "get": {
-        "tags": [
-          "Achievements"
-        ],
+        "tags": ["Achievements"],
         "summary": "Obtiene logros filtrados por tipo (solo admin)",
         "description": "",
         "parameters": [
@@ -2369,12 +2255,7 @@
             "required": true,
             "type": "string",
             "description": "Tipo de logro",
-            "@enum": [
-              "task",
-              "goal",
-              "streak",
-              "progress"
-            ]
+            "@enum": ["task", "goal", "streak", "progress"]
           },
           {
             "name": "authorization",
@@ -2399,9 +2280,7 @@
     },
     "/api/achievements/{id}": {
       "get": {
-        "tags": [
-          "Achievements"
-        ],
+        "tags": ["Achievements"],
         "summary": "Obtiene un logro por ID (solo admin)",
         "description": "",
         "parameters": [
@@ -2433,9 +2312,7 @@
         ]
       },
       "put": {
-        "tags": [
-          "Achievements"
-        ],
+        "tags": ["Achievements"],
         "summary": "Actualiza un logro existente (solo admin)",
         "description": "",
         "parameters": [
@@ -2467,9 +2344,7 @@
         ]
       },
       "delete": {
-        "tags": [
-          "Achievements"
-        ],
+        "tags": ["Achievements"],
         "summary": "Elimina un logro (solo admin)",
         "description": "",
         "parameters": [
@@ -2503,9 +2378,7 @@
     },
     "/api/admin/users/{userId}/achievements/{achievementId}": {
       "delete": {
-        "tags": [
-          "Achievements"
-        ],
+        "tags": ["Achievements"],
         "summary": "Resetea el progreso de un logro de un usuario (solo admin)",
         "description": "",
         "parameters": [
@@ -2546,9 +2419,7 @@
     },
     "/api/user/achievements": {
       "get": {
-        "tags": [
-          "User Achievements"
-        ],
+        "tags": ["User Achievements"],
         "summary": "Obtiene todos los logros con progreso personal",
         "description": "",
         "parameters": [
@@ -2575,9 +2446,7 @@
     },
     "/api/user/achievements/progress": {
       "get": {
-        "tags": [
-          "User Achievements"
-        ],
+        "tags": ["User Achievements"],
         "summary": "Obtiene el progreso personal en todos los logros",
         "description": "",
         "parameters": [
@@ -2591,11 +2460,7 @@
             "in": "query",
             "description": "Filtrar por estado",
             "type": "string",
-            "@enum": [
-              "completed",
-              "inProgress",
-              "notStarted"
-            ]
+            "@enum": ["completed", "inProgress", "notStarted"]
           }
         ],
         "responses": {
@@ -2615,9 +2480,7 @@
     },
     "/api/user/achievements/stats": {
       "get": {
-        "tags": [
-          "User Achievements"
-        ],
+        "tags": ["User Achievements"],
         "summary": "Obtiene estadísticas personales de logros",
         "description": "",
         "parameters": [
@@ -2644,9 +2507,7 @@
     },
     "/api/user/achievements/{id}/progress": {
       "get": {
-        "tags": [
-          "User Achievements"
-        ],
+        "tags": ["User Achievements"],
         "summary": "Obtiene el progreso en un logro específico",
         "description": "",
         "parameters": [
@@ -2678,9 +2539,7 @@
         ]
       },
       "post": {
-        "tags": [
-          "User Achievements"
-        ],
+        "tags": ["User Achievements"],
         "summary": "Incrementa el progreso en un logro",
         "description": "",
         "parameters": [
