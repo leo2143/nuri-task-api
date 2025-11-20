@@ -24,7 +24,7 @@ const streakSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      unique: true, // Un registro de racha por usuario
+      unique: true,
     },
     currentStreak: {
       type: Number,
@@ -40,7 +40,6 @@ const streakSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    // Historial simplificado: un registro por día con actividad
     history: [
       {
         date: {
@@ -132,9 +131,8 @@ streakSchema.methods.checkStreakExpiration = function () {
   return false;
 };
 
-// Configurar para que los virtuals se incluyan en JSON y Object
-streakSchema.set('toJSON', { virtuals: true });
-streakSchema.set('toObject', { virtuals: true });
+streakSchema.set('toJSON', { versionKey: false });
+streakSchema.set('toObject', { versionKey: false });
 
 /**
  * Modelo de Streak para MongoDB

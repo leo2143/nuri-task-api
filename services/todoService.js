@@ -59,14 +59,16 @@ export class TodoService {
    * @param {string} id - ID de la tarea
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea o error
-   * @description Incluye populate de userId (User) y GoalId (Goal) para obtener información completa
+   * @description Incluye populate de userId (User) y GoalId (Goal mínimo) para obtener información completa
    */
   static async getTodoById(id, userId) {
     try {
-      const todo = await Todo.findOne({ _id: id, userId }).populate('userId', 'name email avatar').populate('GoalId');
+      const todo = await Todo.findOne({ _id: id, userId });
+
       if (!todo) {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
       }
+
       return new SuccessResponseModel(todo, 1, 'Tarea obtenida correctamente');
     } catch (error) {
       console.error(chalk.red('Error al obtener tarea:', error));
@@ -401,7 +403,7 @@ export class TodoService {
       return new ErrorResponseModel('Error al obtener tareas por prioridad');
     }
   }
-
+  //TODO: los comentarios ya no van a ir dentro de la app, eliminarlos
   /**
    * Agrega un comentario a una tarea del usuario autenticado
    * @static

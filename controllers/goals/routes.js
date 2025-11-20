@@ -109,12 +109,42 @@ export const setupGoalRoutes = app => {
 
   app.put('/api/goals/:id', validateToken, (req, res) => {
     // #swagger.tags = ['Goals']
-    // #swagger.summary = 'Actualiza una meta existente'
+    // #swagger.summary = 'Actualiza completamente una meta'
+    // #swagger.description = 'Actualiza una meta completa. DEBES enviar TODOS los campos requeridos (title, description, status, priority, dueDate, smart). Si cambia el status, actualiza automáticamente el progreso de metas padre.'
     /* #swagger.parameters['id'] = {
          in: 'path',
          description: 'ID de la meta',
          required: true,
          type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Todos los campos de la meta (actualización completa)',
+         required: true,
+         schema: {
+           title: 'Aprender Node.js',
+           description: 'Dominar backend con Node.js',
+           status: 'active',
+           priority: 'high',
+           dueDate: '2025-12-31T23:59:59.000Z',
+           smart: {
+             specific: 'Completar curso de Node.js',
+             measurable: '100% del curso',
+             achievable: 'Con dedicación diaria',
+             relevant: 'Para mi carrera',
+             timeBound: 'En 3 meses'
+           },
+           parentGoalId: null
+         }
+    } */
+    /* #swagger.responses[200] = {
+         description: 'Meta actualizada correctamente',
+         schema: {
+           success: true,
+           status: 200,
+           message: 'Meta actualizada correctamente',
+           data: { $ref: '#/definitions/Goal' }
+         }
     } */
     /* #swagger.security = [{
          "bearerAuth": []
@@ -174,5 +204,29 @@ export const setupGoalRoutes = app => {
          "bearerAuth": []
     }] */
     return GoalController.getGoalsByParentGoalId(req, res);
+  });
+
+  app.patch('/api/goals/:id/subgoals', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Agrega una submeta a una meta padre'
+    // #swagger.description = 'Convierte una meta existente en submeta de la meta especificada en la URL'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la meta padre (la meta que estás viendo)',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'ID de la meta que será submeta',
+         required: true,
+         schema: {
+           subgoalId: '507f1f77bcf86cd799439011'
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.addSubgoal(req, res);
   });
 };

@@ -1274,8 +1274,8 @@
         "tags": [
           "Goals"
         ],
-        "summary": "Actualiza una meta existente",
-        "description": "",
+        "summary": "Actualiza completamente una meta",
+        "description": "Actualiza una meta completa. DEBES enviar TODOS los campos requeridos (title, description, status, priority, dueDate, smart). Si cambia el status, actualiza automáticamente el progreso de metas padre.",
         "parameters": [
           {
             "name": "id",
@@ -1288,9 +1288,92 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Todos los campos de la meta (actualización completa)",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "example": "Aprender Node.js"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Dominar backend con Node.js"
+                },
+                "status": {
+                  "type": "string",
+                  "example": "active"
+                },
+                "priority": {
+                  "type": "string",
+                  "example": "high"
+                },
+                "dueDate": {
+                  "type": "string",
+                  "example": "2025-12-31T23:59:59.000Z"
+                },
+                "smart": {
+                  "type": "object",
+                  "properties": {
+                    "specific": {
+                      "type": "string",
+                      "example": "Completar curso de Node.js"
+                    },
+                    "measurable": {
+                      "type": "string",
+                      "example": "100% del curso"
+                    },
+                    "achievable": {
+                      "type": "string",
+                      "example": "Con dedicación diaria"
+                    },
+                    "relevant": {
+                      "type": "string",
+                      "example": "Para mi carrera"
+                    },
+                    "timeBound": {
+                      "type": "string",
+                      "example": "En 3 meses"
+                    }
+                  }
+                },
+                "parentGoalId": {}
+              }
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Meta actualizada correctamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "status": {
+                  "type": "number",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Meta actualizada correctamente"
+                },
+                "data": {
+                  "$ref": "#/definitions/Goal"
+                }
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          },
           "401": {
             "description": "Unauthorized"
           },
@@ -1413,6 +1496,57 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/goals/{id}/subgoals": {
+      "patch": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "Agrega una submeta a una meta padre",
+        "description": "Convierte una meta existente en submeta de la meta especificada en la URL",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "ID de la meta padre (la meta que estás viendo)"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "ID de la meta que será submeta",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "subgoalId": {
+                  "type": "string",
+                  "example": "507f1f77bcf86cd799439011"
+                }
+              }
+            }
           }
         ],
         "responses": {

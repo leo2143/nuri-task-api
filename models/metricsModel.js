@@ -44,7 +44,6 @@ const metricsSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    // Historial simplificado: un registro por día con actividad
     history: [
       {
         date: {
@@ -62,8 +61,6 @@ const metricsSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-
-// ========== MÉTODOS HELPER PRIVADOS ==========
 
 /**
  * Calcula la diferencia en días entre hoy y la última actividad
@@ -87,8 +84,6 @@ metricsSchema.methods._getDaysSinceLastActivity = function () {
   return { today, lastActivity, diffDays };
 };
 
-// ========== MÉTODOS PÚBLICOS ==========
-
 /**
  * Actualiza métricas cuando se completa una tarea
  * @method onTaskCompleted
@@ -108,7 +103,6 @@ metricsSchema.methods.onTaskCompleted = function () {
     return;
   }
 
-  // Verificar si la racha expiro
   const streakExpired = this.checkStreakExpiration();
 
   if (diffDays === 0) {
@@ -163,9 +157,8 @@ metricsSchema.methods.checkStreakExpiration = function () {
   return false;
 };
 
-// Configurar para que los virtuals se incluyan en JSON y Object
-metricsSchema.set('toJSON', { virtuals: true });
-metricsSchema.set('toObject', { virtuals: true });
+metricsSchema.set('toJSON', { versionKey: false });
+metricsSchema.set('toObject', { versionKey: false });
 
 /**
  * Modelo de Metrics para MongoDB

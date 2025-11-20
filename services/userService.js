@@ -269,15 +269,14 @@ export class UserService {
         );
       }
 
-      // Generar token de recuperación seguro (32 bytes en hexadecimal)
+      // Generar token de recuperación
       const resetToken = crypto.randomBytes(32).toString('hex');
 
-      // Hashear el token antes de guardarlo en la BD (seguridad adicional)
+      // Hashear el token
       const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
-      // Guardar token y fecha de expiración (1 hora)
       user.resetPasswordToken = hashedToken;
-      user.resetPasswordExpires = Date.now() + 3600000; // 1 hora en milisegundos
+      user.resetPasswordExpires = Date.now() + 3600000; // 1 hora
       await user.save();
 
       // Enviar email con el token SIN hashear
@@ -293,7 +292,7 @@ export class UserService {
       return new SuccessResponseModel(
         {
           message: 'Si el email existe, recibirás un correo con instrucciones',
-          // Solo en desarrollo, mostrar el token (QUITAR EN PRODUCCIÓN)
+          //QUITAR EN PRODUCCIÓN
           ...(process.env.NODE_ENV === 'development' && { devToken: resetToken }),
         },
         1,
