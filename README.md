@@ -11,8 +11,41 @@ Nuri Task API es una solución backend robusta diseñada para ayudar a los usuar
 
 ---
 
+## 💚 La Visión
+
+**Nuri Task** no es una app más de listas. Es una aplicación creada para ayudarte a construir hábitos y cumplir tus metas de una forma **emocionalmente acompañada, sin presión y sin culpas**.
+
+### ¿Qué hace diferente a Nuri?
+
+Descubrimos que el verdadero problema no es la falta de disciplina, sino la **falta de motivación emocional**. Por eso **Nuri** —tu pequeño compañero— está diseñado para guiarte con calidez en cada paso.
+
+**El propósito de Nuri es:**
+
+🌱 **Acompañarte, no exigirte**
+
+La idea no es que hagas más cosas, sino que te sientas mejor haciéndolas.
+
+🎯 **Ayudarte a crear hábitos sostenibles**
+
+Crear metas, dividirlas en pequeñas tareas manejables, marcar tus avances y recibir apoyo emocional.
+
+💚 **Hacer el proceso amable y disfrutable**
+
+Un espacio donde no te sientes solo, donde no se te juzga por fallar, y donde cada acción tiene un sentido.
+
+✨ **Darte una experiencia más humana**
+
+Celebramos tus progresos y te acompañamos en el camino, con mensajes cálidos y motivadores.
+
+### 📖 Estado Actual del Proyecto
+
+> **Nota:** Este proyecto está en **etapa inicial de desarrollo**. La visión completa de Nuri (con acompañamiento emocional, mensajes motivadores y experiencia personalizada) aún no está completamente implementada. Actualmente cuenta con las funcionalidades base técnicas.
+
+---
+
 ## 📋 Tabla de Contenidos
 
+- [💚 La Visión](#-la-visión)
 - [✨ Características](#-características)
 - [🏗️ Arquitectura](#️-arquitectura)
 - [🚀 Inicio Rápido](#-inicio-rápido)
