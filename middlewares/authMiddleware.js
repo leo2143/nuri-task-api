@@ -26,7 +26,7 @@ export const validateToken = (req, res, next) => {
     }
     next();
   } catch (error) {
-    return res.status(403).json(new ErrorResponseModel('Token inválido'));
+    return res.status(401).json(new ErrorResponseModel('Token inválido'));
   }
 };
 
@@ -66,31 +66,4 @@ const verifyJwt = (req, token) => {
   req.userId = decoded.userId;
   req.user = decoded;
   return decoded;
-};
-
-/**
- * Middleware opcional para rutas que pueden ser públicas o privadas
- * @function validateOptionalToken
- * @param {Object} req - Objeto request de Express
- * @param {Object} req.headers - Headers de la petición
- * @param {string} [req.headers.authorization] - Token JWT opcional en formato "Bearer <token>"
- * @param {Object} res - Objeto response de Express
- * @param {Function} next - Función para continuar al siguiente middleware
- * @returns {void} No retorna valor, siempre continúa al siguiente middleware
- * @description Valida el token JWT si está presente, pero no falla si no hay token
- */
-export const validateOptionalToken = (req, res, next) => {
-  const token = req.headers.authorization;
-  try {
-    const decoded = verifyJwt(req, token);
-    if (!decoded) {
-      req.userId = null;
-      req.user = null;
-    }
-    return next();
-  } catch (error) {
-    req.userId = null;
-    req.user = null;
-    return next();
-  }
 };
