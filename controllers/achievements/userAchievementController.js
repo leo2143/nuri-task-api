@@ -2,14 +2,10 @@ import { UserAchievementService } from '../../services/userAchievementService.js
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con el progreso de usuario en logros
- * @class UserAchievementController
  */
 export class UserAchievementController {
   /**
    * Obtiene todos los logros con el progreso del usuario
-   * @static
-   * @async
-   * @function getAllAchievementsWithProgress
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
    * @param {Object} res - Objeto response de Express
@@ -23,9 +19,6 @@ export class UserAchievementController {
 
   /**
    * Obtiene el progreso del usuario en todos los logros con filtro opcional por estado
-   * @static
-   * @async
-   * @function getUserProgress
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
    * @param {Object} req.query - Parámetros de consulta
@@ -42,9 +35,6 @@ export class UserAchievementController {
 
   /**
    * Obtiene el progreso del usuario en un logro específico
-   * @static
-   * @async
-   * @function getUserAchievementProgress
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
    * @param {Object} req.params - Parámetros de URL
@@ -61,9 +51,6 @@ export class UserAchievementController {
 
   /**
    * Incrementa el progreso en un logro
-   * @static
-   * @async
-   * @function incrementProgress
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
    * @param {Object} req.params - Parámetros de URL
@@ -83,9 +70,6 @@ export class UserAchievementController {
 
   /**
    * Obtiene estadísticas de logros del usuario
-   * @static
-   * @async
-   * @function getUserStats
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
    * @param {Object} res - Objeto response de Express
@@ -99,9 +83,6 @@ export class UserAchievementController {
 
   /**
    * Reinicia el progreso del usuario en un logro (solo administradores)
-   * @static
-   * @async
-   * @function resetProgress
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.params - Parámetros de URL
    * @param {string} req.params.userId - ID del usuario

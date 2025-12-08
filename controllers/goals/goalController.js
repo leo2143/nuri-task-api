@@ -2,14 +2,10 @@ import { GoalService } from '../../services/goalService.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con metas (goals)
- * @class GoalController
  */
 export class GoalController {
   /**
    * Obtiene todas las metas del usuario autenticado con filtros opcionales
-   * @static
-   * @async
-   * @function getAllGoals
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.query - Query parameters (status, priority, search, dueDateFrom, dueDateTo, sortBy, sortOrder)
@@ -33,9 +29,6 @@ export class GoalController {
 
   /**
    * Obtiene una meta específica por ID
-   * @static
-   * @async
-   * @function getGoalById
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -52,9 +45,6 @@ export class GoalController {
 
   /**
    * Crea una nueva meta
-   * @static
-   * @async
-   * @function createGoal
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.body - Datos de la meta
@@ -70,9 +60,6 @@ export class GoalController {
 
   /**
    * Actualiza una meta existente
-   * @static
-   * @async
-   * @function updateGoal
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -91,9 +78,6 @@ export class GoalController {
 
   /**
    * Elimina una meta
-   * @static
-   * @async
-   * @function deleteGoal
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -110,9 +94,6 @@ export class GoalController {
 
   /**
    * Obtiene metas activas
-   * @static
-   * @async
-   * @function getActiveGoals
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} res - Objeto response de Express
@@ -127,10 +108,6 @@ export class GoalController {
   /**
    * Obtiene metas pausadas
    *@route GET /goals/paused
-
-   * @static
-   * @async
-   * @function getPausedGoals
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} res - Objeto response de Express
@@ -144,9 +121,6 @@ export class GoalController {
 
   /**
    * Obtiene metas completadas
-   * @static
-   * @async
-   * @function getCompletedGoals
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} res - Objeto response de Express
@@ -160,9 +134,6 @@ export class GoalController {
 
   /**
    * Agrega un comentario a la meta
-   * @static
-   * @async
-   * @function addComment
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -180,9 +151,6 @@ export class GoalController {
   }
   /**
    * Obtiene metas por ID de la meta padre
-   * @static
-   * @async
-   * @function getGoalsByParentGoalId
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -199,14 +167,11 @@ export class GoalController {
 
   /**
    * Obtiene lista catalog de metas (solo id y título)
-   * @static
-   * @async
-   * @function getCatalogGoals
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   * @description Útilizado para selects
+   * Útilizado para selects
    */
   static async getCatalogGoals(req, res) {
     const userId = req.userId;
@@ -216,9 +181,6 @@ export class GoalController {
 
   /**
    * Agrega una submeta a una meta padre
-   * @static
-   * @async
-   * @function addSubgoal
    * @param {Object} req - Objeto request de Express
    * @param {string} req.params.id - ID de la meta padre (la meta que estás viendo)
    * @param {Object} req.body - Datos

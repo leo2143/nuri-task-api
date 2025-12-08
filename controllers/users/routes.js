@@ -3,10 +3,9 @@ import { validateAdminToken, validateToken } from '../../middlewares/authMiddlew
 
 /**
  * Función para configurar las rutas de usuarios
- * @function setupUserRoutes
  * @param {Object} app - Instancia de Express
  * @returns {void} No retorna valor, configura las rutas de usuarios en la app
- * @description Configura las rutas de usuarios, algunas públicas (login, registro) y otras protegidas
+   * Configura las rutas de usuarios, algunas públicas (login, registro) y otras protegidas
  */
 export const setupUserRoutes = app => {
   app.post('/api/users/login', (req, res) => {

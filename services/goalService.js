@@ -9,23 +9,77 @@ import {
   MinGoalDto,
   CatalogGoalDto,
 } from '../models/dtos/goals/index.js';
+import { ErrorHandler } from './helpers/errorHandler.js';
 import chalk from 'chalk';
+
+const POPULATE_PARENT_TITLE = 'title';
+const POPULATE_PARENT_DESCRIPTION = 'description';
 
 /**
  * Servicio para manejar la lógica de negocio de metas (goals)
- * @class GoalService
  */
 export class GoalService {
   /**
-   * Actualiza los contadores de submetas de una meta padre
-   * @static
-   * @async
+   * Busca una meta por ID y usuario
    * @private
-   * @function _updateParentGoalCounters
+   */
+  static async _findGoalByIdAndUser(goalId, userId) {
+    const goal = await Goal.findOne({ _id: goalId, userId });
+
+    if (!goal) {
+      return { goal: null, error: new NotFoundResponseModel('Meta no encontrada') };
+    }
+
+    return { goal, error: null };
+  }
+
+  /**
+   * Detecta si el parentGoalId cambió
+   * @private
+   */
+  static _detectParentGoalChange(currentGoal, cleanData) {
+    const oldParentId = currentGoal.parentGoalId;
+    const newParentId = cleanData.parentGoalId !== undefined ? cleanData.parentGoalId : oldParentId;
+
+    return {
+      changed: (oldParentId || newParentId) && oldParentId?.toString() !== newParentId?.toString(),
+      oldParentId,
+      newParentId,
+    };
+  }
+
+  /**
+   * Detecta si el status cambió
+   * @private
+   */
+  static _detectStatusChange(currentGoal, cleanData) {
+    return {
+      changed: cleanData.status && cleanData.status !== currentGoal.status,
+      oldStatus: currentGoal.status,
+      newStatus: cleanData.status,
+    };
+  }
+
+  /**
+   * Maneja la actualización de contadores cuando cambia el parent
+   * @private
+   */
+  static async _handleParentGoalUpdates(parentChange) {
+    if (!parentChange.changed) return;
+
+    if (parentChange.oldParentId) {
+      await this._updateParentGoalCounters(parentChange.oldParentId, 'Meta padre anterior');
+    }
+
+    if (parentChange.newParentId) {
+      await this._updateParentGoalCounters(parentChange.newParentId, 'Nueva meta padre');
+    }
+  }
+
+  /**
+   * Actualiza los contadores de submetas de una meta padre
    * @param {string} parentGoalId - ID de la meta padre
    * @param {string} [label='Meta padre'] - Etiqueta para el log
-   * @returns {Promise<void>}
-   * @description Función auxiliar para actualizar contadores de submetas
    */
   static async _updateParentGoalCounters(parentGoalId, label = 'Meta padre') {
     try {
@@ -44,13 +98,10 @@ export class GoalService {
 
   /**
    * Obtiene todas las metas del usuario  con filtros opcionales
-   * @static
-   * @async
-   * @function getAllGoals
    * @param {string} userId - ID del usuario
    * @param {Object} [filters={}] - Filtros de búsqueda (status, priority, search, dueDateFrom, dueDateTo, sortBy, sortOrder)
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista resumida de metas o error
-   * @description Devuelve solo información mínima (id, title, status, priority, dueDate, parentGoalId, dates)
+   * Devuelve solo información mínima (id, title, status, priority, dueDate, parentGoalId, dates)
    * Para información completa incluyendo SMART, comentarios y métricas, usar getGoalById
    */
   static async getAllGoals(userId, filters = {}) {
@@ -65,7 +116,7 @@ export class GoalService {
       const query = { userId, ...filterDto.toMongoQuery() };
       const sort = filterDto.toMongoSort();
 
-      const goals = await Goal.find(query).populate('parentGoalId', 'title').sort(sort);
+      const goals = await Goal.find(query).populate('parentGoalId', POPULATE_PARENT_TITLE).sort(sort);
       if (goals.length === 0) {
         return new NotFoundResponseModel('No se encontraron metas para este usuario');
       }
@@ -74,39 +125,31 @@ export class GoalService {
 
       return new SuccessResponseModel(minGoals, minGoals.length, 'Metas obtenidas correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al obtener metas:', error));
-      return new ErrorResponseModel('Error al obtener metas');
+      return ErrorHandler.handleDatabaseError(error, 'obtener metas');
     }
   }
 
   /**
    * Obtiene una meta específica por ID del usuario
-   * @static
-   * @async
-   * @function getGoalById
    * @param {string} goalId - ID de la meta
    * @param {string} userId - ID del usuario
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la meta o error
-   * @description Incluye populate de parentGoalId (Goal)
+   * Incluye populate de parentGoalId (Goal)
    */
   static async getGoalById(goalId, userId) {
     try {
-      const goal = await Goal.findOne({ _id: goalId, userId }).populate('parentGoalId', 'description');
+      const goal = await Goal.findOne({ _id: goalId, userId }).populate('parentGoalId', POPULATE_PARENT_DESCRIPTION);
       if (!goal) {
         return new NotFoundResponseModel('Meta no encontrada');
       }
       return new SuccessResponseModel(goal, 1, 'Meta obtenida correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al obtener meta:', error));
-      return new ErrorResponseModel('Error al obtener meta');
+      return ErrorHandler.handleDatabaseError(error, 'obtener meta');
     }
   }
 
   /**
    * Crea una nueva meta para el usuario
-   * @static
-   * @async
-   * @function createGoal
    * @param {Object} goalData - Datos de la meta
    * @param {string} goalData.title - Título de la meta
    * @param {string} goalData.description - Descripción de la meta
@@ -138,21 +181,17 @@ export class GoalService {
 
       return new CreatedResponseModel(savedGoal, 'Meta creada correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al crear meta:', error));
-      return new ErrorResponseModel('Error al crear meta');
+      return ErrorHandler.handleDatabaseError(error, 'crear meta');
     }
   }
 
   /**
    * Actualiza una meta existente del usuario
-   * @static
-   * @async
-   * @function updateGoal
    * @param {string} goalId - ID de la meta
    * @param {Object} updateData - Datos completos de la meta (actualización completa)
    * @param {string} userId - ID del usuario
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la meta actualizada o error
-   * @description Actualización completa - requiere title y smart. Detecta cambios en status y parentGoalId para actualizar contadores automáticamente
+   * Actualización completa - requiere title y smart. Detecta cambios en status y parentGoalId para actualizar contadores automáticamente
    */
   static async updateGoal(goalId, updateData, userId) {
     try {
@@ -163,7 +202,7 @@ export class GoalService {
         return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
-      // Obtener la meta actual para detectar cambios
+      // Early return: Verificar que la meta existe
       const currentGoal = await Goal.findOne({ _id: goalId, userId });
       if (!currentGoal) {
         return new NotFoundResponseModel('Meta no encontrada');
@@ -171,50 +210,32 @@ export class GoalService {
 
       const cleanData = updateDto.toPlainObject();
 
-      //verifico si el parentGoalId es igual al enviado
-      const oldParentGoalId = currentGoal.parentGoalId;
-      const newParentGoalId = cleanData.parentGoalId !== undefined ? cleanData.parentGoalId : oldParentGoalId;
-      const parentGoalChanged =
-        (oldParentGoalId || newParentGoalId) && oldParentGoalId?.toString() !== newParentGoalId?.toString();
+      // Detectar cambios
+      const parentChange = this._detectParentGoalChange(currentGoal, cleanData);
+      const statusChange = this._detectStatusChange(currentGoal, cleanData);
 
-      // verifico si cambio el status
-      const statusChanged = cleanData.status && cleanData.status !== currentGoal.status;
-
-      // actualizo la meta
+      // Actualizar la meta
       const goal = await Goal.findOneAndUpdate({ _id: goalId, userId }, cleanData, {
         new: true,
         runValidators: true,
       });
 
-      // si cambio el parentGoalId -> se movió de meta padre
-      if (parentGoalChanged) {
-        // Actualizo contador del padre anterior
-        if (oldParentGoalId) {
-          await this._updateParentGoalCounters(oldParentGoalId, 'Meta padre anterior');
-        }
-        // Actualizo contador del nuevo padre
-        if (newParentGoalId) {
-          await this._updateParentGoalCounters(newParentGoalId, 'Nueva meta padre');
-        }
-      }
-      // si cambio el status y tiene meta padre -> impacta en el progreso
-      else if (statusChanged && goal.parentGoalId) {
+      // Manejar actualizaciones de contadores
+      if (parentChange.changed) {
+        await this._handleParentGoalUpdates(parentChange);
+      } else if (statusChange.changed && goal.parentGoalId) {
         await this._updateParentGoalCounters(goal.parentGoalId);
-        console.log(chalk.green(`Estado cambiado: ${currentGoal.status} → ${goal.status}`));
+        console.log(chalk.green(`Estado cambiado: ${statusChange.oldStatus} → ${statusChange.newStatus}`));
       }
 
       return new SuccessResponseModel(goal, 1, 'Meta actualizada correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al actualizar meta:', error));
-      return new ErrorResponseModel('Error al actualizar meta');
+      return ErrorHandler.handleDatabaseError(error, 'actualizar meta');
     }
   }
 
   /**
    * Elimina una meta del usuario
-   * @static
-   * @async
-   * @function deleteGoal
    * @param {string} goalId - ID de la meta
    * @param {string} userId - ID del usuario
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta de confirmación o error
@@ -240,16 +261,12 @@ export class GoalService {
 
       return new SuccessResponseModel({ id: goalId }, 1, 'Meta eliminada correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al eliminar meta:', error));
-      return new ErrorResponseModel('Error al eliminar meta');
+      return ErrorHandler.handleDatabaseError(error, 'eliminar meta');
     }
   }
 
   /**
    * Obtiene metas por estado del usuario
-   * @static
-   * @async
-   * @function getGoalsByStatus
    * @param {string} status - Estado de las metas (active/paused/completed)
    * @param {string} userId - ID del usuario
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las metas filtradas o error
@@ -262,15 +279,11 @@ export class GoalService {
       }
       return new SuccessResponseModel(goals, goals.length, `Metas ${status} obtenidas correctamente`);
     } catch (error) {
-      console.error(chalk.red('Error al obtener metas por estado:', error));
-      return new ErrorResponseModel('Error al obtener metas por estado');
+      return ErrorHandler.handleDatabaseError(error, 'obtener metas por estado');
     }
   }
   /**
    * Obtiene metas por ID de la meta padre del usuario
-   * @static
-   * @async
-   * @function getGoalsByParentGoalId
    * @param {string} parentGoalId - ID de la meta padre
    * @param {string} userId - ID del usuario
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las metas filtradas o error
@@ -287,16 +300,12 @@ export class GoalService {
         `Metas con ID de meta padre: ${parentGoalId} obtenidas correctamente`
       );
     } catch (error) {
-      console.error(chalk.red('Error al obtener metas por ID de meta padre:', error));
-      return new ErrorResponseModel('Error al obtener metas por ID de meta padre');
+      return ErrorHandler.handleDatabaseError(error, 'obtener metas por ID de meta padre');
     }
   }
 
   /**
    * Agrega una submeta a una meta padre
-   * @static
-   * @async
-   * @function addSubgoal
    * @param {string} parentGoalId - ID de la meta padre (del parámetro URL)
    * @param {string} subgoalId - ID de la meta que será submeta (del body)
    * @param {string} userId - ID del usuario
@@ -304,20 +313,21 @@ export class GoalService {
    */
   static async addSubgoal(parentGoalId, subgoalId, userId) {
     try {
-      // Verificar que la meta padre existe
-      const parentGoal = await Goal.findOne({ _id: parentGoalId, userId });
-      if (!parentGoal) {
+      // Early return: Validar autoasignación
+      if (subgoalId === parentGoalId) {
+        return new BadRequestResponseModel('Una meta no puede ser submeta de sí misma');
+      }
+
+      // Early return: Verificar que la meta padre existe
+      const { goal: parentGoal, error: parentError } = await this._findGoalByIdAndUser(parentGoalId, userId);
+      if (parentError) {
         return new NotFoundResponseModel('Meta padre no encontrada');
       }
 
-      // Verificar que la submeta existe
-      const subgoal = await Goal.findOne({ _id: subgoalId, userId });
-      if (!subgoal) {
+      // Early return: Verificar que la submeta existe
+      const { goal: subgoal, error: subgoalError } = await this._findGoalByIdAndUser(subgoalId, userId);
+      if (subgoalError) {
         return new NotFoundResponseModel('Meta no encontrada');
-      }
-
-      if (subgoalId === parentGoalId) {
-        return new BadRequestResponseModel('Una meta no puede ser submeta de sí misma');
       }
 
       const oldParentGoalId = subgoal.parentGoalId;
@@ -336,17 +346,13 @@ export class GoalService {
 
       return new SuccessResponseModel(subgoal, 1, 'Submeta agregada correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al agregar submeta:', error));
-      return new ErrorResponseModel('Error al agregar submeta');
+      return ErrorHandler.handleDatabaseError(error, 'agregar submeta');
     }
   }
 
   //TODO: los comentarios ya no van a ir dentro de la app, eliminarlos
   /**
    * Agrega un comentario a la meta del usuario
-   * @static
-   * @async
-   * @function addComment
    * @param {string} goalId - ID de la meta
    * @param {Object} commentData - Datos del comentario
    * @param {string} commentData.text - Texto del comentario
@@ -375,19 +381,15 @@ export class GoalService {
       }
       return new SuccessResponseModel(goal, 1, 'Comentario agregado correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al agregar comentario:', error));
-      return new ErrorResponseModel('Error al agregar comentario');
+      return ErrorHandler.handleDatabaseError(error, 'agregar comentario');
     }
   }
 
   /**
    * Obtiene lista catalog de metas (solo id y título) del usuario
-   * @static
-   * @async
-   * @function getCatalogGoals
    * @param {string} userId - ID del usuario
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con lista catalog de metas
-   * @description Útilzado para selects
+   * Útilzado para selects
    */
   static async getCatalogGoals(userId) {
     try {
@@ -401,8 +403,7 @@ export class GoalService {
 
       return new SuccessResponseModel(catalogGoals, catalogGoals.length, 'Catalogo de metas obtenida correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al obtener lista simple de metas:', error));
-      return new ErrorResponseModel('Error al obtener lista simple de metas');
+      return ErrorHandler.handleDatabaseError(error, 'obtener lista simple de metas');
     }
   }
 }

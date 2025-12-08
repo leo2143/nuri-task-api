@@ -2,14 +2,10 @@ import { UserService } from '../../services/userService.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con usuarios
- * @class UsersController
  */
 export class UsersController {
   /**
    * Crea un nuevo usuario
-   * @static
-   * @async
-   * @function createUser
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.body - Datos del usuario a crear
    * @param {string} req.body.name - Nombre del usuario
@@ -36,9 +32,6 @@ export class UsersController {
 
   /**
    * Obtiene todos los usuarios con filtros opcionales
-   * @static
-   * @async
-   * @function getAllUsers
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.query - Query parameters para filtros
    * @param {string} [req.query.search] - Término de búsqueda en nombre
@@ -74,9 +67,6 @@ export class UsersController {
 
   /**
    * Autentica un usuario y retorna un token JWT
-   * @static
-   * @async
-   * @function loginUser
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.body - Credenciales del usuario
    * @param {string} req.body.email - Email del usuario
@@ -104,16 +94,13 @@ export class UsersController {
 
   /**
    * Resetea la contraseña de un usuario (solo admin)
-   * @static
-   * @async
-   * @function resetUserPassword
    * @param {Object} req - Objeto request de Express
    * @param {string} req.params.id - ID del usuario
    * @param {Object} req.body - Datos de la nueva contraseña
    * @param {string} [req.body.newPassword] - Contraseña temporal (opcional, se genera si no se envía)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   * @description Solo admin puede resetear contraseñas. Si no se envía newPassword, se genera una automática.
+   * Solo admin puede resetear contraseñas. Si no se envía newPassword, se genera una automática.
    * @example
    * // PUT /api/admin/users/:id/reset-password
    * // Body: { "newPassword": "temporal123" } o {} para generar automática
@@ -138,15 +125,12 @@ export class UsersController {
 
   /**
    * Solicita la recuperación de contraseña (endpoint público)
-   * @static
-   * @async
-   * @function forgotPassword
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.body - Datos de la solicitud
    * @param {string} req.body.email - Email del usuario
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   * @description Genera un token y envía un email con instrucciones de recuperación
+   * Genera un token y envía un email con instrucciones de recuperación
    * @example
    * // POST /api/users/forgot-password
    * // Body: { "email": "usuario@ejemplo.com" }
@@ -173,14 +157,11 @@ export class UsersController {
 
   /**
    * Verifica si un token de recuperación es válido (endpoint público)
-   * @static
-   * @async
-   * @function verifyResetToken
    * @param {Object} req - Objeto request de Express
    * @param {string} req.params.token - Token de recuperación
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   * @description Verifica que el token existe y no ha expirado
+   * Verifica que el token existe y no ha expirado
    * @example
    * // GET /api/users/verify-reset-token/:token
    */
@@ -206,16 +187,13 @@ export class UsersController {
 
   /**
    * Resetea la contraseña usando el token (endpoint público)
-   * @static
-   * @async
-   * @function resetPassword
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.body - Datos para resetear
    * @param {string} req.body.token - Token de recuperación
    * @param {string} req.body.newPassword - Nueva contraseña
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   * @description Verifica el token y actualiza la contraseña
+   * Verifica el token y actualiza la contraseña
    * @example
    * // POST /api/users/reset-password
    * // Body: { "token": "abc123...", "newPassword": "nuevaContraseña123" }

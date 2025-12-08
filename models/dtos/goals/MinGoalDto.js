@@ -1,7 +1,7 @@
 /**
  * DTO Mínimo para respuestas de lista de Goals
  * @class MinGoalDto
- * @description DTO para devolver información resumida de metas en listados
+   * DTO para devolver información resumida de metas en listados
  * Solo incluye los campos esenciales para mostrar en listas
  */
 export class MinGoalDto {
@@ -22,7 +22,6 @@ export class MinGoalDto {
 
   /**
    * Convierte un array de Goals a MinGoalDto
-   * @static
    * @param {Array} goals - Array de documentos de Goal
    * @returns {Array<MinGoalDto>} Array de MinGoalDto
    */

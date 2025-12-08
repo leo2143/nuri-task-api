@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import { ErrorResponseModel } from '../models/responseModel.js';
+import { UnauthorizedResponseModel, ForbiddenResponseModel } from '../models/responseModel.js';
 
 dotenv.config();
 
@@ -8,52 +8,55 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
 
 /**
  * Middleware para validar tokens JWT en rutas protegidas
- * @function validateToken
  * @param {Object} req - Objeto request de Express
  * @param {Object} req.headers - Headers de la petición
  * @param {string} req.headers.authorization - Token JWT en formato "Bearer <token>"
  * @param {Object} res - Objeto response de Express
  * @param {Function} next - Función para continuar al siguiente middleware
  * @returns {void} No retorna valor, continúa o envía respuesta de error
- * @description Valida el token JWT del header Authorization y agrega la información del usuario al request
+ * Valida el token JWT del header Authorization y agrega la información del usuario al request
  */
 export const validateToken = (req, res, next) => {
   const token = req.headers.authorization;
   try {
     const decoded = verifyJwt(req, token);
     if (!decoded) {
-      return res.status(401).json(new ErrorResponseModel('No se pasó el token'));
+      const response = new UnauthorizedResponseModel('No se proporcionó token de autenticación');
+      return res.status(response.status).json(response);
     }
     next();
   } catch (error) {
-    return res.status(401).json(new ErrorResponseModel('Token inválido'));
+    const response = new UnauthorizedResponseModel('Token inválido o expirado');
+    return res.status(response.status).json(response);
   }
 };
 
 /**
  * Middleware para validar tokens JWT y permisos de administrador
- * @function validateAdminToken
  * @param {Object} req - Objeto request de Express
  * @param {Object} req.headers - Headers de la petición
  * @param {string} req.headers.authorization - Token JWT en formato "Bearer <token>"
  * @param {Object} res - Objeto response de Express
  * @param {Function} next - Función para continuar al siguiente middleware
  * @returns {void} No retorna valor, continúa o envía respuesta de error
- * @description Valida el token JWT y verifica que el usuario tenga permisos de administrador
+ * Valida el token JWT y verifica que el usuario tenga permisos de administrador
  */
 export const validateAdminToken = (req, res, next) => {
   const token = req.headers.authorization;
   try {
     const decoded = verifyJwt(req, token);
     if (!decoded) {
-      return res.status(401).json(new ErrorResponseModel('No se pasó el token'));
+      const response = new UnauthorizedResponseModel('No se proporcionó token de autenticación');
+      return res.status(response.status).json(response);
     }
     if (!decoded.isAdmin) {
-      return res.status(403).json(new ErrorResponseModel('Acceso denegado. Se requieren permisos de administrador'));
+      const response = new ForbiddenResponseModel('Acceso denegado. Se requieren permisos de administrador');
+      return res.status(response.status).json(response);
     }
     next();
   } catch (error) {
-    return res.status(401).json(new ErrorResponseModel('Token inválido o expirado'));
+    const response = new UnauthorizedResponseModel('Token inválido o expirado');
+    return res.status(response.status).json(response);
   }
 };
 

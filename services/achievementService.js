@@ -2,18 +2,17 @@ import Achievement from '../models/achievementModel.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import { CreateAchievementDto, UpdateAchievementDto, AchievementFilterDto } from '../models/dtos/achievements/index.js';
+import { ErrorHandler } from './helpers/errorHandler.js';
 import chalk from 'chalk';
+
+const VALID_ACHIEVEMENT_TYPES = ['task', 'goal', 'metric', 'streak', 'comment'];
 
 /**
  * Servicio para gestionar plantillas globales de logros (solo administradores)
- * @class AchievementService
  */
 export class AchievementService {
   /**
    * Obtiene todas las plantillas de logros con filtros opcionales
-   * @static
-   * @async
-   * @function getAllAchievements
    * @param {Object} [filters={}] - Filtros de búsqueda (type, isActive, search, sortBy, sortOrder)
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de plantillas o error
    */
@@ -39,16 +38,12 @@ export class AchievementService {
         'Plantillas de logros obtenidas correctamente'
       );
     } catch (error) {
-      console.error(chalk.red('Error al obtener plantillas de logros:', error));
-      return new ErrorResponseModel('Error al obtener plantillas de logros');
+      return ErrorHandler.handleDatabaseError(error, 'obtener plantillas de logros');
     }
   }
 
   /**
    * Obtiene una plantilla de logro por ID
-   * @static
-   * @async
-   * @function getAchievementById
    * @param {string} achievementId - ID del logro
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la plantilla o error
    */
@@ -60,16 +55,12 @@ export class AchievementService {
       }
       return new SuccessResponseModel(achievement, 1, 'Plantilla de logro obtenida correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al obtener plantilla de logro:', error));
-      return new ErrorResponseModel('Error al obtener plantilla de logro');
+      return ErrorHandler.handleDatabaseError(error, 'obtener plantilla de logro');
     }
   }
 
   /**
    * Crea una nueva plantilla de logro (solo administradores)
-   * @static
-   * @async
-   * @function createAchievement
    * @param {Object} achievementData - Datos del logro
    * @param {string} achievementData.title - Título del logro
    * @param {string} achievementData.description - Descripción del logro
@@ -92,16 +83,12 @@ export class AchievementService {
       const savedAchievement = await achievement.save();
       return new CreatedResponseModel(savedAchievement, 'Plantilla de logro creada correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al crear plantilla de logro:', error));
-      return new ErrorResponseModel('Error al crear plantilla de logro');
+      return ErrorHandler.handleDatabaseError(error, 'crear plantilla de logro');
     }
   }
 
   /**
    * Actualiza una plantilla de logro existente (solo administradores)
-   * @static
-   * @async
-   * @function updateAchievement
    * @param {string} achievementId - ID del logro
    * @param {Object} updateData - Datos a actualizar
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la plantilla actualizada o error
@@ -128,16 +115,12 @@ export class AchievementService {
 
       return new SuccessResponseModel(achievement, 1, 'Plantilla de logro actualizada correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al actualizar plantilla de logro:', error));
-      return new ErrorResponseModel('Error al actualizar plantilla de logro');
+      return ErrorHandler.handleDatabaseError(error, 'actualizar plantilla de logro');
     }
   }
 
   /**
    * Elimina una plantilla de logro (solo administradores)
-   * @static
-   * @async
-   * @function deleteAchievement
    * @param {string} achievementId - ID del logro
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con confirmación de eliminación o error
    */
@@ -151,24 +134,19 @@ export class AchievementService {
 
       return new SuccessResponseModel(achievement, 1, 'Plantilla de logro eliminada correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al eliminar plantilla de logro:', error));
-      return new ErrorResponseModel('Error al eliminar plantilla de logro');
+      return ErrorHandler.handleDatabaseError(error, 'eliminar plantilla de logro');
     }
   }
 
   /**
    * Obtiene plantillas de logros por tipo
-   * @static
-   * @async
-   * @function getAchievementsByType
    * @param {string} type - Tipo de logro (task/goal/metric/streak/comment)
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las plantillas filtradas o error
    */
   static async getAchievementsByType(type) {
     try {
-      const validTypes = ['task', 'goal', 'metric', 'streak', 'comment'];
-      if (!validTypes.includes(type)) {
-        return new ErrorResponseModel(`El tipo debe ser uno de: ${validTypes.join(', ')}`);
+      if (!VALID_ACHIEVEMENT_TYPES.includes(type)) {
+        return new BadRequestResponseModel(`El tipo debe ser uno de: ${VALID_ACHIEVEMENT_TYPES.join(', ')}`);
       }
 
       const achievements = await Achievement.find({ type, isActive: true });
@@ -183,16 +161,12 @@ export class AchievementService {
         `Plantillas de logros de tipo ${type} obtenidas correctamente`
       );
     } catch (error) {
-      console.error(chalk.red('Error al obtener plantillas de logros por tipo:', error));
-      return new ErrorResponseModel('Error al obtener plantillas de logros por tipo');
+      return ErrorHandler.handleDatabaseError(error, 'obtener plantillas de logros por tipo');
     }
   }
 
   /**
    * Obtiene estadísticas de plantillas de logros
-   * @static
-   * @async
-   * @function getAchievementStats
    * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Respuesta con estadísticas o error
    */
   static async getAchievementStats() {
@@ -222,8 +196,7 @@ export class AchievementService {
 
       return new SuccessResponseModel(stats, 1, 'Estadísticas de plantillas de logros obtenidas correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al obtener estadísticas de plantillas de logros:', error));
-      return new ErrorResponseModel('Error al obtener estadísticas de plantillas de logros');
+      return ErrorHandler.handleDatabaseError(error, 'obtener estadísticas de plantillas de logros');
     }
   }
 }

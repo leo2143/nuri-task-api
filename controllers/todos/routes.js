@@ -3,10 +3,9 @@ import { validateToken } from '../../middlewares/authMiddleware.js';
 
 /**
  * Función para configurar las rutas de tareas (todos)
- * @function setupTodoRoutes
  * @param {Object} app - Instancia de Express
  * @returns {void} No retorna valor, configura las rutas de todos en la app
- * @description Configura todas las rutas relacionadas con tareas, todas requieren autenticación
+   * Configura todas las rutas relacionadas con tareas, todas requieren autenticación
  */
 export const setupTodoRoutes = app => {
   app.get('/api/todos', validateToken, (req, res) => {

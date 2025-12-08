@@ -2,14 +2,10 @@ import { AchievementService } from '../../services/achievementService.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con plantillas de logros (solo administradores)
- * @class AchievementController
  */
 export class AchievementController {
   /**
    * Obtiene todas las plantillas de logros con filtros opcionales
-   * @static
-   * @async
-   * @function getAllAchievements
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.query - Parámetros de consulta (type, isActive, search, sortBy, sortOrder)
    * @param {Object} res - Objeto response de Express
@@ -33,9 +29,6 @@ export class AchievementController {
 
   /**
    * Obtiene una plantilla de logro por ID
-   * @static
-   * @async
-   * @function getAchievementById
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.params - Parámetros de URL
    * @param {string} req.params.id - ID del logro
@@ -50,9 +43,6 @@ export class AchievementController {
 
   /**
    * Crea una nueva plantilla de logro (solo administradores)
-   * @static
-   * @async
-   * @function createAchievement
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.body - Datos del logro
    * @param {Object} res - Objeto response de Express
@@ -66,9 +56,6 @@ export class AchievementController {
 
   /**
    * Actualiza una plantilla de logro existente (solo administradores)
-   * @static
-   * @async
-   * @function updateAchievement
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.params - Parámetros de URL
    * @param {string} req.params.id - ID del logro
@@ -85,9 +72,6 @@ export class AchievementController {
 
   /**
    * Elimina una plantilla de logro (solo administradores)
-   * @static
-   * @async
-   * @function deleteAchievement
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.params - Parámetros de URL
    * @param {string} req.params.id - ID del logro
@@ -102,9 +86,6 @@ export class AchievementController {
 
   /**
    * Obtiene logros por tipo
-   * @static
-   * @async
-   * @function getAchievementsByType
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.params - Parámetros de URL
    * @param {string} req.params.type - Tipo de logro
@@ -119,9 +100,6 @@ export class AchievementController {
 
   /**
    * Obtiene estadísticas de plantillas de logros
-   * @static
-   * @async
-   * @function getAchievementStats
    * @param {Object} req - Objeto request de Express
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP

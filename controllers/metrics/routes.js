@@ -3,10 +3,9 @@ import { validateToken } from '../../middlewares/authMiddleware.js';
 
 /**
  * Función para configurar las rutas de Metrics
- * @function setupMetricRoutes
  * @param {Object} app - Instancia de Express
  * @returns {void} No retorna valor, configura las rutas de métricas en la app
- * @description Configura las rutas de Metrics protegidas con autenticación JWT
+   * Configura las rutas de Metrics protegidas con autenticación JWT
  */
 export const setupMetricRoutes = app => {
   app.get('/api/metrics', validateToken, (req, res) => {

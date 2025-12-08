@@ -3,18 +3,15 @@ import { MetricsService } from '../../services/metricsService.js';
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con Metrics
  * @class MetricsController
- * @description Gestiona métricas generales del usuario (rachas, totales, actividad)
+   * Gestiona métricas generales del usuario (rachas, totales, actividad)
  */
 export class MetricsController {
   /**
    * Obtiene las métricas del usuario autenticado
-   * @static
-   * @async
-   * @function getAllMetrics
    * @param {Object} req - Objeto request de Express
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   * @description Retorna las métricas generales del usuario (se auto-crea si no existe)
+   * Retorna las métricas generales del usuario (se auto-crea si no existe)
    */
   static async getAllMetrics(req, res) {
     try {
@@ -29,9 +26,6 @@ export class MetricsController {
 
   /**
    * Obtiene el dashboard del usuario con estadísticas y motivación
-   * @static
-   * @async
-   * @function getMetricDashboard
    * @param {Object} req - Objeto request de Express
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
@@ -49,9 +43,6 @@ export class MetricsController {
 
   /**
    * Verifica y actualiza las rachas del usuario
-   * @static
-   * @async
-   * @function checkAndUpdateStreaks
    * @param {Object} req - Objeto request de Express
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP

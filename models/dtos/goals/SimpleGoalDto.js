@@ -1,7 +1,7 @@
 /**
  * DTO Catalog solo ID y título
  * @class CatalogGoalDto
- * @description DTO para selects
+   * DTO para selects
  */
 export class CatalogGoalDto {
   /**
@@ -14,7 +14,6 @@ export class CatalogGoalDto {
 
   /**
    * Convierte un array de Goals a CatalogGoalDto
-   * @static
    * @param {Array} goals - Array de documentos de Goal
    * @returns {Array<CatalogGoalDto>} Array de CatalogGoalDto
    */

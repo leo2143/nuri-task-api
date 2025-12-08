@@ -1,7 +1,7 @@
 /**
  * DTO Mínimo para respuestas de lista de Todos
  * @class MinTodoDto
- * @description DTO para devolver información resumida de tareas en listados
+   * DTO para devolver información resumida de tareas en listados
  * Solo incluye los campos esenciales para mostrar en listas
  */
 export class MinTodoDto {
@@ -20,7 +20,6 @@ export class MinTodoDto {
 
   /**
    * Convierte un array de Todos a MinTodoDto
-   * @static
    * @param {Array} todos - Array de documentos de Todo
    * @returns {Array<MinTodoDto>} Array de MinTodoDto
    */
