@@ -9,9 +9,10 @@ export class CreateAchievementDto {
    * @param {string} data.title - Título del logro (requerido)
    * @param {string} data.description - Descripción del logro (requerido)
    * @param {number} data.targetCount - Cantidad objetivo para completar (requerido)
-   * @param {string} data.type - Tipo de logro: task/goal/metric/streak/comment (requerido)
+   * @param {string} data.type - Tipo de logro: task/goal/metric/streak (requerido)
    * @param {string} [data.reward] - Recompensa del logro
    * @param {boolean} [data.isActive] - Si el logro está activo (por defecto: true)
+   * @param {string} [data.imageUrl] - URL de la imagen del logro
    */
   constructor(data) {
     this.title = data.title;
@@ -20,6 +21,7 @@ export class CreateAchievementDto {
     this.type = data.type;
     this.reward = data.reward || '';
     this.isActive = data.isActive !== undefined ? data.isActive : true;
+    this.imageUrl = data.imageUrl || null;
   }
 
   /**
@@ -93,7 +95,7 @@ export class CreateAchievementDto {
   _validateType(required = true) {
     if (this.type === undefined) return null;
 
-    const validTypes = ['task', 'goal', 'metric', 'streak', 'comment'];
+    const validTypes = ['task', 'goal', 'metric', 'streak'];
 
     if (required && (!this.type || !validTypes.includes(this.type))) {
       return `El tipo debe ser uno de: ${validTypes.join(', ')}`;
@@ -123,6 +125,20 @@ export class CreateAchievementDto {
   }
 
   /**
+   * Valida imageUrl
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validateImageUrl() {
+    if (this.imageUrl === undefined || this.imageUrl === null) return null;
+
+    if (typeof this.imageUrl !== 'string' || this.imageUrl.trim() === '') {
+      return 'La URL de la imagen debe ser un string válido';
+    }
+
+    return null;
+  }
+
+  /**
    * Valida que los datos del DTO sean correctos
    * @returns {Object} Objeto con isValid y errores
    */
@@ -146,6 +162,9 @@ export class CreateAchievementDto {
     const isActiveError = this._validateIsActive();
     if (isActiveError) errors.push(isActiveError);
 
+    const imageUrlError = this._validateImageUrl();
+    if (imageUrlError) errors.push(imageUrlError);
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -164,6 +183,7 @@ export class CreateAchievementDto {
       type: this.type,
       reward: this.reward.trim(),
       isActive: this.isActive,
+      imageUrl: this.imageUrl,
     };
   }
 }

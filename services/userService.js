@@ -18,7 +18,7 @@ import {
   ChangePasswordDto,
   ResetPasswordDto,
   LoginUserDto,
-  UserDto,
+  UserFilterDto,
 } from '../models/dtos/users/index.js';
 
 dotenv.config();
@@ -30,11 +30,27 @@ const JWT_SECRET = process.env.JWT_SECRET || 'tu_clave_secreta_super_segura';
 export class UserService {
   /**
    * Obtiene todos los usuarios con filtros opcionales
+   * @param {Object} [filters={}] - Filtros de búsqueda (search, isAdmin, isSubscribed, createdFrom, createdTo, sortBy, sortOrder)
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+   * Devuelve solo información mínima (id, name, email, profileImageUrl, subscription)
+   * Para información completa, usar getUserById
    */
   static async getAllUsers(filters = {}) {
     try {
-      const query = this._buildSearchQuery(filters);
-      const users = await User.find(query).select('-password');
+      const filterDto = new UserFilterDto(filters);
+      const validation = filterDto.validate();
+
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
+      }
+
+      const query = filterDto.toMongoQuery();
+      const sort = filterDto.toMongoSort();
+
+      const users = await User.find(query)
+        .select('name email profileImageUrl subscription createdAt updatedAt')
+        .sort(sort)
+        .lean();
 
       if (users.length === 0) {
         return new NotFoundResponseModel('No se encontraron usuarios con los filtros aplicados');
@@ -48,10 +64,13 @@ export class UserService {
 
   /**
    * Obtiene un usuario específico por su ID
+   * @param {string} id - ID del usuario
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+   * Devuelve información completa del usuario (excepto password y tokens)
    */
   static async getUserById(id) {
     try {
-      const user = await User.findById(id).select('-password');
+      const user = await User.findById(id).select('-password -resetPasswordToken -resetPasswordExpires');
 
       if (!user) {
         return new NotFoundResponseModel(`No se encontró el usuario con el id: ${id} en la base de datos`);
@@ -93,9 +112,13 @@ export class UserService {
       });
 
       const savedUser = await user.save();
-      const userDto = UserDto.fromUser(savedUser);
+      const userResponse = savedUser.toObject();
+      delete userResponse.password;
+      delete userResponse.resetPasswordToken;
+      delete userResponse.resetPasswordExpires;
+      delete userResponse.subscription;
 
-      return new CreatedResponseModel(userDto, 'Usuario creado correctamente');
+      return new CreatedResponseModel(userResponse, 'Usuario creado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'crear usuario');
     }
@@ -180,12 +203,17 @@ export class UserService {
 
       const payload = UserServiceHelpers.createJWTPayload(user);
       const token = UserServiceHelpers.generateJWT(payload, JWT_SECRET);
-      const userDto = UserDto.fromUser(user);
+      const userResponse = user.toObject();
+      delete userResponse.password;
+      delete userResponse.resetPasswordToken;
+      delete userResponse.resetPasswordExpires;
+      delete userResponse.subscription.endDate;
+      delete userResponse.subscription.startDate;
 
       return new SuccessResponseModel(
         {
           token,
-          user: userDto,
+          user: userResponse,
         },
         1,
         'Login exitoso'
@@ -369,27 +397,23 @@ export class UserService {
   }
 
   /**
-   * Genera una contraseña temporal segura (solo admin)
+   * Verifica si un email ya está en uso por otro usuario
+   * @private
+   * @param {string} email - Email a verificar
+   * @param {string} excludeUserId - ID del usuario a excluir de la búsqueda
+   * @returns {Promise<boolean>}
    */
-  static generateTemporaryPassword(length = 12) {
-    return UserServiceHelpers.generateTemporaryPassword(length);
-  }
-
-  static _buildSearchQuery(filters) {
-    const query = {};
-
-    if (filters.search) {
-      query.name = { $regex: filters.search, $options: 'i' };
-    }
-
-    return query;
-  }
-
   static async _checkEmailExists(email, excludeUserId) {
     const existingUser = await User.findOne({ email, _id: { $ne: excludeUserId } });
     return !!existingUser;
   }
 
+  /**
+   * Crea una respuesta segura para solicitud de reset de contraseña
+   * @private
+   * @param {string|null} [devToken=null] - Token de desarrollo (solo en modo dev)
+   * @returns {SuccessResponseModel}
+   */
   static _createSecureResetResponse(devToken = null) {
     const response = {
       message: 'Si el email existe, recibirás un correo con instrucciones',
@@ -402,6 +426,12 @@ export class UserService {
     return new SuccessResponseModel(response, 1, 'Email de recuperación enviado');
   }
 
+  /**
+   * Busca un usuario por token de reset válido
+   * @private
+   * @param {string} hashedToken - Token hasheado
+   * @returns {Promise<User|null>}
+   */
   static async _findUserByValidToken(hashedToken) {
     return User.findOne({
       resetPasswordToken: hashedToken,

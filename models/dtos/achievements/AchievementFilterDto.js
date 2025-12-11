@@ -6,7 +6,7 @@
 export class AchievementFilterDto {
   /**
    * @param {Object} filters - Parámetros de filtro
-   * @param {string} [filters.type] - Filtrar por tipo (task/goal/metric/streak/comment)
+   * @param {string} [filters.type] - Filtrar por tipo (task/goal/metric/streak)
    * @param {boolean} [filters.isActive] - Filtrar por estado activo
    * @param {string} [filters.search] - Buscar en título o descripción
    * @param {string} [filters.sortBy] - Campo por el cual ordenar (title, type, targetCount, createdAt)
@@ -29,7 +29,7 @@ export class AchievementFilterDto {
 
     // Validar type si existe
     if (this.type) {
-      const validTypes = ['task', 'goal', 'metric', 'streak', 'comment'];
+      const validTypes = ['task', 'goal', 'metric', 'streak'];
       if (!validTypes.includes(this.type)) {
         errors.push(`El tipo debe ser uno de: ${validTypes.join(', ')}`);
       }

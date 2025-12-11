@@ -97,23 +97,18 @@ export class UsersController {
    * @param {Object} req - Objeto request de Express
    * @param {string} req.params.id - ID del usuario
    * @param {Object} req.body - Datos de la nueva contraseña
-   * @param {string} [req.body.newPassword] - Contraseña temporal (opcional, se genera si no se envía)
+   * @param {string} req.body.newPassword - Nueva contraseña temporal (requerida)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   * Solo admin puede resetear contraseñas. Si no se envía newPassword, se genera una automática.
+   * Solo admin puede resetear contraseñas
    * @example
    * // PUT /api/admin/users/:id/reset-password
-   * // Body: { "newPassword": "temporal123" } o {} para generar automática
+   * // Body: { "newPassword": "temporal123" }
    */
   static async resetUserPassword(req, res) {
     try {
       const userId = req.params.id;
-      let { newPassword } = req.body;
-
-      // Si no se proporciona contraseña, generar una automática
-      if (!newPassword) {
-        newPassword = UserService.generateTemporaryPassword();
-      }
+      const { newPassword } = req.body;
 
       const result = await UserService.resetUserPassword(userId, newPassword);
       res.status(result.status).json(result);

@@ -5,7 +5,7 @@ import { CreateAchievementDto, UpdateAchievementDto, AchievementFilterDto } from
 import { ErrorHandler } from './helpers/errorHandler.js';
 import chalk from 'chalk';
 
-const VALID_ACHIEVEMENT_TYPES = ['task', 'goal', 'metric', 'streak', 'comment'];
+const VALID_ACHIEVEMENT_TYPES = ['task', 'goal', 'metric', 'streak'];
 
 /**
  * Servicio para gestionar plantillas globales de logros (solo administradores)
@@ -140,7 +140,7 @@ export class AchievementService {
 
   /**
    * Obtiene plantillas de logros por tipo
-   * @param {string} type - Tipo de logro (task/goal/metric/streak/comment)
+   * @param {string} type - Tipo de logro (task/goal/metric/streak)
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las plantillas filtradas o error
    */
   static async getAchievementsByType(type) {

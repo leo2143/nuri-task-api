@@ -13,9 +13,10 @@ export class UpdateAchievementDto extends CreateAchievementDto {
    * @param {string} [data.title] - Título del logro
    * @param {string} [data.description] - Descripción del logro
    * @param {number} [data.targetCount] - Cantidad objetivo para completar
-   * @param {string} [data.type] - Tipo de logro: task/goal/metric/streak/comment
+   * @param {string} [data.type] - Tipo de logro: task/goal/metric/streak
    * @param {string} [data.reward] - Recompensa del logro
    * @param {boolean} [data.isActive] - Si el logro está activo
+   * @param {string} [data.imageUrl] - URL de la imagen del logro
    */
   constructor(data) {
     // Llamamos super con objeto vacío para inicializar la clase padre
@@ -28,6 +29,7 @@ export class UpdateAchievementDto extends CreateAchievementDto {
     if (data.type !== undefined) this.type = data.type;
     if (data.reward !== undefined) this.reward = data.reward;
     if (data.isActive !== undefined) this.isActive = data.isActive;
+    if (data.imageUrl !== undefined) this.imageUrl = data.imageUrl;
   }
 
   /**
@@ -54,6 +56,9 @@ export class UpdateAchievementDto extends CreateAchievementDto {
     const isActiveError = this._validateIsActive();
     if (isActiveError) errors.push(isActiveError);
 
+    const imageUrlError = this._validateImageUrl();
+    if (imageUrlError) errors.push(imageUrlError);
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -73,6 +78,7 @@ export class UpdateAchievementDto extends CreateAchievementDto {
     if (this.type !== undefined) result.type = this.type;
     if (this.reward !== undefined) result.reward = this.reward.trim();
     if (this.isActive !== undefined) result.isActive = this.isActive;
+    if (this.imageUrl !== undefined) result.imageUrl = this.imageUrl;
 
     return result;
   }

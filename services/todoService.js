@@ -3,7 +3,7 @@ import Goal from '../models/goalsModel.js';
 import { MetricsService } from './metricsService.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
-import { CreateTodoDto, UpdateTodoDto, TodoFilterDto, AddCommentDto, MinTodoDto } from '../models/dtos/todo/index.js';
+import { CreateTodoDto, UpdateTodoDto, TodoFilterDto, AddCommentDto } from '../models/dtos/todo/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import chalk from 'chalk';
 
@@ -55,14 +55,16 @@ export class TodoService {
       const query = { userId, ...filterDto.toMongoQuery() };
       const sort = filterDto.toMongoSort();
 
-      const todos = await Todo.find(query).sort(sort);
+      const todos = await Todo.find(query)
+        .select('title completed priority dueDate GoalId createdAt updatedAt')
+        .sort(sort)
+        .lean();
+
       if (todos.length === 0) {
         return new NotFoundResponseModel('No se encontraron tareas con los filtros aplicados');
       }
 
-      const minTodos = MinTodoDto.fromArray(todos);
-
-      return new SuccessResponseModel(minTodos, minTodos.length, 'Tareas obtenidas correctamente');
+      return new SuccessResponseModel(todos, todos.length, 'Tareas obtenidas correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener tareas');
     }

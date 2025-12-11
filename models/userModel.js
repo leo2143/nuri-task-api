@@ -32,12 +32,30 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  subscription: {
+    isActive: {
+      type: Boolean,
+      default: false,
+    },
+    startDate: {
+      type: Date,
+      default: null,
+    },
+    endDate: {
+      type: Date,
+      default: null,
+    },
+  },
   resetPasswordToken: {
     type: String,
     default: null,
   },
   resetPasswordExpires: {
     type: Date,
+    default: null,
+  },
+  profileImageUrl: {
+    type: String,
     default: null,
   },
 });

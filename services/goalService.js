@@ -6,7 +6,6 @@ import {
   UpdateGoalDto,
   AddCommentDto,
   GoalFilterDto,
-  MinGoalDto,
   CatalogGoalDto,
 } from '../models/dtos/goals/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
@@ -116,14 +115,17 @@ export class GoalService {
       const query = { userId, ...filterDto.toMongoQuery() };
       const sort = filterDto.toMongoSort();
 
-      const goals = await Goal.find(query).populate('parentGoalId', POPULATE_PARENT_TITLE).sort(sort);
+      const goals = await Goal.find(query)
+        .populate('parentGoalId', POPULATE_PARENT_TITLE)
+        .select('title status priority dueDate parentGoalId progress createdAt updatedAt')
+        .sort(sort)
+        .lean();
+
       if (goals.length === 0) {
         return new NotFoundResponseModel('No se encontraron metas para este usuario');
       }
 
-      const minGoals = MinGoalDto.fromArray(goals);
-
-      return new SuccessResponseModel(minGoals, minGoals.length, 'Metas obtenidas correctamente');
+      return new SuccessResponseModel(goals, goals.length, 'Metas obtenidas correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener metas');
     }
