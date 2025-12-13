@@ -35,10 +35,6 @@
     {
       "name": "User Achievements",
       "description": "Progreso personal de logros"
-    },
-    {
-      "name": "Dashboard",
-      "description": "Dashboard de administración"
     }
   ],
   "schemes": [
@@ -1667,6 +1663,86 @@
         ]
       }
     },
+    "/api/admin/dashboard": {
+      "get": {
+        "tags": [
+          "Metrics - Admin"
+        ],
+        "summary": "Obtiene estadísticas generales del sistema (solo admin)",
+        "description": "Retorna contadores de usuarios, metas y logros del sistema completo",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estadísticas obtenidas correctamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "status": {
+                  "type": "number",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Estadísticas del dashboard obtenidas correctamente"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "totalUsers": {
+                      "type": "number",
+                      "example": 150
+                    },
+                    "subscribedUsers": {
+                      "type": "number",
+                      "example": 45
+                    },
+                    "totalGoals": {
+                      "type": "number",
+                      "example": 450
+                    },
+                    "totalAchievementTemplates": {
+                      "type": "number",
+                      "example": 25
+                    },
+                    "totalAchievementsCompleted": {
+                      "type": "number",
+                      "example": 380
+                    }
+                  }
+                },
+                "meta": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "number",
+                      "example": 1
+                    }
+                  }
+                }
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/moodboards": {
       "get": {
         "tags": [
@@ -2613,86 +2689,6 @@
         "responses": {
           "default": {
             "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/admin/dashboard/stats": {
-      "get": {
-        "tags": [
-          "Dashboard - Admin"
-        ],
-        "summary": "Obtiene estadísticas generales del sistema (solo admin)",
-        "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Estadísticas obtenidas correctamente",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "success": {
-                  "type": "boolean",
-                  "example": true
-                },
-                "status": {
-                  "type": "number",
-                  "example": 200
-                },
-                "message": {
-                  "type": "string",
-                  "example": "Estadísticas del dashboard obtenidas correctamente"
-                },
-                "data": {
-                  "type": "object",
-                  "properties": {
-                    "totalUsers": {
-                      "type": "number",
-                      "example": 150
-                    },
-                    "subscribedUsers": {
-                      "type": "number",
-                      "example": 45
-                    },
-                    "totalGoals": {
-                      "type": "number",
-                      "example": 450
-                    },
-                    "totalAchievementTemplates": {
-                      "type": "number",
-                      "example": 25
-                    },
-                    "totalAchievementsCompleted": {
-                      "type": "number",
-                      "example": 380
-                    }
-                  }
-                },
-                "meta": {
-                  "type": "object",
-                  "properties": {
-                    "count": {
-                      "type": "number",
-                      "example": 1
-                    }
-                  }
-                }
-              },
-              "xml": {
-                "name": "main"
-              }
-            }
           }
         },
         "security": [

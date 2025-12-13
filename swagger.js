@@ -36,7 +36,6 @@ const doc = {
     { name: 'Moodboards', description: 'Gestión de tableros de inspiración' },
     { name: 'Achievements', description: 'Gestión de logros (solo admin)' },
     { name: 'User Achievements', description: 'Progreso personal de logros' },
-    { name: 'Dashboard', description: 'Dashboard de administración' },
   ],
   securityDefinitions: {
     bearerAuth: {
@@ -57,7 +56,6 @@ const endpointsFiles = [
   './controllers/metrics/routes.js',
   './controllers/moodboard/routes.js',
   './controllers/achievements/routes.js',
-  './controllers/dashboard/routes.js',
 ];
 
 swaggerAutogen(outputFile, endpointsFiles, doc).then(() => {
