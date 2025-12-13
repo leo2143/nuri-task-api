@@ -1,4 +1,8 @@
 import Metrics from '../models/metricsModel.js';
+import User from '../models/userModel.js';
+import Goal from '../models/goalsModel.js';
+import Achievement from '../models/achievementModel.js';
+import UserAchievement from '../models/userAchievementModel.js';
 import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel } from '../models/responseModel.js';
 import { MetricsDashboardDto } from '../models/dtos/metrics/index.js';
@@ -152,6 +156,44 @@ export class MetricsService {
       return new SuccessResponseModel({ userId }, 1, 'Métricas eliminadas correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'eliminar métricas');
+    }
+  }
+
+  /**
+   * Obtiene estadísticas generales del sistema para el dashboard de admin
+   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>}
+   */
+  static async getAdminDashboardStats() {
+    try {
+      const [
+        totalUsers,
+        subscribedUsers,
+        totalGoals,
+        totalAchievementTemplates,
+        totalAchievementsCompleted,
+      ] = await Promise.all([
+        User.countDocuments(),
+        User.countDocuments({ 'subscription.isActive': true }),
+        Goal.countDocuments(),
+        Achievement.countDocuments(),
+        UserAchievement.countDocuments({ status: 'completed' }),
+      ]);
+
+      const stats = {
+        totalUsers,
+        subscribedUsers,
+        totalGoals,
+        totalAchievementTemplates,
+        totalAchievementsCompleted,
+      };
+
+      return new SuccessResponseModel(
+        stats, 
+        1, 
+        'Estadísticas del dashboard obtenidas correctamente'
+      );
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'obtener estadísticas del dashboard');
     }
   }
 

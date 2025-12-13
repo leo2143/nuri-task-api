@@ -33,6 +33,20 @@ export class UpdateAchievementDto extends CreateAchievementDto {
   }
 
   /**
+   * Valida imageUrl (opcional en update)
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validateImageUrl() {
+    if (this.imageUrl === undefined) return null;
+
+    if (this.imageUrl !== null && (typeof this.imageUrl !== 'string' || this.imageUrl.trim() === '')) {
+      return 'La URL de la imagen debe ser válida';
+    }
+
+    return null;
+  }
+
+  /**
    * Valida que los datos del DTO sean correctos
    * Reutiliza los métodos de validación del padre
    * @returns {Object} Objeto con isValid y errores

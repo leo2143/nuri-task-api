@@ -49,7 +49,7 @@ const achievementSchema = new mongoose.Schema(
     },
     imageUrl: {
       type: String,
-      default: null,
+      required: true,
     },
   },
   {

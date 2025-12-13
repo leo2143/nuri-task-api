@@ -57,4 +57,15 @@ export class MetricsController {
       res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
     }
   }
+
+  /**
+   * Obtiene estadísticas generales del sistema para el dashboard de admin
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   */
+  static async getAdminDashboardStats(req, res) {
+    const result = await MetricsService.getAdminDashboardStats();
+    res.status(result.status).json(result);
+  }
 }

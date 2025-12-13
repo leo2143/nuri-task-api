@@ -8,7 +8,7 @@ export class UpdateUserDto extends CreateUserDto {
     super(data);
     this.name = data.name;
     this.email = data.email;
-    this.isAdmin = data.isAdmin;
+    this.profileImageUrl = data.profileImageUrl;
     this.password = data.password;
   }
 
@@ -56,8 +56,8 @@ export class UpdateUserDto extends CreateUserDto {
       result.email = this.email.trim().toLowerCase();
     }
 
-    if (this.isAdmin !== undefined) {
-      result.isAdmin = this.isAdmin;
+    if (this.profileImageUrl !== undefined) {
+      result.profileImageUrl = this.profileImageUrl;
     }
 
     if (this.password !== undefined) {

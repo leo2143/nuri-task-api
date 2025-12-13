@@ -468,6 +468,303 @@ UserDataResponseDto; // ❌ Don't use "Response"
 - `{Entity}FilterDto` - For filter parameters
 - `Add{Entity}Dto` - For adding sub-entities
 
+---
+
+### DTO Inheritance - MANDATORY DRY Principle
+
+**ALWAYS use inheritance to avoid duplicating validation logic between DTOs.**
+
+When creating specialized DTOs (admin, update, filter), **extend from base DTOs** instead of duplicating code.
+
+#### ❌ BAD - Duplicated Validation Logic
+
+```javascript
+// CreateUserDto.js
+export class CreateUserDto {
+  constructor(data) {
+    this.name = data.name;
+    this.email = data.email;
+    this.password = data.password;
+  }
+
+  _validateName() { /* 10 lines */ }
+  _validateEmail() { /* 10 lines */ }
+  _validatePassword() { /* 10 lines */ }
+  
+  validate() { /* calls all validations */ }
+  toPlainObject() { /* 5 lines */ }
+}
+
+// CreateAdminUserDto.js - DUPLICATING 40+ LINES
+export class CreateAdminUserDto {
+  constructor(data) {
+    this.name = data.name;           // DUPLICATED
+    this.email = data.email;         // DUPLICATED
+    this.password = data.password;   // DUPLICATED
+    this.isAdmin = data.isAdmin;
+  }
+
+  _validateName() { /* DUPLICATED 10 lines */ }
+  _validateEmail() { /* DUPLICATED 10 lines */ }
+  _validatePassword() { /* DUPLICATED 10 lines */ }
+  _validateIsAdmin() { /* NEW 5 lines */ }
+  
+  validate() { /* DUPLICATED + NEW */ }
+  toPlainObject() { /* DUPLICATED + NEW */ }
+}
+```
+
+**Problems:**
+- ❌ 40+ lines of duplicated code
+- ❌ Changes to email validation must be done in 2 places
+- ❌ High maintenance cost
+- ❌ Violates DRY principle
+- ❌ Violates Open/Closed Principle
+
+#### ✅ GOOD - Using Inheritance (DRY)
+
+```javascript
+// CreateUserDto.js (Base DTO)
+export class CreateUserDto {
+  constructor(data) {
+    this.name = data.name;
+    this.email = data.email;
+    this.password = data.password;
+  }
+
+  _validateName() { /* 10 lines */ }
+  _validateEmail() { /* 10 lines */ }
+  _validatePassword() { /* 10 lines */ }
+  
+  validate() {
+    const errors = [];
+    const nameError = this._validateName();
+    if (nameError) errors.push(nameError);
+    const emailError = this._validateEmail();
+    if (emailError) errors.push(emailError);
+    const passwordError = this._validatePassword();
+    if (passwordError) errors.push(passwordError);
+    
+    return { isValid: errors.length === 0, errors };
+  }
+  
+  toPlainObject() {
+    return {
+      name: this.name.trim(),
+      email: this.email.trim().toLowerCase(),
+      password: this.password,
+    };
+  }
+}
+
+// CreateAdminUserDto.js - EXTENDS base DTO
+import { CreateUserDto } from './CreateUserDto.js';
+
+export class CreateAdminUserDto extends CreateUserDto {
+  constructor(data) {
+    super(data); // ✅ Reuses name, email, password
+    
+    // Only add NEW fields
+    this.isAdmin = data.isAdmin || false;
+    this.isSubscribed = data.isSubscribed || false;
+  }
+
+  // Only validate NEW fields
+  _validateIsAdmin() {
+    if (typeof this.isAdmin !== 'boolean') {
+      return 'isAdmin debe ser un valor booleano';
+    }
+    return null;
+  }
+  
+  validate() {
+    // ✅ Reuse parent validation
+    const parentValidation = super.validate();
+    const errors = [...parentValidation.errors];
+    
+    // Only add NEW validations
+    const isAdminError = this._validateIsAdmin();
+    if (isAdminError) errors.push(isAdminError);
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+  
+  toPlainObject() {
+    // ✅ Reuse parent transformation
+    const parentData = super.toPlainObject();
+    
+    // Only add NEW fields
+    return {
+      ...parentData,
+      isAdmin: this.isAdmin,
+      isSubscribed: this.isSubscribed,
+    };
+  }
+}
+```
+
+**Benefits:**
+- ✅ **DRY**: No duplicated validation logic
+- ✅ **Maintainability**: Change email validation once, inherited everywhere
+- ✅ **Open/Closed**: Base DTO closed for modification, open for extension
+- ✅ **Code reduction**: ~50% less code
+- ✅ **Single Source of Truth**: Validation rules in one place
+
+---
+
+### When to Use DTO Inheritance
+
+**ALWAYS use inheritance when:**
+
+- ✅ New DTO needs **all fields from base DTO + additional fields**
+- ✅ Validation logic is the **same for base fields**
+- ✅ Creating specialized versions (admin, update, extended)
+
+**Example Hierarchy:**
+
+```
+CreateUserDto (base)
+  ├── CreateAdminUserDto (extends: adds isAdmin, isSubscribed)
+  └── CreateGuestUserDto (extends: adds temporaryToken, expiresAt)
+
+UpdateUserDto (base)
+  └── UpdateAdminUserDto (extends: adds canChangeRole, canChangePlan)
+
+TodoDto (base)
+  ├── MinTodoDto (extends: removes description, tags)
+  └── DetailedTodoDto (extends: adds comments, attachments)
+```
+
+**DO NOT use inheritance when:**
+
+- ❌ DTOs have completely different fields
+- ❌ Validation rules are completely different
+- ❌ Logic is unrelated (no "is-a" relationship)
+
+---
+
+### Inheritance Pattern Template
+
+```javascript
+// Base DTO
+export class BaseEntityDto {
+  constructor(data) {
+    this.commonField1 = data.commonField1;
+    this.commonField2 = data.commonField2;
+  }
+
+  _validateCommonField1() { /* validation */ }
+  _validateCommonField2() { /* validation */ }
+
+  validate() {
+    const errors = [];
+    // collect all validation errors
+    return { isValid: errors.length === 0, errors };
+  }
+
+  toPlainObject() {
+    return {
+      commonField1: this.commonField1,
+      commonField2: this.commonField2,
+    };
+  }
+}
+
+// Extended DTO
+import { BaseEntityDto } from './BaseEntityDto.js';
+
+export class ExtendedEntityDto extends BaseEntityDto {
+  constructor(data) {
+    super(data); // Call parent constructor
+    this.newField = data.newField;
+  }
+
+  _validateNewField() { /* validation only for new field */ }
+
+  validate() {
+    const parentValidation = super.validate(); // Reuse parent
+    const errors = [...parentValidation.errors];
+    
+    const newError = this._validateNewField();
+    if (newError) errors.push(newError);
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+
+  toPlainObject() {
+    const parentData = super.toPlainObject(); // Reuse parent
+    return {
+      ...parentData,
+      newField: this.newField, // Add new
+    };
+  }
+}
+```
+
+---
+
+### DTO Inheritance Checklist
+
+Before creating a new DTO:
+
+- ✅ Does it share fields with an existing DTO?
+- ✅ Are the validation rules the same for shared fields?
+- ✅ Would inheritance reduce code duplication?
+- ✅ Is there a clear "is-a" relationship? (AdminUser IS-A User)
+
+If **YES to all**, use inheritance with `extends`.
+
+If **NO**, create an independent DTO.
+
+---
+
+### Real-World Example: User DTOs
+
+```javascript
+// Base: CreateUserDto.js
+export class CreateUserDto {
+  constructor(data) {
+    this.name = data.name;
+    this.email = data.email;
+    this.password = data.password;
+  }
+  // ... validations ...
+}
+
+// Extends: CreateAdminUserDto.js
+import { CreateUserDto } from './CreateUserDto.js';
+
+export class CreateAdminUserDto extends CreateUserDto {
+  constructor(data) {
+    super(data);
+    this.isAdmin = data.isAdmin || false;
+    this.isSubscribed = data.isSubscribed || false;
+  }
+  // ... only admin-specific validations ...
+}
+```
+
+---
+
+### Benefits Summary
+
+| Aspect | Without Inheritance | With Inheritance |
+|--------|---------------------|------------------|
+| **Code Lines** | ~120 lines | ~70 lines (-42%) |
+| **Maintenance** | Update 2+ files | Update 1 file |
+| **DRY Principle** | ❌ Violated | ✅ Applied |
+| **Testability** | Test each DTO fully | Test base + additions |
+| **Consistency** | Can diverge over time | Always consistent |
+| **Refactoring** | High risk | Low risk |
+
+---
+
 ### File Organization
 
 - Keep components small and focused (single responsibility)

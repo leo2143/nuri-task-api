@@ -35,6 +35,10 @@
     {
       "name": "User Achievements",
       "description": "Progreso personal de logros"
+    },
+    {
+      "name": "Dashboard",
+      "description": "Dashboard de administración"
     }
   ],
   "schemes": [
@@ -606,6 +610,67 @@
         ]
       }
     },
+    "/api/admin/users": {
+      "post": {
+        "tags": [
+          "Users - Admin"
+        ],
+        "summary": "Crea un usuario con control completo (solo admin)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Datos completos del usuario con control de admin y suscripción",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "example": "Juan Pérez"
+                },
+                "email": {
+                  "type": "string",
+                  "example": "juan@example.com"
+                },
+                "password": {
+                  "type": "string",
+                  "example": "password123"
+                },
+                "isAdmin": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "isSubscribed": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "profileImageUrl": {
+                  "type": "string",
+                  "example": "https://example.com/avatar.jpg"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/users/forgot-password": {
       "post": {
         "tags": [
@@ -830,6 +895,74 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/users/{id}": {
+      "put": {
+        "tags": [
+          "Users - Admin"
+        ],
+        "summary": "Actualiza un usuario con control completo (solo admin)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "ID del usuario"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Datos a actualizar (todos opcionales)",
+            "required": false,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "example": "Juan Pérez Updated"
+                },
+                "email": {
+                  "type": "string",
+                  "example": "juan.updated@example.com"
+                },
+                "password": {
+                  "type": "string",
+                  "example": "newPassword123"
+                },
+                "isAdmin": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "isSubscribed": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "profileImageUrl": {
+                  "type": "string",
+                  "example": "https://example.com/new-avatar.jpg"
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -2480,6 +2613,86 @@
         "responses": {
           "default": {
             "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/dashboard/stats": {
+      "get": {
+        "tags": [
+          "Dashboard - Admin"
+        ],
+        "summary": "Obtiene estadísticas generales del sistema (solo admin)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estadísticas obtenidas correctamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "status": {
+                  "type": "number",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Estadísticas del dashboard obtenidas correctamente"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "totalUsers": {
+                      "type": "number",
+                      "example": 150
+                    },
+                    "subscribedUsers": {
+                      "type": "number",
+                      "example": 45
+                    },
+                    "totalGoals": {
+                      "type": "number",
+                      "example": 450
+                    },
+                    "totalAchievementTemplates": {
+                      "type": "number",
+                      "example": 25
+                    },
+                    "totalAchievementsCompleted": {
+                      "type": "number",
+                      "example": 380
+                    }
+                  }
+                },
+                "meta": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "number",
+                      "example": 1
+                    }
+                  }
+                }
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
           }
         },
         "security": [

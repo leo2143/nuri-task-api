@@ -14,7 +14,9 @@ import { UserServiceHelpers } from './helpers/userServiceHelpers.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import {
   CreateUserDto,
+  CreateAdminUserDto,
   UpdateUserDto,
+  UpdateAdminUserDto,
   ChangePasswordDto,
   ResetPasswordDto,
   LoginUserDto,
@@ -125,6 +127,57 @@ export class UserService {
   }
 
   /**
+   * Crea un usuario con control admin completo
+   */
+  static async createAdminUser(userData) {
+    try {
+      const createDto = new CreateAdminUserDto(userData);
+
+      const validation = createDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
+      }
+
+      const existingUser = await User.findOne({ email: createDto.email });
+      if (existingUser) {
+        return new ConflictResponseModel(
+          'El email ya está registrado. Por favor, utiliza otro email',
+          'email',
+          createDto.email
+        );
+      }
+
+      const cleanData = createDto.toPlainObject();
+      const hashedPassword = await UserServiceHelpers.hashPassword(cleanData.password);
+
+      const subscriptionData = {
+        isActive: cleanData.isSubscribed,
+        startDate: cleanData.isSubscribed ? new Date() : null,
+        endDate: cleanData.isSubscribed ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null,
+      };
+
+      const user = new User({
+        name: cleanData.name,
+        email: cleanData.email,
+        password: hashedPassword,
+        isAdmin: cleanData.isAdmin,
+        profileImageUrl: cleanData.profileImageUrl,
+        subscription: subscriptionData,
+      });
+
+      const savedUser = await user.save();
+      const userResponse = savedUser.toObject();
+      delete userResponse.password;
+      delete userResponse.resetPasswordToken;
+      delete userResponse.resetPasswordExpires;
+
+      return new CreatedResponseModel(userResponse, 'Usuario creado correctamente');
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'crear usuario admin');
+    }
+  }
+
+  /**
    * Actualiza un usuario existente
    */
   static async updateUser(id, userData) {
@@ -157,6 +210,64 @@ export class UserService {
       return new SuccessResponseModel(user, 1, 'Usuario actualizado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar usuario');
+    }
+  }
+
+  /**
+   * Actualiza un usuario con control admin completo
+   */
+  static async updateAdminUser(id, userData) {
+    try {
+      const updateDto = new UpdateAdminUserDto(userData);
+
+      const validation = updateDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
+      }
+
+      if (updateDto.email) {
+        const emailExists = await this._checkEmailExists(updateDto.email, id);
+        if (emailExists) {
+          return new ConflictResponseModel(
+            'El email ya está en uso por otro usuario. Por favor, utiliza otro email.',
+            'email',
+            updateDto.email
+          );
+        }
+      }
+
+      const user = await User.findById(id);
+      if (!user) {
+        return new NotFoundResponseModel(`No se encontró el usuario con el id: ${id} en la base de datos`);
+      }
+
+      const cleanData = updateDto.toPlainObject();
+
+      if (cleanData.password) {
+        cleanData.password = await UserServiceHelpers.hashPassword(cleanData.password);
+      }
+
+      if (cleanData.isSubscribed !== undefined) {
+        const subscriptionData = {
+          isActive: cleanData.isSubscribed,
+          startDate: cleanData.isSubscribed ? new Date() : null,
+          endDate: cleanData.isSubscribed ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null,
+        };
+        cleanData.subscription = subscriptionData;
+        delete cleanData.isSubscribed;
+      }
+
+      Object.assign(user, cleanData);
+      await user.save();
+
+      const userResponse = user.toObject();
+      delete userResponse.password;
+      delete userResponse.resetPasswordToken;
+      delete userResponse.resetPasswordExpires;
+
+      return new SuccessResponseModel(userResponse, 1, 'Usuario actualizado correctamente');
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'actualizar usuario admin');
     }
   }
 

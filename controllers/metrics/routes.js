@@ -1,5 +1,5 @@
 import { MetricsController } from './metricsController.js';
-import { validateToken } from '../../middlewares/authMiddleware.js';
+import { validateToken, validateAdminToken } from '../../middlewares/authMiddleware.js';
 
 /**
  * Función para configurar las rutas de Metrics
@@ -36,5 +36,31 @@ export const setupMetricRoutes = app => {
          "bearerAuth": []
     }] */
     return MetricsController.checkAndUpdateStreaks(req, res);
+  });
+
+  app.get('/api/admin/dashboard', validateAdminToken, (req, res) => {
+    // #swagger.tags = ['Metrics - Admin']
+    // #swagger.summary = 'Obtiene estadísticas generales del sistema (solo admin)'
+    // #swagger.description = 'Retorna contadores de usuarios, metas y logros del sistema completo'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    /* #swagger.responses[200] = {
+         description: 'Estadísticas obtenidas correctamente',
+         schema: {
+           success: true,
+           status: 200,
+           message: 'Estadísticas del dashboard obtenidas correctamente',
+           data: {
+             totalUsers: 150,
+             subscribedUsers: 45,
+             totalGoals: 450,
+             totalAchievementTemplates: 25,
+             totalAchievementsCompleted: 380
+           },
+           meta: { count: 1 }
+         }
+    } */
+    return MetricsController.getAdminDashboardStats(req, res);
   });
 };

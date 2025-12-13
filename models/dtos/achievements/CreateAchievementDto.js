@@ -10,18 +10,18 @@ export class CreateAchievementDto {
    * @param {string} data.description - Descripción del logro (requerido)
    * @param {number} data.targetCount - Cantidad objetivo para completar (requerido)
    * @param {string} data.type - Tipo de logro: task/goal/metric/streak (requerido)
+   * @param {string} data.imageUrl - URL de la imagen del logro 
    * @param {string} [data.reward] - Recompensa del logro
    * @param {boolean} [data.isActive] - Si el logro está activo (por defecto: true)
-   * @param {string} [data.imageUrl] - URL de la imagen del logro
    */
   constructor(data) {
     this.title = data.title;
     this.description = data.description;
     this.targetCount = data.targetCount;
     this.type = data.type;
+    this.imageUrl = data.imageUrl;
     this.reward = data.reward || '';
     this.isActive = data.isActive !== undefined ? data.isActive : true;
-    this.imageUrl = data.imageUrl || null;
   }
 
   /**
@@ -129,10 +129,8 @@ export class CreateAchievementDto {
    * @returns {string|null} Mensaje de error o null si es válido
    */
   _validateImageUrl() {
-    if (this.imageUrl === undefined || this.imageUrl === null) return null;
-
-    if (typeof this.imageUrl !== 'string' || this.imageUrl.trim() === '') {
-      return 'La URL de la imagen debe ser un string válido';
+    if (!this.imageUrl || typeof this.imageUrl !== 'string' || this.imageUrl.trim() === '') {
+      return 'La URL de la imagen es requerida y debe ser un string válido';
     }
 
     return null;
@@ -158,12 +156,12 @@ export class CreateAchievementDto {
     const typeError = this._validateType(true);
     if (typeError) errors.push(typeError);
 
+    const imageUrlError = this._validateImageUrl();
+    if (imageUrlError) errors.push(imageUrlError);
+
     // Validar campos opcionales
     const isActiveError = this._validateIsActive();
     if (isActiveError) errors.push(isActiveError);
-
-    const imageUrlError = this._validateImageUrl();
-    if (imageUrlError) errors.push(imageUrlError);
 
     return {
       isValid: errors.length === 0,

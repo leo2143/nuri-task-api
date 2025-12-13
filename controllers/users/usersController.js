@@ -23,11 +23,66 @@ export class UsersController {
     res.status(user.status).json(user);
   }
 
+  /**
+   * Crea un usuario con control admin completo
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} req.body - Datos completos del usuario
+   * @param {string} req.body.name - Nombre del usuario
+   * @param {string} req.body.email - Email del usuario
+   * @param {string} req.body.password - Contraseña del usuario
+   * @param {boolean} [req.body.isAdmin=false] - Si el usuario es admin
+   * @param {boolean} [req.body.isSubscribed=false] - Si el usuario tiene suscripción activa
+   * @param {string} [req.body.profileImageUrl] - URL de la imagen de perfil
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   * @example
+   * // POST /api/admin/users
+   * // Body: {
+   * //   "name": "Juan",
+   * //   "email": "juan@test.com",
+   * //   "password": "123456",
+   * //   "isAdmin": false,
+   * //   "isSubscribed": true
+   * // }
+   */
+  static async createAdminUser(req, res) {
+    const userData = req.body;
+    const result = await UserService.createAdminUser(userData);
+    res.status(result.status).json(result);
+  }
+
   static async updateUser(req, res) {
     const id = req.params.id;
     const userData = req.body;
     const user = await UserService.updateUser(id, userData);
     res.status(user.status).json(user);
+  }
+
+  /**
+   * Actualiza un usuario con control admin completo
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.params.id - ID del usuario a actualizar
+   * @param {Object} req.body - Datos a actualizar
+   * @param {string} [req.body.name] - Nombre del usuario
+   * @param {string} [req.body.email] - Email del usuario
+   * @param {string} [req.body.password] - Nueva contraseña
+   * @param {boolean} [req.body.isAdmin] - Si el usuario es admin
+   * @param {boolean} [req.body.isSubscribed] - Si el usuario tiene suscripción activa
+   * @param {string} [req.body.profileImageUrl] - URL de la imagen de perfil
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   * @example
+   * // PUT /api/admin/users/:id
+   * // Body: {
+   * //   "isSubscribed": true,
+   * //   "isAdmin": false
+   * // }
+   */
+  static async updateAdminUser(req, res) {
+    const id = req.params.id;
+    const userData = req.body;
+    const result = await UserService.updateAdminUser(id, userData);
+    res.status(result.status).json(result);
   }
 
   /**

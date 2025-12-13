@@ -39,6 +39,28 @@ export const setupUserRoutes = app => {
     return UsersController.createUser(req, res);
   });
 
+  app.post('/api/admin/users', validateAdminToken, (req, res) => {
+    // #swagger.tags = ['Users - Admin']
+    // #swagger.summary = 'Crea un usuario con control completo (solo admin)'
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Datos completos del usuario con control de admin y suscripción',
+         required: true,
+         schema: {
+           name: 'Juan Pérez',
+           email: 'juan@example.com',
+           password: 'password123',
+           isAdmin: false,
+           isSubscribed: true,
+           profileImageUrl: 'https://example.com/avatar.jpg'
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return UsersController.createAdminUser(req, res);
+  });
+
   app.post('/api/users/forgot-password', (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Solicita recuperación de contraseña'
@@ -135,6 +157,34 @@ export const setupUserRoutes = app => {
          "bearerAuth": []
     }] */
     return UsersController.updateUser(req, res);
+  });
+
+  app.put('/api/admin/users/:id', validateAdminToken, (req, res) => {
+    // #swagger.tags = ['Users - Admin']
+    // #swagger.summary = 'Actualiza un usuario con control completo (solo admin)'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID del usuario',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Datos a actualizar (todos opcionales)',
+         required: false,
+         schema: {
+           name: 'Juan Pérez Updated',
+           email: 'juan.updated@example.com',
+           password: 'newPassword123',
+           isAdmin: true,
+           isSubscribed: true,
+           profileImageUrl: 'https://example.com/new-avatar.jpg'
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return UsersController.updateAdminUser(req, res);
   });
 
   app.delete('/api/users/:id', validateAdminToken, (req, res) => {
