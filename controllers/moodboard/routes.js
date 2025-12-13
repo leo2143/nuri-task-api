@@ -3,10 +3,9 @@ import { validateToken } from '../../middlewares/authMiddleware.js';
 
 /**
  * Función para configurar las rutas de moodboards
- * @function setupMoodboardRoutes
  * @param {Object} app - Instancia de Express
  * @returns {void} No retorna valor, configura las rutas de moodboards en la app
- * @description Configura las rutas de moodboards protegidas con autenticación JWT
+   * Configura las rutas de moodboards protegidas con autenticación JWT
  */
 export const setupMoodboardRoutes = app => {
   app.get('/api/moodboards', validateToken, (req, res) => {

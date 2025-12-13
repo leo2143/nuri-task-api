@@ -4,16 +4,19 @@ import chalk from 'chalk';
 
 dotenv.config();
 
+const DEFAULT_SMTP_HOST = 'smtp.gmail.com';
+const DEFAULT_SMTP_PORT = 587;
+const DEFAULT_EMAIL_FROM_NAME = 'Nuri Task API';
+const DEFAULT_FRONTEND_URL = 'http://localhost:3000';
+
 /**
  * Servicio para enviar correos electrónicos
- * @class EmailService
  */
 export class EmailService {
   /**
    * Crea y configura el transportador de nodemailer
-   * @static
    * @returns {nodemailer.Transporter} Transportador configurado
-   * @description Configura nodemailer con las credenciales del archivo .env
+   * Configura nodemailer con las credenciales del archivo .env
    */
   static createTransport() {
     // Configuración para diferentes proveedores de email
@@ -31,9 +34,9 @@ export class EmailService {
 
     // SMTP genérico
     return nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: process.env.EMAIL_PORT || 587,
-      secure: process.env.EMAIL_SECURE === 'true', // true para 465, false para otros puertos
+      host: process.env.EMAIL_HOST || DEFAULT_SMTP_HOST,
+      port: process.env.EMAIL_PORT || DEFAULT_SMTP_PORT,
+      secure: process.env.EMAIL_SECURE === 'true',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD,
@@ -43,24 +46,20 @@ export class EmailService {
 
   /**
    * Envía un correo de recuperación de contraseña
-   * @static
-   * @async
-   * @function sendPasswordResetEmail
    * @param {string} email - Email del destinatario
    * @param {string} resetToken - Token de recuperación
    * @param {string} userName - Nombre del usuario
    * @returns {Promise<{success: boolean, message: string}>} Resultado del envío
-   * @description Envía un email con el enlace para resetear la contraseña
+   * Envía un email con el enlace para resetear la contraseña
    */
   static async sendPasswordResetEmail(email, resetToken, userName) {
     try {
       const transporter = this.createTransport();
 
-      // URL del frontend donde el usuario ingresará la nueva contraseña
-      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+      const resetUrl = `${process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL}/reset-password?token=${resetToken}`;
 
       const mailOptions = {
-        from: `"${process.env.EMAIL_FROM_NAME || 'Nuri Task API'}" <${process.env.EMAIL_USER}>`,
+        from: `"${process.env.EMAIL_FROM_NAME || DEFAULT_EMAIL_FROM_NAME}" <${process.env.EMAIL_USER}>`,
         to: email,
         subject: 'Recuperación de Contraseña - Nuri Task',
         html: `
@@ -229,20 +228,17 @@ export class EmailService {
 
   /**
    * Envía un correo de confirmación después de resetear la contraseña
-   * @static
-   * @async
-   * @function sendPasswordChangedConfirmation
    * @param {string} email - Email del destinatario
    * @param {string} userName - Nombre del usuario
    * @returns {Promise<{success: boolean, message: string}>} Resultado del envío
-   * @description Envía un email de confirmación cuando la contraseña ha sido cambiada exitosamente
+   * Envía un email de confirmación cuando la contraseña ha sido cambiada exitosamente
    */
   static async sendPasswordChangedConfirmation(email, userName) {
     try {
       const transporter = this.createTransport();
 
       const mailOptions = {
-        from: `"${process.env.EMAIL_FROM_NAME || 'Nuri Task API'}" <${process.env.EMAIL_USER}>`,
+        from: `"${process.env.EMAIL_FROM_NAME || DEFAULT_EMAIL_FROM_NAME}" <${process.env.EMAIL_USER}>`,
         to: email,
         subject: 'Contraseña Cambiada Exitosamente - Nuri Task',
         html: `

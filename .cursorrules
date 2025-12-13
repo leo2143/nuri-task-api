@@ -1,0 +1,2420 @@
+# Cursor Rules - nuri-task-app
+
+## Project Overview
+
+This is a React 19 + TypeScript + Vite project with React Router DOM. Follow these rules strictly for all code generation and modifications.
+
+---
+
+## 🎯 SEMANTIC HTML - CRITICAL RULES
+
+### General Semantic Requirements
+
+- **ALWAYS** use semantic HTML5 elements over generic `<div>` and `<span>` when appropriate
+- Code must be **strictly semantic** - every element choice must be justified by its semantic meaning
+- Prioritize accessibility and SEO through proper semantic structure
+
+### Heading Hierarchy (H1-H6)
+
+- **VERIFY** heading hierarchy in every page/component:
+  - Only **ONE** `<h1>` per page (main page title)
+  - `<h2>` for major sections
+  - `<h3>` for subsections of `<h2>`
+  - `<h4>-<h6>` following proper nesting
+  - **NEVER** skip heading levels (e.g., h1 → h3)
+- Headings must describe content, not style
+- Do not use headings for styling purposes - use CSS instead
+
+### Section Elements
+
+- **ALWAYS** verify and use appropriate sectioning elements:
+  - `<header>` - Site/section header, logo, navigation
+  - `<nav>` - Navigation menus and links
+  - `<main>` - Main content (ONE per page)
+  - `<article>` - Self-contained content (blog post, product card, comment)
+  - `<section>` - Thematic grouping with a heading
+  - `<aside>` - Tangential/sidebar content
+  - `<footer>` - Site/section footer
+- Each `<section>` should typically contain a heading
+- Use `<article>` for content that makes sense in isolation (RSS feed)
+
+### Text Semantics
+
+- `<strong>` for **important** text (semantic importance)
+- `<em>` for _emphasized_ text (semantic emphasis)
+- `<mark>` for highlighted/relevant text
+- `<small>` for fine print, disclaimers
+- `<time>` for dates and times (with `datetime` attribute)
+- `<abbr>` for abbreviations (with `title` attribute)
+- `<code>` for inline code
+- `<pre>` for preformatted text blocks
+- **NEVER** use `<b>` or `<i>` - use `<strong>` or `<em>` with CSS styling
+
+### Forms - MANDATORY Rules
+
+- **ALWAYS** wrap form controls in `<form>` element
+- **EVERY** `<input>`, `<textarea>`, `<select>` must have:
+  - Associated `<label>` (using `for`/`id` or wrapping)
+  - Appropriate `type` attribute
+  - `name` attribute for form submission
+  - `id` attribute for label association
+- Use `<fieldset>` and `<legend>` for grouping related inputs
+- Required fields must have `required` attribute AND `aria-required="true"`
+- Use appropriate input types: `email`, `tel`, `url`, `number`, `date`, `search`, etc.
+- Always include `autocomplete` attributes where applicable
+- Error messages should use `aria-describedby` and `aria-invalid`
+
+### Lists
+
+- Use `<ul>` for unordered lists
+- Use `<ol>` for ordered lists
+- Use `<dl>`, `<dt>`, `<dd>` for description/definition lists
+- Navigation menus should be `<nav>` with `<ul>/<li>` inside
+
+### Buttons and Links
+
+- `<button>` for actions (forms, UI interactions)
+- `<a>` for navigation (has `href`)
+- Buttons must have `type` attribute: `button`, `submit`, or `reset`
+- Links for navigation must have meaningful text (not "click here")
+
+### Images and Media
+
+- **ALWAYS** include `alt` attribute on `<img>` (empty string if decorative)
+- Use `<figure>` and `<figcaption>` for images with captions
+- Lazy load images with `loading="lazy"` when appropriate
+
+---
+
+## ⚛️ REACT BEST PRACTICES
+
+### Component Structure
+
+- Use **functional components** with hooks (React 19)
+- Use TypeScript for all components with proper type definitions
+- Component files: PascalCase (e.g., `TaskList.tsx`)
+- One component per file (unless closely related small components)
+
+### React 19 Features
+
+- Utilize React 19 features when appropriate:
+  - Use `use` hook for async operations
+  - Leverage automatic batching
+  - Use `useOptimistic` for optimistic updates
+  - Server Actions support (if using SSR)
+
+### Hooks Best Practices
+
+- Follow Rules of Hooks (only at top level, only in React functions)
+- Use `useState` for local component state
+- Use `useEffect` carefully - prefer derived state when possible
+- Use `useMemo` and `useCallback` for performance optimization (when needed)
+- Custom hooks should start with `use` prefix
+- Extract reusable logic into custom hooks
+
+### Props and Types
+
+```typescript
+// Always define prop types
+interface TaskCardProps {
+  task: Task;
+  onComplete: (id: string) => void;
+  className?: string;
+}
+
+// Use destructuring with defaults
+export function TaskCard({ task, onComplete, className = '' }: TaskCardProps) {
+  // Component logic
+}
+```
+
+### State Management
+
+- Local state for component-specific data
+- Lift state up when needed by multiple components
+- Use Context API for app-wide state (theme, auth)
+- Consider state management libraries for complex apps (Zustand, Redux Toolkit)
+
+### Event Handlers
+
+- Name handlers with `handle` prefix: `handleClick`, `handleSubmit`
+- Use arrow functions for inline handlers sparingly
+- Prevent default behavior explicitly when needed
+
+### Conditional Rendering
+
+```typescript
+// Preferred patterns
+{isLoading && <LoadingSpinner />}
+{error ? <ErrorMessage error={error} /> : <Content />}
+{items.length > 0 ? <ItemList items={items} /> : <EmptyState />}
+```
+
+### Lists and Keys
+
+- Always provide unique `key` prop for list items
+- Use stable IDs, not array indices (unless list is static)
+- Keys should be strings or numbers
+
+### Performance
+
+- Use React.memo() for expensive components
+- Lazy load routes and heavy components: `React.lazy()`
+- Use `Suspense` for loading states
+- Avoid inline object/array creation in renders
+
+---
+
+## 🎨 TAILWIND CSS BEST PRACTICES
+
+### Class Organization
+
+- Order Tailwind classes logically:
+  1. Layout (display, position, z-index)
+  2. Box model (margin, padding, width, height)
+  3. Typography (font, text size, color)
+  4. Visual (background, border, shadow)
+  5. Interactions (hover, focus, active)
+  6. Responsive (sm:, md:, lg:)
+
+```typescript
+// Good example
+<button className="
+  flex items-center justify-center
+  px-4 py-2 rounded-lg
+  text-sm font-medium text-white
+  bg-blue-600 hover:bg-blue-700
+  focus:outline-none focus:ring-2 focus:ring-blue-500
+  transition-colors duration-200
+  disabled:opacity-50 disabled:cursor-not-allowed
+">
+  Click me
+</button>
+```
+
+### Responsive Design
+
+- Mobile-first approach (base styles = mobile)
+- Use breakpoints: `sm:`, `md:`, `lg:`, `xl:`, `2xl:`
+- Test on multiple screen sizes
+- Consider touch targets on mobile (min 44x44px)
+
+### Custom Styles
+
+- Extend Tailwind config for custom colors, spacing, etc.
+- Use `@apply` sparingly - prefer utility classes
+- Create components for repeated patterns
+
+### Accessibility with Tailwind
+
+- Use `focus:` variants for keyboard navigation
+- Ensure sufficient color contrast
+- Use `sr-only` for screen reader only text
+- Add focus rings: `focus:ring-2 focus:ring-offset-2`
+
+### Dark Mode
+
+- Plan for dark mode from the start
+- Use `dark:` variant for dark mode styles
+- Configure in `tailwind.config.js`
+
+---
+
+## 🎬 GSAP ANIMATION BEST PRACTICES
+
+### Setup and Imports
+
+```typescript
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+// Register plugins
+gsap.registerPlugin(ScrollTrigger);
+```
+
+### React + GSAP Integration
+
+- Store GSAP instances in refs, not state
+- Create animations in `useEffect` (or `useLayoutEffect` for immediate)
+- Clean up animations in effect cleanup
+- Use `useGSAP` hook if available
+
+```typescript
+import { useRef, useLayoutEffect } from 'react';
+import { gsap } from 'gsap';
+
+function AnimatedComponent() {
+  const elementRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from(elementRef.current, {
+        opacity: 0,
+        y: 50,
+        duration: 1,
+        ease: 'power3.out'
+      });
+    });
+
+    return () => ctx.revert(); // Cleanup
+  }, []);
+
+  return <div ref={elementRef}>Animated content</div>;
+}
+```
+
+### Animation Best Practices
+
+- Use `gsap.context()` for automatic cleanup in React
+- Prefer `gsap.to()` over `gsap.from()` when possible
+- Use timelines for complex sequences: `gsap.timeline()`
+- Set initial states with `gsap.set()`
+- Use appropriate easing functions: `power1-4`, `elastic`, `bounce`, `expo`
+
+### Performance
+
+- Animate transform and opacity (GPU accelerated)
+- Avoid animating layout properties (width, height, margin)
+- Use `will-change` CSS property sparingly
+- Batch animations with `gsap.context()`
+
+### ScrollTrigger
+
+```typescript
+gsap.to(element, {
+  scrollTrigger: {
+    trigger: element,
+    start: 'top center',
+    end: 'bottom center',
+    scrub: true,
+    markers: false, // Set true for debugging
+  },
+  opacity: 1,
+  y: 0,
+});
+```
+
+### Accessibility Considerations
+
+- Respect `prefers-reduced-motion`:
+
+```typescript
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+if (!prefersReducedMotion) {
+  gsap.to(element, {
+    /* animation */
+  });
+}
+```
+
+---
+
+## 🚀 REACT ROUTER DOM BEST PRACTICES
+
+### Router Setup
+
+```typescript
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/tasks" element={<TaskList />} />
+        <Route path="/tasks/:id" element={<TaskDetail />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+```
+
+### Navigation
+
+- Use `<Link>` or `<NavLink>` for internal navigation
+- Use `useNavigate()` for programmatic navigation
+- `NavLink` for navigation menus (has `active` class)
+
+### Route Parameters
+
+```typescript
+import { useParams } from 'react-router-dom';
+
+function TaskDetail() {
+  const { id } = useParams<{ id: string }>();
+  // Use id...
+}
+```
+
+### Protected Routes
+
+```typescript
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuth();
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+}
+```
+
+---
+
+## 📁 PROJECT STRUCTURE
+
+```
+src/
+├── components/          # Reusable UI components
+│   ├── ui/             # Basic UI elements (Button, Input, Card)
+│   └── features/       # Feature-specific components
+├── pages/              # Route/page components
+├── hooks/              # Custom React hooks
+├── utils/              # Utility functions
+├── types/              # TypeScript type definitions
+├── services/           # API calls and external services
+├── context/            # React Context providers
+├── constants/          # App constants
+└── assets/             # Static assets (images, fonts)
+```
+
+---
+
+## ♿ ACCESSIBILITY (A11Y) REQUIREMENTS
+
+### Mandatory A11Y Features
+
+- Keyboard navigation must work for all interactive elements
+- Focus indicators must be visible (not `outline: none` without alternative)
+- Color contrast must meet WCAG AA standards (4.5:1 for text)
+- All images must have meaningful `alt` text
+- Form inputs must have associated labels
+- Use ARIA attributes when semantic HTML is insufficient
+- Skip links for keyboard users
+- Proper heading hierarchy
+
+### ARIA Attributes (when needed)
+
+- `aria-label` for elements without visible text
+- `aria-labelledby` to reference label element
+- `aria-describedby` for additional descriptions
+- `aria-hidden="true"` for decorative elements
+- `aria-live` for dynamic content updates
+- `aria-expanded`, `aria-controls` for interactive widgets
+
+### Focus Management
+
+- Manage focus for modals and dialogs
+- Return focus after closing overlays
+- Skip navigation links for keyboard users
+- Visible focus indicators
+
+---
+
+## 🧪 TESTING CONSIDERATIONS
+
+- Components should be testable (avoid tight coupling)
+- Use data-testid for test selectors
+- Keep business logic separate from UI
+
+---
+
+## 💅 CODE QUALITY
+
+### Naming Conventions
+
+- Components: PascalCase (`TaskCard.tsx`)
+- Functions/variables: camelCase (`handleSubmit`, `taskList`)
+- Constants: UPPER_SNAKE_CASE (`API_BASE_URL`)
+- Types/Interfaces: PascalCase (`TaskType`, `UserProps`)
+
+#### DTO Naming Conventions
+
+**NEVER use "Response" suffix in DTO names.**
+
+DTOs for responses should use descriptive prefixes, NOT "Response":
+
+**✅ GOOD - Descriptive prefixes:**
+
+```javascript
+UserDto; // Basic user response
+MinUserDto; // Minimal user data for lists
+CatalogUserDto; // Catalog/dropdown user data
+CreateUserDto; // User creation data
+UpdateUserDto; // User update data
+LoginUserDto; // Login credentials
+```
+
+**❌ BAD - "Response" suffix:**
+
+```javascript
+UserResponseDto; // ❌ Don't use "Response"
+MinUserResponseDto; // ❌ Don't use "Response"
+UserDataResponseDto; // ❌ Don't use "Response"
+```
+
+**Examples from the project:**
+
+- `MinTodoDto` (not `TodoResponseDto`)
+- `MinGoalDto` (not `GoalResponseDto`)
+- `CatalogGoalDto` (not `CatalogGoalResponseDto`)
+- `UserDto` (not `UserResponseDto`)
+
+**Pattern for DTOs:**
+
+- `Create{Entity}Dto` - For creation operations
+- `Update{Entity}Dto` - For update operations (extends Create)
+- `{Entity}Dto` - For basic responses
+- `Min{Entity}Dto` - For minimal/list responses
+- `Catalog{Entity}Dto` - For catalog/dropdown responses
+- `{Entity}FilterDto` - For filter parameters
+- `Add{Entity}Dto` - For adding sub-entities
+
+---
+
+### DTO Inheritance - MANDATORY DRY Principle
+
+**ALWAYS use inheritance to avoid duplicating validation logic between DTOs.**
+
+When creating specialized DTOs (admin, update, filter), **extend from base DTOs** instead of duplicating code.
+
+#### ❌ BAD - Duplicated Validation Logic
+
+```javascript
+// CreateUserDto.js
+export class CreateUserDto {
+  constructor(data) {
+    this.name = data.name;
+    this.email = data.email;
+    this.password = data.password;
+  }
+
+  _validateName() { /* 10 lines */ }
+  _validateEmail() { /* 10 lines */ }
+  _validatePassword() { /* 10 lines */ }
+  
+  validate() { /* calls all validations */ }
+  toPlainObject() { /* 5 lines */ }
+}
+
+// CreateAdminUserDto.js - DUPLICATING 40+ LINES
+export class CreateAdminUserDto {
+  constructor(data) {
+    this.name = data.name;           // DUPLICATED
+    this.email = data.email;         // DUPLICATED
+    this.password = data.password;   // DUPLICATED
+    this.isAdmin = data.isAdmin;
+  }
+
+  _validateName() { /* DUPLICATED 10 lines */ }
+  _validateEmail() { /* DUPLICATED 10 lines */ }
+  _validatePassword() { /* DUPLICATED 10 lines */ }
+  _validateIsAdmin() { /* NEW 5 lines */ }
+  
+  validate() { /* DUPLICATED + NEW */ }
+  toPlainObject() { /* DUPLICATED + NEW */ }
+}
+```
+
+**Problems:**
+- ❌ 40+ lines of duplicated code
+- ❌ Changes to email validation must be done in 2 places
+- ❌ High maintenance cost
+- ❌ Violates DRY principle
+- ❌ Violates Open/Closed Principle
+
+#### ✅ GOOD - Using Inheritance (DRY)
+
+```javascript
+// CreateUserDto.js (Base DTO)
+export class CreateUserDto {
+  constructor(data) {
+    this.name = data.name;
+    this.email = data.email;
+    this.password = data.password;
+  }
+
+  _validateName() { /* 10 lines */ }
+  _validateEmail() { /* 10 lines */ }
+  _validatePassword() { /* 10 lines */ }
+  
+  validate() {
+    const errors = [];
+    const nameError = this._validateName();
+    if (nameError) errors.push(nameError);
+    const emailError = this._validateEmail();
+    if (emailError) errors.push(emailError);
+    const passwordError = this._validatePassword();
+    if (passwordError) errors.push(passwordError);
+    
+    return { isValid: errors.length === 0, errors };
+  }
+  
+  toPlainObject() {
+    return {
+      name: this.name.trim(),
+      email: this.email.trim().toLowerCase(),
+      password: this.password,
+    };
+  }
+}
+
+// CreateAdminUserDto.js - EXTENDS base DTO
+import { CreateUserDto } from './CreateUserDto.js';
+
+export class CreateAdminUserDto extends CreateUserDto {
+  constructor(data) {
+    super(data); // ✅ Reuses name, email, password
+    
+    // Only add NEW fields
+    this.isAdmin = data.isAdmin || false;
+    this.isSubscribed = data.isSubscribed || false;
+  }
+
+  // Only validate NEW fields
+  _validateIsAdmin() {
+    if (typeof this.isAdmin !== 'boolean') {
+      return 'isAdmin debe ser un valor booleano';
+    }
+    return null;
+  }
+  
+  validate() {
+    // ✅ Reuse parent validation
+    const parentValidation = super.validate();
+    const errors = [...parentValidation.errors];
+    
+    // Only add NEW validations
+    const isAdminError = this._validateIsAdmin();
+    if (isAdminError) errors.push(isAdminError);
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+  
+  toPlainObject() {
+    // ✅ Reuse parent transformation
+    const parentData = super.toPlainObject();
+    
+    // Only add NEW fields
+    return {
+      ...parentData,
+      isAdmin: this.isAdmin,
+      isSubscribed: this.isSubscribed,
+    };
+  }
+}
+```
+
+**Benefits:**
+- ✅ **DRY**: No duplicated validation logic
+- ✅ **Maintainability**: Change email validation once, inherited everywhere
+- ✅ **Open/Closed**: Base DTO closed for modification, open for extension
+- ✅ **Code reduction**: ~50% less code
+- ✅ **Single Source of Truth**: Validation rules in one place
+
+---
+
+### When to Use DTO Inheritance
+
+**ALWAYS use inheritance when:**
+
+- ✅ New DTO needs **all fields from base DTO + additional fields**
+- ✅ Validation logic is the **same for base fields**
+- ✅ Creating specialized versions (admin, update, extended)
+
+**Example Hierarchy:**
+
+```
+CreateUserDto (base)
+  ├── CreateAdminUserDto (extends: adds isAdmin, isSubscribed)
+  └── CreateGuestUserDto (extends: adds temporaryToken, expiresAt)
+
+UpdateUserDto (base)
+  └── UpdateAdminUserDto (extends: adds canChangeRole, canChangePlan)
+
+TodoDto (base)
+  ├── MinTodoDto (extends: removes description, tags)
+  └── DetailedTodoDto (extends: adds comments, attachments)
+```
+
+**DO NOT use inheritance when:**
+
+- ❌ DTOs have completely different fields
+- ❌ Validation rules are completely different
+- ❌ Logic is unrelated (no "is-a" relationship)
+
+---
+
+### Inheritance Pattern Template
+
+```javascript
+// Base DTO
+export class BaseEntityDto {
+  constructor(data) {
+    this.commonField1 = data.commonField1;
+    this.commonField2 = data.commonField2;
+  }
+
+  _validateCommonField1() { /* validation */ }
+  _validateCommonField2() { /* validation */ }
+
+  validate() {
+    const errors = [];
+    // collect all validation errors
+    return { isValid: errors.length === 0, errors };
+  }
+
+  toPlainObject() {
+    return {
+      commonField1: this.commonField1,
+      commonField2: this.commonField2,
+    };
+  }
+}
+
+// Extended DTO
+import { BaseEntityDto } from './BaseEntityDto.js';
+
+export class ExtendedEntityDto extends BaseEntityDto {
+  constructor(data) {
+    super(data); // Call parent constructor
+    this.newField = data.newField;
+  }
+
+  _validateNewField() { /* validation only for new field */ }
+
+  validate() {
+    const parentValidation = super.validate(); // Reuse parent
+    const errors = [...parentValidation.errors];
+    
+    const newError = this._validateNewField();
+    if (newError) errors.push(newError);
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+
+  toPlainObject() {
+    const parentData = super.toPlainObject(); // Reuse parent
+    return {
+      ...parentData,
+      newField: this.newField, // Add new
+    };
+  }
+}
+```
+
+---
+
+### DTO Inheritance Checklist
+
+Before creating a new DTO:
+
+- ✅ Does it share fields with an existing DTO?
+- ✅ Are the validation rules the same for shared fields?
+- ✅ Would inheritance reduce code duplication?
+- ✅ Is there a clear "is-a" relationship? (AdminUser IS-A User)
+
+If **YES to all**, use inheritance with `extends`.
+
+If **NO**, create an independent DTO.
+
+---
+
+### Real-World Example: User DTOs
+
+```javascript
+// Base: CreateUserDto.js
+export class CreateUserDto {
+  constructor(data) {
+    this.name = data.name;
+    this.email = data.email;
+    this.password = data.password;
+  }
+  // ... validations ...
+}
+
+// Extends: CreateAdminUserDto.js
+import { CreateUserDto } from './CreateUserDto.js';
+
+export class CreateAdminUserDto extends CreateUserDto {
+  constructor(data) {
+    super(data);
+    this.isAdmin = data.isAdmin || false;
+    this.isSubscribed = data.isSubscribed || false;
+  }
+  // ... only admin-specific validations ...
+}
+```
+
+---
+
+### Benefits Summary
+
+| Aspect | Without Inheritance | With Inheritance |
+|--------|---------------------|------------------|
+| **Code Lines** | ~120 lines | ~70 lines (-42%) |
+| **Maintenance** | Update 2+ files | Update 1 file |
+| **DRY Principle** | ❌ Violated | ✅ Applied |
+| **Testability** | Test each DTO fully | Test base + additions |
+| **Consistency** | Can diverge over time | Always consistent |
+| **Refactoring** | High risk | Low risk |
+
+---
+
+### File Organization
+
+- Keep components small and focused (single responsibility)
+- Extract reusable logic into hooks
+- Co-locate related files (component + styles + tests)
+
+### Comments
+
+- Write self-documenting code (clear names)
+- Add comments for complex business logic
+- Use JSDoc for public APIs and complex functions
+
+### Imports
+
+- Group imports: React, libraries, local, styles
+- Use absolute imports when configured
+- Remove unused imports
+
+---
+
+## 📝 JSDOC BEST PRACTICES
+
+### Core Philosophy
+
+**JSDoc debe ser conciso y útil, no redundante.** Evita agregar información que ya es visible en la firma de la función.
+
+### ❌ BAD - JSDoc Redundante
+
+```javascript
+/**
+ * Obtiene un usuario por ID
+ * @static
+ * @async
+ * @function getUserById
+ * @param {string} id - ID del usuario a buscar
+ * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el usuario encontrado o error
+ * @description Busca un usuario en la base de datos por su ID y lo retorna
+ */
+static async getUserById(id) {
+  // implementation
+}
+```
+
+**Problemas:**
+
+- `@static` - Ya se ve que es static en el código
+- `@async` - Ya se ve que es async en el código
+- `@function getUserById` - El nombre está en la firma
+- `@description` redundante con la primera línea
+- Descripción en `@returns` demasiado verbose
+
+### ✅ GOOD - JSDoc Conciso
+
+```javascript
+/**
+ * Obtiene un usuario por ID
+ * @param {string} id - ID del usuario a buscar
+ * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+ */
+static async getUserById(id) {
+  // implementation
+}
+```
+
+**Beneficios:**
+
+- Limpio y fácil de leer
+- No repite información visible
+- Se enfoca en tipos y parámetros
+
+---
+
+### Tags NUNCA Usar (Redundantes)
+
+**ELIMINAR siempre:**
+
+- ❌ `@static` - visible en la firma
+- ❌ `@async` - visible en la firma
+- ❌ `@function nombreFuncion` - el nombre está en el código
+- ❌ `@private` - si está solo (usa convención con `_` en el nombre)
+- ❌ `@public` - innecesario, es el default
+
+### Tags Útiles (Mantener)
+
+**SÍ usar cuando agregan valor:**
+
+- ✅ `@param` - Define tipos y describe parámetros
+- ✅ `@returns` - Define tipo de retorno (sin descripciones verbosas)
+- ✅ `@throws` - Documenta excepciones específicas
+- ✅ `@example` - Muestra uso real de la función
+- ✅ `@deprecated` - Marca funciones obsoletas
+
+---
+
+### Patrones Recomendados
+
+#### 1. Función Simple
+
+```javascript
+/**
+ * Valida un email
+ * @param {string} email - Email a validar
+ * @returns {boolean}
+ */
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+```
+
+#### 2. Función con Múltiples Parámetros
+
+```javascript
+/**
+ * Crea un nuevo usuario en la base de datos
+ * @param {Object} userData - Datos del usuario
+ * @param {string} userData.name - Nombre completo
+ * @param {string} userData.email - Email único
+ * @param {string} userData.password - Contraseña (será hasheada)
+ * @returns {Promise<CreatedResponseModel|ErrorResponseModel>}
+ */
+static async createUser(userData) {
+  // implementation
+}
+```
+
+#### 3. Función con Contexto Adicional
+
+```javascript
+/**
+ * Resetea la contraseña de un usuario - solo para admin
+ * @param {string} userId - ID del usuario
+ * @param {string} newPassword - Nueva contraseña temporal
+ * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+ */
+static async resetUserPassword(userId, newPassword) {
+  // implementation
+}
+```
+
+**Nota:** El contexto "solo para admin" está en la descripción, no en un tag separado.
+
+#### 4. Función con Ejemplo (cuando es compleja)
+
+```javascript
+/**
+ * Filtra tareas por múltiples criterios
+ * @param {Object} filters - Filtros de búsqueda
+ * @param {string} [filters.search] - Término de búsqueda
+ * @param {boolean} [filters.completed] - Estado completado
+ * @param {string} [filters.priority] - Prioridad (low/medium/high)
+ * @param {string} userId - ID del usuario
+ * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+ * @example
+ * // Buscar tareas completadas de alta prioridad
+ * await getAllTodos({ completed: true, priority: 'high' }, userId);
+ */
+static async getAllTodos(filters, userId) {
+  // implementation
+}
+```
+
+#### 5. Clase/Servicio
+
+```javascript
+/**
+ * Servicio para manejar la lógica de negocio de usuarios
+ * Incluye autenticación, recuperación de contraseña y gestión de perfiles
+ */
+export class UserService {
+  // methods
+}
+```
+
+**No usar:** `@class UserService` - el nombre está visible.
+
+---
+
+### Descripciones en @returns
+
+**❌ Evitar descripciones redundantes:**
+
+```javascript
+@returns {Promise<SuccessResponseModel>} Respuesta con el usuario encontrado exitosamente
+```
+
+**✅ Solo el tipo es suficiente:**
+
+```javascript
+@returns {Promise<SuccessResponseModel>}
+```
+
+El tipo de retorno ya dice lo necesario. La implementación habla por sí misma.
+
+---
+
+### Checklist JSDoc
+
+Antes de hacer commit, verificar:
+
+- ✅ NO hay tags `@static`, `@async`, `@function`
+- ✅ Descripción es concisa (1 línea preferiblemente)
+- ✅ `@param` tiene tipo y descripción breve
+- ✅ `@returns` solo tiene el tipo (sin descripción redundante)
+- ✅ No hay `@description` separado (ponerlo en la primera línea)
+- ✅ Información importante está en la descripción, no en tags extras
+
+---
+
+### Ejemplos Comparativos
+
+#### Antes (❌ Redundante - 8 líneas)
+
+```javascript
+/**
+ * Elimina las métricas del usuario (solo para testing/admin)
+ * @static
+ * @async
+ * @function deleteUserMetrics
+ * @param {string} userId - ID del usuario autenticado
+ * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con confirmación
+ */
+```
+
+#### Después (✅ Conciso - 4 líneas)
+
+```javascript
+/**
+ * Elimina las métricas del usuario - solo para testing/admin
+ * @param {string} userId - ID del usuario autenticado
+ * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+ */
+```
+
+**Mejora:** 50% menos líneas, misma información útil.
+
+---
+
+### Cuándo NO usar JSDoc
+
+**No documentar:**
+
+- Funciones triviales evidentes (getters/setters simples)
+- Funciones privadas internas muy simples
+- Callbacks inline
+
+```javascript
+// ❌ NO necesario
+/**
+ * Obtiene el nombre
+ * @returns {string}
+ */
+getName() {
+  return this.name;
+}
+
+// ✅ Código auto-explicativo
+getName() {
+  return this.name;
+}
+```
+
+---
+
+## 🔒 SECURITY
+
+- Sanitize user input
+- Use `textContent` or proper escaping, avoid `dangerouslySetInnerHTML`
+- Validate data on both client and server
+- Use HTTPS in production
+- Keep dependencies updated
+
+---
+
+## ⚡ PERFORMANCE
+
+- Lazy load routes and heavy components
+- Optimize images (WebP, proper sizing)
+- Use production builds for deployment
+- Minimize bundle size
+- Code splitting at route level
+
+---
+
+## 🚀 ALGORITHM OPTIMIZATION & DATA STRUCTURES
+
+### Complexity Reduction Guidelines
+
+**ALWAYS** optimize O(n²) algorithms to O(n) or O(n log n) when possible:
+
+#### ❌ BAD - O(n²) - Nested loops for lookups
+
+```typescript
+// O(n²) - Inefficient!
+function findDuplicates(arr: number[]): number[] {
+  const duplicates: number[] = [];
+  for (let i = 0; i < arr.length; i++) {
+    for (let j = i + 1; j < arr.length; j++) {
+      if (arr[i] === arr[j] && !duplicates.includes(arr[i])) {
+        duplicates.push(arr[i]);
+      }
+    }
+  }
+  return duplicates;
+}
+```
+
+#### ✅ GOOD - O(n) - Using Set
+
+```typescript
+// O(n) - Optimized!
+function findDuplicates(arr: number[]): number[] {
+  const seen = new Set<number>();
+  const duplicates = new Set<number>();
+
+  for (const num of arr) {
+    if (seen.has(num)) {
+      duplicates.add(num);
+    } else {
+      seen.add(num);
+    }
+  }
+
+  return Array.from(duplicates);
+}
+```
+
+**Performance Gain**: Para 10,000 elementos, O(n²) = 100M operaciones vs O(n) = 10K operaciones
+**Ganancia**: ~10,000x más rápido
+
+---
+
+### Data Structure Selection
+
+| Use Case          | Structure    | Complexity      | When to Use                               |
+| ----------------- | ------------ | --------------- | ----------------------------------------- |
+| Unique values     | `Set`        | O(1) lookup     | Eliminar duplicados, verificar existencia |
+| Key-value pairs   | `Map`        | O(1) lookup     | Caché, contadores, índices                |
+| Object references | `WeakMap`    | O(1) lookup     | Metadatos sin memory leaks                |
+| Sorted data       | Sorted Array | O(log n) search | Búsqueda binaria                          |
+
+---
+
+### Common Optimization Patterns
+
+#### 1. Two Sum Problem
+
+**❌ O(n²) - Nested loops:**
+
+```typescript
+function twoSum(nums: number[], target: number): [number, number] | null {
+  for (let i = 0; i < nums.length; i++) {
+    for (let j = i + 1; j < nums.length; j++) {
+      if (nums[i] + nums[j] === target) {
+        return [i, j];
+      }
+    }
+  }
+  return null;
+}
+```
+
+**✅ O(n) - Using Map:**
+
+```typescript
+function twoSum(nums: number[], target: number): [number, number] | null {
+  const map = new Map<number, number>();
+
+  for (let i = 0; i < nums.length; i++) {
+    const complement = target - nums[i];
+    if (map.has(complement)) {
+      return [map.get(complement)!, i];
+    }
+    map.set(nums[i], i);
+  }
+
+  return null;
+}
+```
+
+#### 2. Frequency Counter Pattern
+
+**❌ O(n²) - Using filter:**
+
+```typescript
+function countOccurrences(arr: string[]): Record<string, number> {
+  const result: Record<string, number> = {};
+
+  for (const item of arr) {
+    // filter recorre todo el array cada vez - O(n²)
+    result[item] = arr.filter(x => x === item).length;
+  }
+
+  return result;
+}
+```
+
+**✅ O(n) - Using Map:**
+
+```typescript
+function countOccurrences(arr: string[]): Map<string, number> {
+  const frequency = new Map<string, number>();
+
+  for (const item of arr) {
+    frequency.set(item, (frequency.get(item) || 0) + 1);
+  }
+
+  return frequency;
+}
+```
+
+#### 3. Array Intersection
+
+**❌ O(n×m) - Using includes:**
+
+```typescript
+function intersection(arr1: number[], arr2: number[]): number[] {
+  return arr1.filter(item => arr2.includes(item)); // includes es O(n)
+}
+```
+
+**✅ O(n+m) - Using Set:**
+
+```typescript
+function intersection(arr1: number[], arr2: number[]): number[] {
+  const set1 = new Set(arr1);
+  const set2 = new Set(arr2);
+
+  return Array.from(set1).filter(item => set2.has(item));
+}
+```
+
+#### 4. Remove Duplicates from Array
+
+**❌ O(n²) - Nested filtering:**
+
+```typescript
+function removeDuplicates(arr: number[]): number[] {
+  return arr.filter(
+    (item, index) => arr.indexOf(item) === index // indexOf es O(n)
+  );
+}
+```
+
+**✅ O(n) - Using Set:**
+
+```typescript
+function removeDuplicates(arr: number[]): number[] {
+  return Array.from(new Set(arr));
+}
+```
+
+---
+
+### Benchmark Template
+
+**ALWAYS** include benchmarks when optimizing algorithms:
+
+```typescript
+function benchmark(fn: () => void, name: string, iterations: number = 1000) {
+  const start = performance.now();
+
+  for (let i = 0; i < iterations; i++) {
+    fn();
+  }
+
+  const end = performance.now();
+  const avgTime = (end - start) / iterations;
+
+  console.log(`${name}: ${avgTime.toFixed(4)}ms (promedio)`);
+  console.log(`${name}: ${(end - start).toFixed(2)}ms (total)`);
+}
+
+// Uso:
+const testData = Array.from({ length: 10000 }, (_, i) => i);
+
+benchmark(() => {
+  findDuplicatesO2(testData); // Versión O(n²)
+}, 'O(n²) Implementation');
+
+benchmark(() => {
+  findDuplicatesOptimized(testData); // Versión O(n)
+}, 'O(n) Implementation');
+
+/* Salida esperada:
+ * O(n²) Implementation: 125.45ms (promedio)
+ * O(n²) Implementation: 125450.00ms (total)
+ * O(n) Implementation: 0.82ms (promedio)
+ * O(n) Implementation: 820.00ms (total)
+ *
+ * Ganancia: ~153x más rápido
+ */
+```
+
+---
+
+### WeakMap Use Cases
+
+**Use WeakMap for:**
+
+- Private object metadata
+- DOM node data (auto garbage collection)
+- Cache with object keys
+
+```typescript
+// ✅ WeakMap para metadatos privados (no memory leaks)
+const privateData = new WeakMap<object, { accessCount: number }>();
+
+class Service {
+  logAccess(user: object) {
+    const data = privateData.get(user) || { accessCount: 0 };
+    data.accessCount++;
+    privateData.set(user, data);
+  }
+
+  getAccessCount(user: object): number {
+    return privateData.get(user)?.accessCount || 0;
+  }
+}
+
+// Cuando el objeto user se elimina, el WeakMap lo limpia automáticamente
+```
+
+---
+
+### Optimization Checklist
+
+Before committing any data processing code:
+
+- ✅ Check for nested loops - can they be eliminated?
+- ✅ Using `.includes()`, `.indexOf()`, `.filter()` inside loops? → Use Set/Map
+- ✅ Searching arrays repeatedly? → Convert to Set/Map once
+- ✅ Counting occurrences? → Use Map for frequency counter
+- ✅ Need unique values? → Use Set
+- ✅ Complex nested data transformations? → Break into single-pass operations
+- ✅ Add benchmark for critical paths (>1000 items)
+- ✅ Document complexity: `// O(n)` or `// O(n log n)`
+
+---
+
+### 🚫 NO Agregar Comentarios de Feedback
+
+**CRITICAL: Después de optimizar código, NO agregar comentarios explicando la optimización.**
+
+#### ❌ BAD - Comentarios de feedback innecesarios
+
+```javascript
+// ✅ OPTIMIZADO: O(n) - reduce en vez de 3 filters O(3n)
+const statusCounts = userProgress.reduce(...);
+
+// O(n) - Crear Map para búsquedas O(1) - más eficiente que Object
+const progressMap = new Map(userProgress.map(...));
+
+// O(n) - Combinar logros con progreso usando Map.get() O(1)
+const result = achievements.map(...);
+```
+
+**Problemas:**
+
+- ❌ Ruido visual innecesario
+- ❌ Comentarios obvios para desarrolladores experimentados
+- ❌ Se desactualizan con el tiempo
+- ❌ No pertenecen al código de producción
+
+#### ✅ GOOD - Código limpio sin feedback
+
+```javascript
+const statusCounts = userProgress.reduce(
+  (acc, progress) => {
+    acc[progress.status] = (acc[progress.status] || 0) + 1;
+    return acc;
+  },
+  { locked: 0, unlocked: 0, completed: 0 }
+);
+
+const progressMap = new Map(userProgress.map(progress => [progress.achievementId.toString(), progress]));
+
+const result = achievements.map(achievement => ({
+  ...achievement,
+  userProgress: progressMap.get(achievement._id.toString()) || defaultProgress,
+}));
+```
+
+**Beneficios:**
+
+- ✅ Código limpio y profesional
+- ✅ Auto-explicativo con buenos nombres de variables
+- ✅ Sin ruido visual
+- ✅ Enfoque en la lógica, no en meta-comentarios
+
+---
+
+### Dónde Documentar Optimizaciones
+
+**SÍ documentar optimizaciones en:**
+
+- ✅ Commits de Git (mensaje descriptivo)
+- ✅ Pull Request description
+- ✅ Archivo OPTIMIZATION_REPORT.md
+- ✅ Benchmarks en carpeta `/benchmarks`
+- ✅ Documentación técnica
+
+**NO documentar optimizaciones en:**
+
+- ❌ Comentarios inline en el código
+- ❌ JSDoc (a menos que afecte el uso de la API)
+- ❌ Comentarios de "antes/después"
+
+---
+
+### Cuándo SÍ Comentar en Código Optimizado
+
+**Solo comentar cuando:**
+
+```javascript
+// Usando WeakMap para evitar memory leaks con referencias a objetos
+const cache = new WeakMap();
+
+// Binary search requiere array ordenado - NO modificar el sort
+const result = binarySearch(sortedArray, target);
+
+// Algoritmo de Kadane para maximum subarray - O(n)
+function maxSubArray(nums) {
+  let maxSoFar = nums[0];
+  let maxEndingHere = nums[0];
+  // ... implementation
+}
+```
+
+**Criterios:**
+
+- ✅ Algoritmo complejo no obvio (Kadane, Floyd-Warshall, etc.)
+- ✅ Comportamiento crítico que no debe modificarse
+- ✅ Trade-offs importantes de memoria/velocidad
+- ✅ Explicación de por qué NO hacer algo obvio
+
+---
+
+### Regla de Oro
+
+**El código optimizado debe hablar por sí mismo.**
+
+Si necesitas comentarios para explicar que es O(n) en vez de O(n²):
+
+- ✅ Úsalo en documentación externa
+- ❌ NO lo pongas en el código
+
+**Excepción:** Algoritmos académicos complejos o no obvios donde el nombre del algoritmo ayuda (Floyd-Warshall, Dijkstra, KMP, etc.)
+
+---
+
+### Real-World Example: Task Filtering Optimization
+
+**❌ BAD - O(n×m) complexity:**
+
+```typescript
+function filterTasksByTags(tasks: Task[], requiredTags: string[]): Task[] {
+  return tasks.filter(task =>
+    requiredTags.every(
+      tag => task.tags.includes(tag) // includes dentro de every dentro de filter
+    )
+  );
+}
+```
+
+**✅ GOOD - O(n+m) complexity:**
+
+```typescript
+function filterTasksByTags(tasks: Task[], requiredTags: string[]): Task[] {
+  const requiredSet = new Set(requiredTags);
+
+  return tasks.filter(task => {
+    const taskTagSet = new Set(task.tags);
+    return [...requiredSet].every(tag => taskTagSet.has(tag));
+  });
+}
+```
+
+**Performance Impact:**
+
+- 1,000 tasks × 10 tags × 5 required tags = 50,000 operations (O(n×m))
+- vs
+- 1,000 tasks + conversions = ~1,500 operations (O(n+m))
+- **Ganancia: ~33x más rápido**
+
+---
+
+## 🏗️ CLEAN CODE & SOLID PRINCIPLES
+
+### 1. SOLID Principles
+
+#### Single Responsibility Principle (SRP)
+
+**Una clase o función debe tener una única razón para cambiar.**
+
+**❌ BAD - Múltiples responsabilidades:**
+
+```typescript
+class UserService {
+  async createUser(userData: UserData) {
+    // Validación
+    if (!userData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
+      throw new Error('Email inválido');
+    }
+
+    // Hash de contraseña
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(userData.password, salt);
+
+    // Guardar en BD
+    const user = await db.users.create({ ...userData, password: hashedPassword });
+
+    // Enviar email
+    await sendEmail(userData.email, 'Bienvenido', `Hola ${userData.name}`);
+
+    // Generar token
+    const token = jwt.sign({ userId: user.id }, SECRET);
+
+    return { user, token };
+  }
+}
+```
+
+**✅ GOOD - Responsabilidad única:**
+
+```typescript
+// Servicio: Lógica de negocio
+class UserService {
+  constructor(
+    private userRepository: UserRepository,
+    private emailService: EmailService,
+    private authService: AuthService
+  ) {}
+
+  async createUser(userData: CreateUserDto) {
+    const validation = userData.validate();
+    if (!validation.isValid) {
+      throw new ValidationError(validation.errors);
+    }
+
+    const hashedPassword = await this.authService.hashPassword(userData.password);
+    const user = await this.userRepository.create({ ...userData, password: hashedPassword });
+
+    await this.emailService.sendWelcomeEmail(user);
+    const token = this.authService.generateToken(user);
+
+    return { user, token };
+  }
+}
+
+// DTO: Validación de datos
+class CreateUserDto {
+  validate() {
+    const errors = [];
+    if (!this._isValidEmail(this.email)) errors.push('Email inválido');
+    if (!this._isValidPassword(this.password)) errors.push('Contraseña inválida');
+    return { isValid: errors.length === 0, errors };
+  }
+}
+
+// Helper: Operaciones puras
+class AuthHelpers {
+  static async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
+  }
+
+  static generateToken(user: User): string {
+    return jwt.sign({ userId: user.id }, SECRET);
+  }
+}
+```
+
+#### Open/Closed Principle (OCP)
+
+**Abierto para extensión, cerrado para modificación.**
+
+**❌ BAD - Requiere modificación:**
+
+```typescript
+function calculateDiscount(user: User, amount: number): number {
+  if (user.type === 'regular') {
+    return amount * 0.05;
+  } else if (user.type === 'premium') {
+    return amount * 0.1;
+  } else if (user.type === 'vip') {
+    return amount * 0.2;
+  }
+  return 0;
+}
+```
+
+**✅ GOOD - Extensible sin modificación:**
+
+```typescript
+interface DiscountStrategy {
+  calculate(amount: number): number;
+}
+
+class RegularDiscount implements DiscountStrategy {
+  calculate(amount: number): number {
+    return amount * 0.05;
+  }
+}
+
+class PremiumDiscount implements DiscountStrategy {
+  calculate(amount: number): number {
+    return amount * 0.1;
+  }
+}
+
+class VIPDiscount implements DiscountStrategy {
+  calculate(amount: number): number {
+    return amount * 0.2;
+  }
+}
+
+function calculateDiscount(strategy: DiscountStrategy, amount: number): number {
+  return strategy.calculate(amount);
+}
+```
+
+#### Dependency Inversion Principle (DIP)
+
+**Depende de abstracciones, no de implementaciones concretas.**
+
+**❌ BAD - Dependencia directa:**
+
+```typescript
+class UserService {
+  private database = new MongoDatabase();
+
+  async getUser(id: string) {
+    return this.database.findById('users', id);
+  }
+}
+```
+
+**✅ GOOD - Inyección de dependencias:**
+
+```typescript
+interface Database {
+  findById(collection: string, id: string): Promise<any>;
+}
+
+class UserService {
+  constructor(private database: Database) {}
+
+  async getUser(id: string) {
+    return this.database.findById('users', id);
+  }
+}
+
+// Ahora puedes usar MongoDB, PostgreSQL, o MockDB sin cambiar UserService
+```
+
+---
+
+### 2. Early Returns - Reducir Nesting
+
+**ALWAYS** use early returns to avoid nested if statements.
+
+#### ❌ BAD - Deep nesting (Arrow Anti-pattern)
+
+```typescript
+async function updateUser(userId: string, data: UserData) {
+  const user = await User.findById(userId);
+
+  if (user) {
+    if (user.isActive) {
+      if (data.email) {
+        const existingUser = await User.findOne({ email: data.email });
+        if (!existingUser) {
+          user.email = data.email;
+          await user.save();
+          return { success: true, user };
+        } else {
+          return { success: false, error: 'Email ya existe' };
+        }
+      } else {
+        return { success: false, error: 'Email requerido' };
+      }
+    } else {
+      return { success: false, error: 'Usuario inactivo' };
+    }
+  } else {
+    return { success: false, error: 'Usuario no encontrado' };
+  }
+}
+```
+
+**Problemas:**
+
+- 6 niveles de indentación
+- Difícil de leer y mantener
+- Lógica principal al final
+
+#### ✅ GOOD - Early returns (Guard clauses)
+
+```typescript
+async function updateUser(userId: string, data: UserData) {
+  const user = await User.findById(userId);
+  if (!user) {
+    return { success: false, error: 'Usuario no encontrado' };
+  }
+
+  if (!user.isActive) {
+    return { success: false, error: 'Usuario inactivo' };
+  }
+
+  if (!data.email) {
+    return { success: false, error: 'Email requerido' };
+  }
+
+  const existingUser = await User.findOne({ email: data.email });
+  if (existingUser) {
+    return { success: false, error: 'Email ya existe' };
+  }
+
+  user.email = data.email;
+  await user.save();
+
+  return { success: true, user };
+}
+```
+
+**Beneficios:**
+
+- 1-2 niveles de indentación máximo
+- Lógica principal al final, claramente visible
+- Fácil de leer de arriba hacia abajo
+- Condiciones de error al inicio (fail fast)
+
+#### Pattern: Guard Clauses
+
+```typescript
+function processPayment(user: User, amount: number) {
+  // Guard clauses al inicio
+  if (!user) throw new Error('Usuario requerido');
+  if (amount <= 0) throw new Error('Monto inválido');
+  if (!user.hasPaymentMethod) throw new Error('Sin método de pago');
+  if (user.balance < amount) throw new Error('Saldo insuficiente');
+
+  // Lógica principal sin nesting
+  user.balance -= amount;
+  const transaction = createTransaction(user, amount);
+  sendReceipt(user, transaction);
+
+  return transaction;
+}
+```
+
+---
+
+### 3. Extracción de Funciones - DRY Principle
+
+**Don't Repeat Yourself** - Extract reusable logic into small functions.
+
+#### ❌ BAD - Código duplicado
+
+```typescript
+class UserService {
+  async createUser(data: any) {
+    // Validar email
+    if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      return { error: 'Email inválido' };
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    const user = new User({ ...data, password: hashedPassword });
+    await user.save();
+    return user;
+  }
+
+  async updateUser(id: string, data: any) {
+    // Validar email (DUPLICADO)
+    if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      return { error: 'Email inválido' };
+    }
+
+    // Hash password (DUPLICADO)
+    if (data.password) {
+      data.password = await bcrypt.hash(data.password, 10);
+    }
+
+    const user = await User.findByIdAndUpdate(id, data);
+    return user;
+  }
+}
+```
+
+#### ✅ GOOD - Funciones reutilizables extraídas
+
+```typescript
+// Helpers extraídos
+class UserHelpers {
+  static validateEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  static async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
+  }
+
+  static sanitizeUser(user: User) {
+    const { password, ...safeUser } = user;
+    return safeUser;
+  }
+}
+
+// Servicio limpio y reutilizable
+class UserService {
+  async createUser(data: CreateUserDto) {
+    if (!UserHelpers.validateEmail(data.email)) {
+      return { error: 'Email inválido' };
+    }
+
+    const hashedPassword = await UserHelpers.hashPassword(data.password);
+    const user = new User({ ...data, password: hashedPassword });
+    await user.save();
+
+    return UserHelpers.sanitizeUser(user);
+  }
+
+  async updateUser(id: string, data: UpdateUserDto) {
+    if (data.email && !UserHelpers.validateEmail(data.email)) {
+      return { error: 'Email inválido' };
+    }
+
+    if (data.password) {
+      data.password = await UserHelpers.hashPassword(data.password);
+    }
+
+    const user = await User.findByIdAndUpdate(id, data);
+    return UserHelpers.sanitizeUser(user);
+  }
+}
+```
+
+#### Rules for Function Extraction
+
+**Extract when:**
+
+- ✅ Code is duplicated (DRY)
+- ✅ Function is longer than 20-30 lines
+- ✅ Complex logic can be named meaningfully
+- ✅ Logic is reusable across multiple places
+- ✅ Testing would benefit from isolation
+
+**Don't extract when:**
+
+- ❌ Function would be called only once
+- ❌ Extraction makes code harder to understand
+- ❌ Logic is tightly coupled to its context
+
+---
+
+### 4. Nombres Descriptivos
+
+**Code should read like prose** - Names should reveal intent.
+
+#### ❌ BAD - Nombres crípticos
+
+```typescript
+function proc(u: any, d: any): any {
+  const t = Date.now();
+  if (u.s === 'a' && d.a > 0) {
+    u.b -= d.a;
+    const r = { id: genId(), u: u.id, a: d.a, t };
+    db.save(r);
+    return { ok: true, r };
+  }
+  return { ok: false };
+}
+
+// Variables de una letra
+let x = getUserData();
+let f = x.filter(i => i.a > 100);
+```
+
+#### ✅ GOOD - Nombres descriptivos
+
+```typescript
+function processPayment(user: User, paymentData: PaymentData): PaymentResult {
+  const timestamp = Date.now();
+
+  if (user.status === 'active' && paymentData.amount > 0) {
+    user.balance -= paymentData.amount;
+
+    const transaction = {
+      id: generateTransactionId(),
+      userId: user.id,
+      amount: paymentData.amount,
+      timestamp,
+    };
+
+    database.save(transaction);
+
+    return { success: true, transaction };
+  }
+
+  return { success: false };
+}
+
+// Variables descriptivas
+const activeUsers = getUserData();
+const highValueUsers = activeUsers.filter(user => user.revenue > 100);
+```
+
+#### Naming Conventions
+
+**Variables:**
+
+```typescript
+// ✅ GOOD - Descriptive nouns
+const userEmail = 'user@example.com';
+const totalPrice = 99.99;
+const isAuthenticated = true;
+const activeUserCount = 42;
+
+// ❌ BAD - Vague or abbreviated
+const e = 'user@example.com';
+const tot = 99.99;
+const flag = true;
+const cnt = 42;
+```
+
+**Functions:**
+
+```typescript
+// ✅ GOOD - Action verbs + descriptive
+function calculateTotalPrice(items: Item[]): number {}
+function isValidEmail(email: string): boolean {}
+function getUserById(id: string): Promise<User> {}
+function handleSubmitForm(event: FormEvent): void {}
+
+// ❌ BAD - Vague or non-descriptive
+function calc(items: Item[]): number {}
+function check(email: string): boolean {}
+function get(id: string): Promise<User> {}
+function onClick(event: FormEvent): void {}
+```
+
+**Boolean variables:**
+
+```typescript
+// ✅ GOOD - is/has/should/can prefix
+const isLoading = true;
+const hasPermission = false;
+const shouldValidate = true;
+const canEdit = false;
+
+// ❌ BAD - No prefix
+const loading = true;
+const permission = false;
+const validate = true;
+const edit = false;
+```
+
+**Constants:**
+
+```typescript
+// ✅ GOOD - UPPER_SNAKE_CASE for config
+const MAX_RETRY_ATTEMPTS = 3;
+const API_BASE_URL = 'https://api.example.com';
+const DEFAULT_TIMEOUT_MS = 5000;
+
+// ❌ BAD - Lowercase or unclear
+const max = 3;
+const url = 'https://api.example.com';
+const timeout = 5000;
+```
+
+---
+
+### 5. Manejo de Errores Robusto
+
+**Error handling should be consistent and informative.**
+
+#### ❌ BAD - Error handling inconsistente
+
+```typescript
+async function createUser(data: any) {
+  try {
+    const user = await User.create(data);
+    return user;
+  } catch (error) {
+    console.log(error); // Solo log
+    return null; // Retorna null sin info
+  }
+}
+
+async function updateUser(id: string, data: any) {
+  try {
+    const user = await User.findByIdAndUpdate(id, data);
+    return user;
+  } catch (error) {
+    throw error; // Re-lanza sin contexto
+  }
+}
+
+async function deleteUser(id: string) {
+  try {
+    await User.findByIdAndDelete(id);
+    return { success: true };
+  } catch (error) {
+    return { error: 'Error' }; // Mensaje genérico
+  }
+}
+```
+
+**Problemas:**
+
+- Manejo inconsistente (null, throw, generic message)
+- Sin información útil para debugging
+- Pérdida de contexto del error
+
+#### ✅ GOOD - Error handling centralizado y robusto
+
+```typescript
+// ErrorHandler centralizado
+class ErrorHandler {
+  static handleDatabaseError(error: Error, context: string) {
+    console.error(`Error en ${context}:`, error);
+
+    if (error.name === 'ValidationError') {
+      return this.handleValidationError(error);
+    }
+
+    if (error.name === 'CastError') {
+      return new BadRequestError('ID inválido');
+    }
+
+    if (error.code === 11000) {
+      return this.handleDuplicateKeyError(error);
+    }
+
+    return new InternalServerError(`Error al ${context}`);
+  }
+
+  static handleValidationError(error: any) {
+    const messages = Object.values(error.errors)
+      .map((err: any) => err.message)
+      .join(', ');
+    return new ValidationError(messages);
+  }
+
+  static handleDuplicateKeyError(error: any) {
+    const field = Object.keys(error.keyPattern)[0];
+    return new ConflictError(`El ${field} ya está en uso`);
+  }
+}
+
+// Servicio con error handling consistente
+class UserService {
+  async createUser(data: CreateUserDto) {
+    try {
+      const validation = data.validate();
+      if (!validation.isValid) {
+        throw new ValidationError(validation.errors.join(', '));
+      }
+
+      const user = await User.create(data);
+      return new SuccessResponse(user, 'Usuario creado correctamente');
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'crear usuario');
+    }
+  }
+
+  async updateUser(id: string, data: UpdateUserDto) {
+    try {
+      const user = await User.findById(id);
+      if (!user) {
+        throw new NotFoundError(`Usuario con id ${id} no encontrado`);
+      }
+
+      Object.assign(user, data);
+      await user.save();
+
+      return new SuccessResponse(user, 'Usuario actualizado correctamente');
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'actualizar usuario');
+    }
+  }
+}
+```
+
+#### Custom Error Classes
+
+```typescript
+class AppError extends Error {
+  constructor(
+    public statusCode: number,
+    public message: string,
+    public isOperational = true
+  ) {
+    super(message);
+    Object.setPrototypeOf(this, AppError.prototype);
+  }
+}
+
+class ValidationError extends AppError {
+  constructor(message: string) {
+    super(400, message);
+  }
+}
+
+class NotFoundError extends AppError {
+  constructor(message: string) {
+    super(404, message);
+  }
+}
+
+class ConflictError extends AppError {
+  constructor(message: string) {
+    super(409, message);
+  }
+}
+
+class InternalServerError extends AppError {
+  constructor(message: string) {
+    super(500, message);
+  }
+}
+```
+
+#### Error Handling Best Practices
+
+**DO:**
+
+- ✅ Use centralized error handler
+- ✅ Create custom error classes
+- ✅ Log errors with context
+- ✅ Return consistent error responses
+- ✅ Preserve error stack traces
+- ✅ Provide meaningful error messages
+- ✅ Handle specific error types differently
+
+**DON'T:**
+
+- ❌ Swallow errors silently
+- ❌ Return null/undefined on errors
+- ❌ Use generic error messages
+- ❌ Log sensitive data in errors
+- ❌ Re-throw without adding context
+- ❌ Mix error handling patterns
+
+---
+
+### Clean Code Checklist
+
+Before committing any code:
+
+- ✅ **SOLID**: Each class/function has single responsibility
+- ✅ **Early Returns**: No more than 2-3 levels of nesting
+- ✅ **DRY**: No duplicated code - extract to functions
+- ✅ **Naming**: Variables and functions have descriptive names
+- ✅ **Errors**: Consistent error handling with meaningful messages
+- ✅ **Functions**: Small (<30 lines), focused, testable
+- ✅ **Dependencies**: Injected, not hardcoded
+- ✅ **Comments**: Only for complex logic, not for obvious code
+- ✅ **Types**: Full TypeScript typing (no `any`)
+
+---
+
+## 🎨 SVG AND ICON MANAGEMENT
+
+### SVG File Organization
+
+- **NEVER** use inline SVG code directly in components (except for very small, one-time use cases)
+- **ALWAYS** save SVG icons as separate files in `src/assets/svg-icons/`
+- Use descriptive, lowercase names with hyphens: `close.svg`, `menu-hamburger.svg`, `arrow-left.svg`
+
+### SVG Import and Usage
+
+**PREFERRED - Use centralized index:**
+
+```typescript
+// ✅ BEST - Import from centralized index
+import { close, hamburger, notification } from "../assets/svg-icons";
+
+// Use in component
+<img src={close} alt="close icon" className="w-6 h-6" />
+```
+
+**Alternative - Direct import (when index not available):**
+
+```typescript
+// ✅ ACCEPTABLE - Direct import
+import closeIcon from "../assets/svg-icons/close.svg";
+
+// Use in component
+<img src={closeIcon} alt="close icon" className="w-6 h-6" />
+```
+
+```typescript
+// ❌ INCORRECT - Don't use inline SVG
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="..." />
+</svg>
+```
+
+### SVG Best Practices
+
+- Keep SVG files clean and optimized (remove unnecessary attributes)
+- Use `currentColor` for stroke/fill when you need dynamic colors
+- Always provide meaningful `alt` text when using SVGs as `<img>`
+- For decorative SVGs, use empty alt: `alt=""`
+- Use appropriate sizing classes: `w-6 h-6`, `w-8 h-8`, etc.
+
+### Naming Conventions for SVG Imports
+
+- Import variables should use camelCase: `close`, `menuHamburger`, `arrowLeft`
+- File names should use kebab-case: `close.svg`, `menu-hamburger.svg`, `arrow-left.svg`
+
+### Maintaining the SVG Index
+
+- **ALWAYS** update `src/assets/svg-icons/index.ts` when adding new SVG files
+- Group related icons together (Navigation, Status, Metrics, etc.)
+- Use consistent camelCase naming for exports
+- Add comments to document icon categories
+
+```typescript
+// Example: Adding a new icon to index.ts
+export { default as newIcon } from './new-icon.svg';
+```
+
+---
+
+## 🎮 CONTROLLER BEST PRACTICES
+
+### Controller Structure
+
+- Controllers son **thin layers** - solo manejan HTTP requests/responses
+- Toda la lógica de negocio va en **Services**
+- Validación básica en Controllers, validación compleja en **DTOs**
+
+### HTTP Status Codes - MANDATORY
+
+**ALWAYS use ResponseModel classes, NEVER hardcode status codes**
+
+#### ✅ Available ResponseModel Classes
+
+| Status  | Class                          | When to Use                                |
+| ------- | ------------------------------ | ------------------------------------------ |
+| **200** | `SuccessResponseModel`         | Operación exitosa (GET, PUT, PATCH)        |
+| **201** | `CreatedResponseModel`         | Recurso creado exitosamente (POST)         |
+| **204** | `NoContentResponseModel`       | Operación exitosa sin contenido (DELETE)   |
+| **400** | `BadRequestResponseModel`      | Solicitud incorrecta, parámetros inválidos |
+| **400** | `ValidationErrorResponseModel` | Errores de validación de datos             |
+| **401** | `UnauthorizedResponseModel`    | Token faltante, inválido o expirado        |
+| **403** | `ForbiddenResponseModel`       | Sin permisos para la operación             |
+| **404** | `NotFoundResponseModel`        | Recurso no encontrado                      |
+| **409** | `ConflictResponseModel`        | Conflicto (email duplicado, etc.)          |
+| **500** | `ErrorResponseModel`           | Error interno del servidor                 |
+
+Reference: [MDN HTTP Status Codes](https://developer.mozilla.org/es/docs/Web/HTTP/Reference/Status)
+
+#### ❌ BAD - Hardcoded status
+
+```javascript
+// ❌ NO HACER ESTO
+static async getUser(req, res) {
+  try {
+    const result = await UserService.getUser(req.params.id);
+    res.status(200).json(result); // ❌ Hardcoded
+  } catch (error) {
+    res.status(500).json({ // ❌ Hardcoded, formato inconsistente
+      message: 'Error',
+      status: 500,
+      success: false
+    });
+  }
+}
+
+// ❌ NO HACER ESTO
+if (!user) {
+  return res.status(404).json({ error: 'Not found' }); // ❌ Inconsistente
+}
+```
+
+#### ✅ GOOD - Using ResponseModel classes
+
+```javascript
+// ✅ BUENO - Service retorna ResponseModel
+static async getUser(req, res) {
+  const result = await UserService.getUser(req.params.id);
+  return res.status(result.status).json(result);
+}
+
+// ✅ BUENO - Controller maneja ResponseModels del Service
+static async createUser(req, res) {
+  const result = await UserService.createUser(req.body);
+
+  // El Service retorna CreatedResponseModel (201) o ErrorResponseModel (400, 409, 500)
+  return res.status(result.status).json(result);
+}
+
+// ✅ BUENO - Middleware usa ResponseModel directamente
+if (!token) {
+  const response = new UnauthorizedResponseModel('Token requerido');
+  return res.status(response.status).json(response);
+}
+```
+
+### Error Handling in Controllers
+
+**Pattern 1: Service handles all errors (PREFERRED)**
+
+```javascript
+// ✅ BEST - Service maneja todo, Controller solo pasa la respuesta
+static async getAllUsers(req, res) {
+  const result = await UserService.getAllUsers(req.query);
+  return res.status(result.status).json(result);
+}
+```
+
+**Pattern 2: Controller catches unexpected errors**
+
+```javascript
+// ✅ GOOD - Solo para errores inesperados fuera del Service
+static async getAllUsers(req, res) {
+  try {
+    const result = await UserService.getAllUsers(req.query);
+    return res.status(result.status).json(result);
+  } catch (error) {
+    console.error('Error inesperado en controller:', error);
+    const response = new ErrorResponseModel('Error interno del servidor');
+    return res.status(response.status).json(response);
+  }
+}
+```
+
+**❌ Pattern to AVOID:**
+
+```javascript
+// ❌ BAD - Controller NO debe manejar lógica de negocio
+static async createUser(req, res) {
+  try {
+    // ❌ Validación en controller (debería estar en DTO)
+    if (!req.body.email) {
+      return res.status(400).json({ error: 'Email requerido' });
+    }
+
+    // ❌ Lógica de BD en controller (debería estar en Service)
+    const user = await User.create(req.body);
+
+    return res.status(201).json(user);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
+```
+
+### Controller Naming Conventions
+
+```javascript
+// ✅ GOOD - Nombres descriptivos basados en acción HTTP
+static async getAllUsers(req, res) {}       // GET /users
+static async getUserById(req, res) {}       // GET /users/:id
+static async createUser(req, res) {}        // POST /users
+static async updateUser(req, res) {}        // PUT/PATCH /users/:id
+static async deleteUser(req, res) {}        // DELETE /users/:id
+
+// ❌ BAD - Nombres genéricos
+static async handle(req, res) {}            // ❌ Qué maneja?
+static async process(req, res) {}           // ❌ Qué procesa?
+static async doSomething(req, res) {}       // ❌ No descriptivo
+```
+
+### Request Data Extraction
+
+```javascript
+// ✅ GOOD - Extraer datos del request claramente
+static async updateUser(req, res) {
+  const userId = req.userId;           // From auth middleware
+  const { id } = req.params;           // URL params
+  const updateData = req.body;         // Request body
+  const filters = req.query;           // Query params
+
+  const result = await UserService.updateUser(id, updateData, userId);
+  return res.status(result.status).json(result);
+}
+
+// ❌ BAD - Pasar todo el req al Service
+static async updateUser(req, res) {
+  const result = await UserService.updateUser(req); // ❌
+  return res.status(result.status).json(result);
+}
+```
+
+### Response Format Consistency
+
+**All responses MUST follow this structure:**
+
+```typescript
+{
+  success: boolean,      // true for 2xx, false for 4xx/5xx
+  status: number,        // HTTP status code
+  message: string,       // Descriptive message
+  data: any | null,      // Response data (null on errors)
+  meta: object | null    // Metadata (count, pagination, errors)
+}
+```
+
+This is enforced by ResponseModel classes.
+
+---
+
+## 📝 FINAL CHECKLIST
+
+Before marking any task complete, verify:
+
+**HTML & Accessibility:**
+
+- ✅ Semantic HTML used correctly
+- ✅ Heading hierarchy is proper (h1-h6)
+- ✅ Sections, articles, aside, nav used appropriately
+- ✅ All forms have proper labels and accessibility
+- ✅ Strong, em, and semantic text elements used (not b, i)
+- ✅ Accessibility requirements met (keyboard nav, ARIA, focus)
+
+**Styling & Responsiveness:**
+
+- ✅ Tailwind classes are organized and responsive
+- ✅ GSAP animations respect reduced motion preference
+- ✅ Responsive on mobile, tablet, desktop
+
+**Code Quality & Clean Code:**
+
+- ✅ SOLID principles applied (SRP, DIP)
+- ✅ Early returns used (max 2-3 nesting levels)
+- ✅ No duplicated code (DRY principle)
+- ✅ Functions are small and focused (<30 lines)
+- ✅ Descriptive names for variables and functions
+- ✅ Consistent error handling with meaningful messages
+- ✅ TypeScript types are defined (no `any`)
+
+**Performance & Optimization:**
+
+- ✅ No O(n²) algorithms (use Set/Map when appropriate)
+- ✅ No nested loops for lookups
+- ✅ Critical paths benchmarked (>1000 items)
+
+**General:**
+
+- ✅ Code is clean, readable, and follows conventions
+- ✅ No console errors or warnings
+- ✅ JSDoc is concise (no @static, @async, @function tags)
+
+---
+
+**REMEMBER**: Semantic HTML is not optional - it's mandatory. Every element choice must be semantically correct and meaningful. Question every `<div>` and ask if there's a better semantic alternative.

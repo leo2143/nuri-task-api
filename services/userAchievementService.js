@@ -1,20 +1,26 @@
 import UserAchievement from '../models/userAchievementModel.js';
 import Achievement from '../models/achievementModel.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
-import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
+import { SuccessResponseModel } from '../models/responseModel.js';
 import { IncrementProgressDto } from '../models/dtos/achievements/index.js';
+import { ErrorHandler } from './helpers/errorHandler.js';
 import chalk from 'chalk';
+
+const VALID_ACHIEVEMENT_STATUSES = ['locked', 'unlocked', 'completed'];
+const POPULATE_USER_FIELDS = 'name email avatar';
+const DEFAULT_PROGRESS = {
+  currentCount: 0,
+  status: 'locked',
+  unlockedAt: null,
+  completedAt: null,
+};
 
 /**
  * Servicio para gestionar el progreso del usuario en logros
- * @class UserAchievementService
  */
 export class UserAchievementService {
   /**
    * Obtiene todos los logros con el progreso del usuario
-   * @static
-   * @async
-   * @function getAllAchievementsWithProgress
    * @param {string} userId - ID del usuario
    * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Respuesta con los logros y el progreso del usuario
    */
@@ -26,53 +32,40 @@ export class UserAchievementService {
       // Obtener el progreso del usuario para todos los logros
       const userProgress = await UserAchievement.find({ userId }).lean();
 
-      // Crear un mapa para búsquedas rápidas
-      const progressMap = userProgress.reduce((acc, progress) => {
-        acc[progress.achievementId.toString()] = progress;
-        return acc;
-      }, {});
+      const progressMap = new Map(userProgress.map(progress => [progress.achievementId.toString(), progress]));
 
       // Combinar logros con el progreso del usuario
       const result = achievements.map(achievement => ({
         ...achievement,
-        userProgress: progressMap[achievement._id.toString()] || {
-          currentCount: 0,
-          status: 'locked',
-          unlockedAt: null,
-          completedAt: null,
-        },
+        userProgress: progressMap.get(achievement._id.toString()) || DEFAULT_PROGRESS,
       }));
 
       return new SuccessResponseModel(result, result.length, 'Logros obtenidos correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al obtener logros con progreso:', error));
-      return new ErrorResponseModel('Error al obtener logros con progreso');
+      return ErrorHandler.handleDatabaseError(error, 'obtener logros con progreso');
     }
   }
 
   /**
    * Obtiene el progreso del usuario en todos los logros
-   * @static
-   * @async
-   * @function getUserProgress
    * @param {string} userId - ID del usuario
    * @param {string} [status] - Filtrar por estado (locked/unlocked/completed)
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el progreso del usuario
-   * @description Incluye populate de userId (User) y achievementId (Achievement)
+   * Incluye populate de userId (User) y achievementId (Achievement)
    */
   static async getUserProgress(userId, status = null) {
     try {
+      if (status && !VALID_ACHIEVEMENT_STATUSES.includes(status)) {
+        return new BadRequestResponseModel(`El estado debe ser uno de: ${VALID_ACHIEVEMENT_STATUSES.join(', ')}`);
+      }
+
       const query = { userId };
       if (status) {
-        const validStatuses = ['locked', 'unlocked', 'completed'];
-        if (!validStatuses.includes(status)) {
-          return new ErrorResponseModel(`El estado debe ser uno de: ${validStatuses.join(', ')}`);
-        }
         query.status = status;
       }
 
       const userAchievements = await UserAchievement.find(query)
-        .populate('userId', 'name email avatar')
+        .populate('userId', POPULATE_USER_FIELDS)
         .populate('achievementId')
         .sort({ updatedAt: -1 });
 
@@ -86,25 +79,21 @@ export class UserAchievementService {
         'Progreso de logros obtenido correctamente'
       );
     } catch (error) {
-      console.error(chalk.red('Error al obtener progreso de logros:', error));
-      return new ErrorResponseModel('Error al obtener progreso de logros');
+      return ErrorHandler.handleDatabaseError(error, 'obtener progreso de logros');
     }
   }
 
   /**
    * Obtiene el progreso del usuario en un logro específico
-   * @static
-   * @async
-   * @function getUserAchievementProgress
    * @param {string} userId - ID del usuario
    * @param {string} achievementId - ID del logro
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el progreso del usuario
-   * @description Incluye populate de userId (User) y achievementId (Achievement)
+   * Incluye populate de userId (User) y achievementId (Achievement)
    */
   static async getUserAchievementProgress(userId, achievementId) {
     try {
       const userAchievement = await UserAchievement.findOne({ userId, achievementId })
-        .populate('userId', 'name email avatar')
+        .populate('userId', POPULATE_USER_FIELDS)
         .populate('achievementId');
 
       if (!userAchievement) {
@@ -117,10 +106,7 @@ export class UserAchievementService {
         return new SuccessResponseModel(
           {
             achievement,
-            currentCount: 0,
-            status: 'locked',
-            unlockedAt: null,
-            completedAt: null,
+            ...DEFAULT_PROGRESS,
           },
           1,
           'Progreso de logro obtenido correctamente'
@@ -129,16 +115,12 @@ export class UserAchievementService {
 
       return new SuccessResponseModel(userAchievement, 1, 'Progreso de logro obtenido correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al obtener progreso de logro:', error));
-      return new ErrorResponseModel('Error al obtener progreso de logro');
+      return ErrorHandler.handleDatabaseError(error, 'obtener progreso de logro');
     }
   }
 
   /**
    * Incrementa el progreso en un logro
-   * @static
-   * @async
-   * @function incrementProgress
    * @param {string} userId - ID del usuario
    * @param {string} achievementId - ID del logro
    * @param {number} [amount=1] - Cantidad a incrementar
@@ -189,50 +171,48 @@ export class UserAchievementService {
 
       return new SuccessResponseModel(userAchievement, 1, 'Progreso actualizado correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al incrementar progreso:', error));
-      return new ErrorResponseModel('Error al incrementar progreso');
+      return ErrorHandler.handleDatabaseError(error, 'incrementar progreso');
     }
   }
 
   /**
    * Obtiene estadísticas de logros del usuario
-   * @static
-   * @async
-   * @function getUserStats
    * @param {string} userId - ID del usuario
-   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Respuesta con las estadísticas
+   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>}
    */
   static async getUserStats(userId) {
     try {
       const totalAchievements = await Achievement.countDocuments({ isActive: true });
       const userProgress = await UserAchievement.find({ userId });
 
-      const locked = userProgress.filter(p => p.status === 'locked').length;
-      const unlocked = userProgress.filter(p => p.status === 'unlocked').length;
-      const completed = userProgress.filter(p => p.status === 'completed').length;
+      // O(n) - Un solo recorrido con reduce vs O(3n) con 3 filters
+      const statusCounts = userProgress.reduce(
+        (acc, progress) => {
+          acc[progress.status] = (acc[progress.status] || 0) + 1;
+          return acc;
+        },
+        { locked: 0, unlocked: 0, completed: 0 }
+      );
+
       const notStarted = totalAchievements - userProgress.length;
 
       const stats = {
         total: totalAchievements,
         notStarted,
-        locked,
-        unlocked,
-        completed,
-        completionRate: totalAchievements > 0 ? ((completed / totalAchievements) * 100).toFixed(2) : 0,
+        locked: statusCounts.locked,
+        unlocked: statusCounts.unlocked,
+        completed: statusCounts.completed,
+        completionRate: totalAchievements > 0 ? ((statusCounts.completed / totalAchievements) * 100).toFixed(2) : 0,
       };
 
       return new SuccessResponseModel(stats, 1, 'Estadísticas de logros obtenidas correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al obtener estadísticas de logros:', error));
-      return new ErrorResponseModel('Error al obtener estadísticas de logros');
+      return ErrorHandler.handleDatabaseError(error, 'obtener estadísticas de logros');
     }
   }
 
   /**
    * Resetea el progreso del usuario en un logro (solo administradores)
-   * @static
-   * @async
-   * @function resetProgress
    * @param {string} userId - ID del usuario
    * @param {string} achievementId - ID del logro
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la confirmación de eliminación
@@ -247,8 +227,7 @@ export class UserAchievementService {
 
       return new SuccessResponseModel(userAchievement, 1, 'Progreso reseteado correctamente');
     } catch (error) {
-      console.error(chalk.red('Error al resetear progreso:', error));
-      return new ErrorResponseModel('Error al resetear progreso');
+      return ErrorHandler.handleDatabaseError(error, 'resetear progreso');
     }
   }
 }

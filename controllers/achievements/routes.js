@@ -4,10 +4,9 @@ import { validateToken, validateAdminToken } from '../../middlewares/authMiddlew
 
 /**
  * Function to configure achievement routes
- * @function setupAchievementRoutes
  * @param {Object} app - Express instance
  * @returns {void} No return value, configures achievement routes in the app
- * @description Configures all routes related to achievements
+   * Configures all routes related to achievements
  */
 export const setupAchievementRoutes = app => {
   // ============================================================

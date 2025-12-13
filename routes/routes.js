@@ -19,10 +19,9 @@ const swaggerFile = JSON.parse(readFileSync(new URL('../swagger_output.json', im
 
 /**
  * Función principal para configurar todas las rutas de la aplicación
- * @function setupRoutes
  * @param {Object} app - Instancia de Express
  * @returns {void} No retorna valor, configura las rutas en la app
- * @description Configura todas las rutas de la API, middlewares globales y manejo de errores
+   * Configura todas las rutas de la API, middlewares globales y manejo de errores
  */
 export const setupRoutes = app => {
   // Health check endpoint

@@ -153,3 +153,72 @@ export class BadRequestResponseModel {
     this.meta = details ? { details } : null;
   }
 }
+
+/**
+ * Modelo de respuesta para autenticación requerida (401)
+ * @class UnauthorizedResponseModel
+ * @description Clase para generar respuestas cuando falta o es inválida la autenticación
+ * @property {boolean} success - Siempre false
+ * @property {number} status - Código de estado HTTP (401)
+ * @property {string} message - Mensaje de error
+ * @property {null} data - Siempre null
+ * @property {Object|null} meta - Metadatos adicionales
+ */
+export class UnauthorizedResponseModel {
+  /**
+   * @param {string} message - Mensaje del error de autenticación
+   */
+  constructor(message = 'Autenticación requerida') {
+    this.success = false;
+    this.status = 401;
+    this.message = message;
+    this.data = null;
+    this.meta = null;
+  }
+}
+
+/**
+ * Modelo de respuesta para permisos insuficientes (403)
+ * @class ForbiddenResponseModel
+ * @description Clase para generar respuestas cuando el usuario no tiene permisos
+ * @property {boolean} success - Siempre false
+ * @property {number} status - Código de estado HTTP (403)
+ * @property {string} message - Mensaje de error
+ * @property {null} data - Siempre null
+ * @property {Object|null} meta - Metadatos adicionales
+ */
+export class ForbiddenResponseModel {
+  /**
+   * @param {string} message - Mensaje del error de permisos
+   */
+  constructor(message = 'Acceso denegado') {
+    this.success = false;
+    this.status = 403;
+    this.message = message;
+    this.data = null;
+    this.meta = null;
+  }
+}
+
+/**
+ * Modelo de respuesta para operaciones sin contenido (204)
+ * @class NoContentResponseModel
+ * @description Clase para generar respuestas exitosas sin datos (DELETE exitoso, etc.)
+ * @property {boolean} success - Siempre true
+ * @property {number} status - Código de estado HTTP (204)
+ * @property {string} message - Mensaje de éxito
+ * @property {null} data - Siempre null (204 no debe tener cuerpo)
+ * @property {null} meta - Siempre null
+ */
+export class NoContentResponseModel {
+  /**
+   * @param {string} message - Mensaje de éxito
+   */
+  constructor(message = 'Operación completada exitosamente') {
+    this.success = true;
+    this.status = 204;
+    this.message = message;
+    this.data = null;
+    this.meta = null;
+  }
+}

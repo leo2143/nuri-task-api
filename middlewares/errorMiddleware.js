@@ -2,7 +2,6 @@ import { SuccessResponseModel, ErrorResponseModel, NotFoundResponseModel } from 
 
 /**
  * Middleware para manejar rutas no encontradas (404)
- * @function notFoundHandler
  * @param {Object} req - Objeto request de Express
  * @param {Object} res - Objeto response de Express
  * @param {Function} next - Función para continuar al siguiente middleware
@@ -14,7 +13,6 @@ export const notFoundHandler = (req, res, next) => {
 
 /**
  * Middleware para manejar errores generales del servidor (500)
- * @function errorHandler
  * @param {Error} err - Objeto de error capturado
  * @param {Object} req - Objeto request de Express
  * @param {Object} res - Objeto response de Express
@@ -29,11 +27,10 @@ export const errorHandler = (err, req, res, next) => {
 
 /**
  * Handler para el endpoint de health check
- * @function healthCheck
  * @param {Object} req - Objeto request de Express
  * @param {Object} res - Objeto response de Express
  * @returns {void} No retorna valor, envía respuesta de salud
- * @description Endpoint que responde si el servidor está funcionando correctamente
+   * Endpoint que responde si el servidor está funcionando correctamente
  */
 export const healthCheck = (req, res) => {
   res.status(200).json(new SuccessResponseModel(null, 0, 'Servidor funcionando correctamente'));

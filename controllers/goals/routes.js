@@ -3,10 +3,9 @@ import { validateToken } from '../../middlewares/authMiddleware.js';
 
 /**
  * Función para configurar las rutas de metas (goals)
- * @function setupGoalRoutes
  * @param {Object} app - Instancia de Express
  * @returns {void} No retorna valor, configura las rutas de goals en la app
- * @description Configura todas las rutas relacionadas con metas, todas requieren autenticación
+   * Configura todas las rutas relacionadas con metas, todas requieren autenticación
  */
 export const setupGoalRoutes = app => {
   app.get('/api/goals', validateToken, (req, res) => {

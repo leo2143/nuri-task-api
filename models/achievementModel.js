@@ -31,26 +31,25 @@ const achievementSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+
     targetCount: {
       type: Number,
       required: true,
       default: 1,
       min: 1,
     },
-    reward: {
-      type: String,
-      required: false,
-      trim: true,
-      default: '',
-    },
     type: {
       type: String,
       required: true,
-      enum: ['task', 'goal', 'metric', 'streak', 'comment'],
+      enum: ['task', 'goal', 'metric', 'streak'],
     },
     isActive: {
       type: Boolean,
       default: true,
+    },
+    imageUrl: {
+      type: String,
+      required: true,
     },
   },
   {

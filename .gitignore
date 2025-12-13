@@ -111,6 +111,12 @@ coverage
 *.swo
 *~
 
+# Cursor IDE
+.cursor/
+.cursor-tutor/
+*.cursor-*
+.aidigestignore
+
 # Vercel
 .vercel
 

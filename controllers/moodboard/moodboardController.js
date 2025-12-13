@@ -2,14 +2,10 @@ import { MoodboardService } from '../../services/moodboardService.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con moodboards
- * @class MoodboardController
  */
 export class MoodboardController {
   /**
    * Obtiene todos los moodboards del usuario autenticado
-   * @static
-   * @async
-   * @function getAllMoodboards
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} res - Objeto response de Express
@@ -28,9 +24,6 @@ export class MoodboardController {
 
   /**
    * Obtiene un moodboard específico por ID
-   * @static
-   * @async
-   * @function getMoodboardById
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -52,9 +45,6 @@ export class MoodboardController {
 
   /**
    * Crea un nuevo moodboard
-   * @static
-   * @async
-   * @function createMoodboard
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.body - Datos del moodboard
@@ -78,9 +68,6 @@ export class MoodboardController {
 
   /**
    * Actualiza un moodboard existente
-   * @static
-   * @async
-   * @function updateMoodboard
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -104,9 +91,6 @@ export class MoodboardController {
 
   /**
    * Elimina un moodboard
-   * @static
-   * @async
-   * @function deleteMoodboard
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -128,9 +112,6 @@ export class MoodboardController {
 
   /**
    * Agrega una imagen a un moodboard
-   * @static
-   * @async
-   * @function addImage
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -157,9 +138,6 @@ export class MoodboardController {
 
   /**
    * Elimina una imagen de un moodboard
-   * @static
-   * @async
-   * @function removeImage
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -182,9 +160,6 @@ export class MoodboardController {
 
   /**
    * Actualiza una imagen de un moodboard
-   * @static
-   * @async
-   * @function updateImage
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -209,9 +184,6 @@ export class MoodboardController {
 
   /**
    * Agrega una frase a un moodboard
-   * @static
-   * @async
-   * @function addPhrase
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -236,9 +208,6 @@ export class MoodboardController {
 
   /**
    * Elimina una frase de un moodboard
-   * @static
-   * @async
-   * @function removePhrase
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -261,9 +230,6 @@ export class MoodboardController {
 
   /**
    * Actualiza una frase de un moodboard
-   * @static
-   * @async
-   * @function updatePhrase
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
@@ -289,9 +255,6 @@ export class MoodboardController {
 
   /**
    * Busca moodboards por título
-   * @static
-   * @async
-   * @function searchByTitle
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.query - Query parameters

@@ -2,14 +2,10 @@ import { TodoService } from '../../services/todoService.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con tareas (todos)
- * @class TodoController
  */
 export class TodoController {
   /**
    * Obtiene todas las tareas con filtros opcionales
-   * @static
-   * @async
-   * @function getAllTodos
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.query - Query parameters para filtros
    * @param {string} [req.query.search] - Término de búsqueda en título
@@ -45,9 +41,6 @@ export class TodoController {
 
   /**
    * Crea una nueva tarea para el usuario autenticado
-   * @static
-   * @async
-   * @function createTodo
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.body - Datos de la tarea a crear
@@ -75,9 +68,6 @@ export class TodoController {
 
   /**
    * Actualiza solo el estado (completed) de una tarea
-   * @static
-   * @async
-   * @function updateTodoState
    * @param {Object} req - Objeto request de Express
    * @param {string} req.params.id - ID de la tarea
    * @param {Object} req.body - Datos del estado
@@ -110,9 +100,6 @@ export class TodoController {
 
   /**
    * Obtiene todas las tareas completadas del usuario autenticado
-   * @static
-   * @async
-   * @function getCompletedTodos
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} res - Objeto response de Express
@@ -126,9 +113,6 @@ export class TodoController {
 
   /**
    * Obtiene todas las tareas pendientes del usuario autenticado
-   * @static
-   * @async
-   * @function getPendingTodos
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} res - Objeto response de Express
@@ -142,9 +126,6 @@ export class TodoController {
 
   /**
    * Obtiene todas las tareas de una meta específica
-   * @static
-   * @async
-   * @function getTodosByGoalId
    * @param {Object} req - Objeto request de Express
    * @param {string} req.params.goalId - ID de la meta
    * @param {Object} res - Objeto response de Express
@@ -159,9 +140,6 @@ export class TodoController {
 
   /**
    * Agrega un comentario a una tarea
-   * @static
-   * @async
-   * @function addCommentToTodo
    * @param {Object} req - Objeto request de Express
    * @param {string} req.params.id - ID de la tarea
    * @param {Object} req.body - Datos del comentario
