@@ -3,8 +3,8 @@ import mongoose from 'mongoose';
 /**
  * Esquema de Mongoose para el modelo de UserAchievement (Progreso Individual)
  * @typedef {Object} UserAchievementSchema
- * @property {mongoose.Schema.Types.ObjectId} userId - ID del usuario (requerido)
- * @property {mongoose.Schema.Types.ObjectId} achievementId - ID de la plantilla del logro (requerido)
+ * @property {mongoose.Schema.Types.ObjectId} user - Referencia al usuario (requerido)
+ * @property {mongoose.Schema.Types.ObjectId} achievement - Referencia al logro (requerido)
  * @property {number} currentCount - Conteo de progreso actual (default: 0)
  * @property {string} status - Estado del progreso - Valores: 'locked', 'unlocked', 'completed'
  * @property {Date} unlockedAt - Fecha en que se desbloqueó el logro
@@ -20,12 +20,12 @@ import mongoose from 'mongoose';
  */
 const userAchievementSchema = new mongoose.Schema(
   {
-    userId: {
+    user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
-    achievementId: {
+    achievement: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Achievement',
       required: true,
@@ -52,12 +52,13 @@ const userAchievementSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    id: false,
   }
 );
 
-userAchievementSchema.index({ userId: 1, achievementId: 1 }, { unique: true });
+userAchievementSchema.index({ user: 1, achievement: 1 }, { unique: true });
 
-userAchievementSchema.index({ userId: 1, status: 1 });
+userAchievementSchema.index({ user: 1, status: 1 });
 
 /**
  * Modelo de UserAchievement para MongoDB

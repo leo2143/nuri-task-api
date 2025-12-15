@@ -6,7 +6,7 @@ import { validateToken, validateAdminToken } from '../../middlewares/authMiddlew
  * Function to configure achievement routes
  * @param {Object} app - Express instance
  * @returns {void} No return value, configures achievement routes in the app
-   * Configures all routes related to achievements
+ * Configures all routes related to achievements
  */
 export const setupAchievementRoutes = app => {
   // ============================================================
@@ -114,7 +114,7 @@ export const setupAchievementRoutes = app => {
     return AchievementController.deleteAchievement(req, res);
   });
 
-  app.delete('/api/admin/users/:userId/achievements/:achievementId', validateAdminToken, (req, res) => {
+  app.delete('/api/achievements/users/:userId/achievements/:achievementId', validateAdminToken, (req, res) => {
     // #swagger.tags = ['Achievements']
     // #swagger.summary = 'Resetea el progreso de un logro de un usuario (solo admin)'
     /* #swagger.parameters['userId'] = {
@@ -146,21 +146,6 @@ export const setupAchievementRoutes = app => {
          "bearerAuth": []
     }] */
     return UserAchievementController.getAllAchievementsWithProgress(req, res);
-  });
-
-  app.get('/api/user/achievements/progress', validateToken, (req, res) => {
-    // #swagger.tags = ['User Achievements']
-    // #swagger.summary = 'Obtiene el progreso personal en todos los logros'
-    /* #swagger.parameters['status'] = {
-         in: 'query',
-         description: 'Filtrar por estado',
-         type: 'string',
-         '@enum': ['completed', 'inProgress', 'notStarted']
-    } */
-    /* #swagger.security = [{
-         "bearerAuth": []
-    }] */
-    return UserAchievementController.getUserProgress(req, res);
   });
 
   app.get('/api/user/achievements/stats', validateToken, (req, res) => {

@@ -18,22 +18,6 @@ export class UserAchievementController {
   }
 
   /**
-   * Obtiene el progreso del usuario en todos los logros con filtro opcional por estado
-   * @param {Object} req - Objeto request de Express
-   * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
-   * @param {Object} req.query - Parámetros de consulta
-   * @param {string} [req.query.status] - Filtrar por estado (locked/unlocked/completed)
-   * @param {Object} res - Objeto response de Express
-   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   */
-  static async getUserProgress(req, res) {
-    const userId = req.userId;
-    const status = req.query.status;
-    const result = await UserAchievementService.getUserProgress(userId, status);
-    res.status(result.status).json(result);
-  }
-
-  /**
    * Obtiene el progreso del usuario en un logro específico
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
