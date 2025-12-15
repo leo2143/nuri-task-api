@@ -2491,7 +2491,7 @@
         ]
       }
     },
-    "/api/admin/users/{userId}/achievements/{achievementId}": {
+    "/api/achievements/users/{userId}/achievements/{achievementId}": {
       "delete": {
         "tags": [
           "Achievements"
@@ -2543,43 +2543,6 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/user/achievements/progress": {
-      "get": {
-        "tags": [
-          "User Achievements"
-        ],
-        "summary": "Obtiene el progreso personal en todos los logros",
-        "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "description": "Filtrar por estado",
-            "type": "string",
-            "@enum": [
-              "completed",
-              "inProgress",
-              "notStarted"
-            ]
           }
         ],
         "responses": {
