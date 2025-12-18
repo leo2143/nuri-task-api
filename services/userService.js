@@ -85,6 +85,25 @@ export class UserService {
   }
 
   /**
+   * Obtiene el perfil del usuario autenticado (campos públicos)
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+   */
+  static async getProfile(userId) {
+    try {
+      const user = await User.findById(userId).select('name email subscription profileImageUrl');
+
+      if (!user) {
+        return new NotFoundResponseModel('Usuario no encontrado');
+      }
+
+      return new SuccessResponseModel(user, 1, 'Perfil obtenido correctamente');
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'obtener perfil');
+    }
+  }
+
+  /**
    * Crea un nuevo usuario en la base de datos
    */
   static async createUser(userData) {

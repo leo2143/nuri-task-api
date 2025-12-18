@@ -810,6 +810,32 @@
         ]
       }
     },
+    "/api/user/profile": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Obtiene el perfil del usuario autenticado",
+        "description": "Retorna: name, email, subscription (isActive, startDate, endDate), profileImageUrl",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/users/{id}": {
       "get": {
         "tags": [
