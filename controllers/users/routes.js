@@ -120,6 +120,16 @@ export const setupUserRoutes = app => {
     return UsersController.changePassword(req, res);
   });
 
+  app.get('/api/user/profile', validateToken, (req, res) => {
+    // #swagger.tags = ['Users']
+    // #swagger.summary = 'Obtiene el perfil del usuario autenticado'
+    // #swagger.description = 'Retorna: name, email, subscription (isActive, startDate, endDate), profileImageUrl'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return UsersController.getProfile(req, res);
+  });
+
   app.get('/api/users', validateAdminToken, (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Obtiene todos los usuarios (solo admin)'

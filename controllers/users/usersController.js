@@ -114,6 +114,19 @@ export class UsersController {
     res.status(user.status).json(user);
   }
 
+  /**
+   * Obtiene el perfil del usuario autenticado
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.userId - ID del usuario (del token)
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   */
+  static async getProfile(req, res) {
+    const userId = req.userId;
+    const result = await UserService.getProfile(userId);
+    res.status(result.status).json(result);
+  }
+
   static async deleteUser(req, res) {
     const id = req.params.id;
     const user = await UserService.deleteUser(id);
