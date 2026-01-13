@@ -1,9 +1,12 @@
+import { PaginationDto } from '../paginationDto.js';
+
 /**
  * DTO para filtrar plantillas de logros
  * @class AchievementFilterDto
+ * @extends PaginationDto
  * @description Define la estructura y validaciones para filtrar plantillas de logros globales
  */
-export class AchievementFilterDto {
+export class AchievementFilterDto extends PaginationDto {
   /**
    * @param {Object} filters - Parámetros de filtro
    * @param {string} [filters.type] - Filtrar por tipo (task/goal/metric/streak)
@@ -11,8 +14,11 @@ export class AchievementFilterDto {
    * @param {string} [filters.search] - Buscar en título o descripción
    * @param {string} [filters.sortBy] - Campo por el cual ordenar (title, type, targetCount, createdAt)
    * @param {string} [filters.sortOrder] - Orden de clasificación (asc/desc)
+   * @param {string} [filters.cursor] - Cursor para paginación
+   * @param {number} [filters.limit] - Límite de resultados por página
    */
   constructor(filters = {}) {
+    super(filters);
     this.type = filters.type;
     this.isActive = filters.isActive;
     this.search = filters.search;
@@ -25,7 +31,8 @@ export class AchievementFilterDto {
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
-    const errors = [];
+    const parentValidation = super.validate();
+    const errors = [...parentValidation.errors];
 
     // Validar type si existe
     if (this.type) {
@@ -82,6 +89,8 @@ export class AchievementFilterDto {
         { description: { $regex: this.search, $options: 'i' } },
       ];
     }
+
+    this.applyCursorToQuery(query);
 
     return query;
   }

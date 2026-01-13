@@ -1,9 +1,11 @@
+import { PaginationDto } from '../paginationDto.js';
+
 /**
  * DTO para filtrar tareas
  * @class TodoFilterDto
  * @description Define la estructura y validaciones para filtrar tareas
  */
-export class TodoFilterDto {
+export class TodoFilterDto extends PaginationDto {
   /**
    * @param {Object} data - Filtros de búsqueda
    * @param {string} [data.search] - Término de búsqueda para título
@@ -16,6 +18,7 @@ export class TodoFilterDto {
    * @param {string} [data.sortOrder] - Orden de clasificación (asc/desc)
    */
   constructor(data) {
+    super(data);
     if (data.search !== undefined) this.search = data.search;
     if (data.completed !== undefined) this.completed = data.completed;
     if (data.priority !== undefined) this.priority = data.priority;
@@ -31,8 +34,8 @@ export class TodoFilterDto {
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
-    const errors = [];
-
+    const parentValidation = super.validate();
+    const errors = [...parentValidation.errors]; // Incluye errores del padre
     // Validar completed si existe
     if (this.completed !== undefined) {
       // Puede venir como string desde query params
@@ -120,6 +123,7 @@ export class TodoFilterDto {
         query.dueDate.$lte = new Date(this.dueDateTo);
       }
     }
+    this.applyCursorToQuery(query);
 
     return query;
   }

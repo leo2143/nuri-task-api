@@ -8,13 +8,14 @@ export class MoodboardController {
    * Obtiene todos los moodboards del usuario autenticado
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.query - Query params para paginación
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAllMoodboards(req, res) {
     try {
       const userId = req.userId;
-      const result = await MoodboardService.getAllMoodboards(userId);
+      const result = await MoodboardService.getAllMoodboards(userId, req.query);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en getAllMoodboards:', error);
@@ -257,16 +258,18 @@ export class MoodboardController {
    * Busca moodboards por título
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
-   * @param {Object} req.query - Query parameters
+   * @param {Object} req.query - Query parameters para búsqueda y paginación
    * @param {string} req.query.title - Término de búsqueda
+   * @param {string} [req.query.cursor] - Cursor para paginación
+   * @param {number} [req.query.limit] - Límite de resultados
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async searchByTitle(req, res) {
     try {
-      const { title } = req.query;
+      const { title, ...pagination } = req.query;
       const userId = req.userId;
-      const result = await MoodboardService.searchByTitle(title, userId);
+      const result = await MoodboardService.searchByTitle(title, userId, pagination);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en searchByTitle:', error);

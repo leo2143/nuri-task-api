@@ -24,7 +24,7 @@ export class MetricsService {
       const metrics = await this._findOrCreateMetrics(userId);
       const populatedMetrics = await Metrics.findById(metrics._id).populate('userId', POPULATE_USER_FIELDS);
 
-      return new SuccessResponseModel(populatedMetrics, 1, 'Métricas del usuario obtenidas correctamente');
+      return new SuccessResponseModel(populatedMetrics, 'Métricas del usuario obtenidas correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener métricas del usuario');
     }
@@ -45,7 +45,7 @@ export class MetricsService {
 
       const populatedMetrics = await Metrics.findById(metrics._id).populate('userId', POPULATE_USER_FIELDS);
 
-      return new SuccessResponseModel(populatedMetrics, 1, 'Métricas actualizadas correctamente');
+      return new SuccessResponseModel(populatedMetrics, 'Métricas actualizadas correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar métricas');
     }
@@ -67,7 +67,7 @@ export class MetricsService {
         )
       );
 
-      return new SuccessResponseModel(metrics, 1, 'Tarea registrada en métricas correctamente');
+      return new SuccessResponseModel(metrics, 'Tarea registrada en métricas correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'registrar tarea completada');
     }
@@ -85,7 +85,7 @@ export class MetricsService {
 
       console.log(chalk.green(`Meta completada Total: ${metrics.totalGoalsCompleted} metas`));
 
-      return new SuccessResponseModel(metrics, 1, 'Meta registrada en métricas correctamente');
+      return new SuccessResponseModel(metrics, 'Meta registrada en métricas correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'registrar meta completada');
     }
@@ -115,7 +115,6 @@ export class MetricsService {
           bestStreak: metrics.bestStreak,
           expired,
         },
-        1,
         expired ? 'Racha expirada' : 'Racha activa'
       );
     } catch (error) {
@@ -136,7 +135,7 @@ export class MetricsService {
 
       const dashboard = MetricsDashboardDto.fromMetrics(metrics);
 
-      return new SuccessResponseModel(dashboard, 1, 'Dashboard obtenido correctamente');
+      return new SuccessResponseModel(dashboard, 'Dashboard obtenido correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener dashboard');
     }
@@ -153,7 +152,7 @@ export class MetricsService {
         return new NotFoundResponseModel('Métricas del usuario no encontradas');
       }
 
-      return new SuccessResponseModel({ userId }, 1, 'Métricas eliminadas correctamente');
+      return new SuccessResponseModel({ userId }, 'Métricas eliminadas correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'eliminar métricas');
     }
@@ -165,19 +164,14 @@ export class MetricsService {
    */
   static async getAdminDashboardStats() {
     try {
-      const [
-        totalUsers,
-        subscribedUsers,
-        totalGoals,
-        totalAchievementTemplates,
-        totalAchievementsCompleted,
-      ] = await Promise.all([
-        User.countDocuments(),
-        User.countDocuments({ 'subscription.isActive': true }),
-        Goal.countDocuments(),
-        Achievement.countDocuments(),
-        UserAchievement.countDocuments({ status: 'completed' }),
-      ]);
+      const [totalUsers, subscribedUsers, totalGoals, totalAchievementTemplates, totalAchievementsCompleted] =
+        await Promise.all([
+          User.countDocuments(),
+          User.countDocuments({ 'subscription.isActive': true }),
+          Goal.countDocuments(),
+          Achievement.countDocuments(),
+          UserAchievement.countDocuments({ status: 'completed' }),
+        ]);
 
       const stats = {
         totalUsers,
@@ -187,11 +181,7 @@ export class MetricsService {
         totalAchievementsCompleted,
       };
 
-      return new SuccessResponseModel(
-        stats, 
-        1, 
-        'Estadísticas del dashboard obtenidas correctamente'
-      );
+      return new SuccessResponseModel(stats, 'Estadísticas del dashboard obtenidas correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener estadísticas del dashboard');
     }

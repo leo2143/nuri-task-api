@@ -8,6 +8,7 @@ import {
   AddPhraseDto,
   UpdatePhraseDto,
 } from '../models/dtos/moodboard/index.js';
+import { PaginationDto } from '../models/dtos/paginationDto.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 
 const MAX_IMAGES_PER_MOODBOARD = 6;
@@ -34,17 +35,27 @@ export class MoodboardService {
   /**
    * Obtiene todos los moodboards del usuario autenticado
    * @param {string} userId - ID del usuario autenticado
+   * @param {Object} pagination - Opciones de paginación
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de moodboards o error
    */
-  static async getAllMoodboards(userId) {
+  static async getAllMoodboards(userId, pagination = {}) {
     try {
-      const moodboards = await Moodboard.find({ userId }).sort({ createdAt: -1 });
+      const paginationDto = new PaginationDto(pagination);
+      const query = { userId };
+      paginationDto.applyCursorToQuery(query);
 
-      if (moodboards.length === 0) {
+      const moodboards = await Moodboard.find(query)
+        .sort({ createdAt: -1 })
+        .limit(paginationDto.limit + 1)
+        .lean();
+
+      const { results, meta } = paginationDto.processPaginationResults(moodboards);
+
+      if (results.length === 0) {
         return new NotFoundResponseModel('No se encontraron moodboards para este usuario');
       }
 
-      return new SuccessResponseModel(moodboards, moodboards.length, 'Moodboards obtenidos correctamente');
+      return new SuccessResponseModel(results, 'Moodboards obtenidos correctamente', 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener moodboards');
     }
@@ -65,7 +76,7 @@ export class MoodboardService {
         return new NotFoundResponseModel('Moodboard no encontrado');
       }
 
-      return new SuccessResponseModel(moodboard, 1, 'Moodboard obtenido correctamente');
+      return new SuccessResponseModel(moodboard, 'Moodboard obtenido correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener moodboard');
     }
@@ -131,7 +142,7 @@ export class MoodboardService {
         return new NotFoundResponseModel('Moodboard no encontrado');
       }
 
-      return new SuccessResponseModel(moodboard, 1, 'Moodboard actualizado correctamente');
+      return new SuccessResponseModel(moodboard, 'Moodboard actualizado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar moodboard');
     }
@@ -151,7 +162,7 @@ export class MoodboardService {
         return new NotFoundResponseModel('Moodboard no encontrado');
       }
 
-      return new SuccessResponseModel({ id }, 1, 'Moodboard eliminado correctamente');
+      return new SuccessResponseModel({ id }, 'Moodboard eliminado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'eliminar moodboard');
     }
@@ -193,7 +204,7 @@ export class MoodboardService {
         { new: true, runValidators: true }
       );
 
-      return new SuccessResponseModel(moodboard, 1, 'Imagen agregada correctamente');
+      return new SuccessResponseModel(moodboard, 'Imagen agregada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'agregar imagen');
     }
@@ -222,7 +233,7 @@ export class MoodboardService {
         return new NotFoundResponseModel('Moodboard no encontrado');
       }
 
-      return new SuccessResponseModel(moodboard, 1, 'Imagen eliminada correctamente');
+      return new SuccessResponseModel(moodboard, 'Imagen eliminada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'eliminar imagen');
     }
@@ -255,7 +266,7 @@ export class MoodboardService {
 
       const updatedMoodboard = await moodboard.save();
 
-      return new SuccessResponseModel(updatedMoodboard, 1, 'Imagen actualizada correctamente');
+      return new SuccessResponseModel(updatedMoodboard, 'Imagen actualizada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar imagen');
     }
@@ -265,20 +276,30 @@ export class MoodboardService {
    * Busca moodboards por título del usuario autenticado
    * @param {string} searchTerm - Término de búsqueda
    * @param {string} userId - ID del usuario autenticado
+   * @param {Object} pagination - Opciones de paginación
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con los moodboards encontrados o error
    */
-  static async searchByTitle(searchTerm, userId) {
+  static async searchByTitle(searchTerm, userId, pagination = {}) {
     try {
-      const moodboards = await Moodboard.find({
+      const paginationDto = new PaginationDto(pagination);
+      const query = {
         userId,
         title: { $regex: searchTerm, $options: 'i' },
-      }).sort({ createdAt: -1 });
+      };
+      paginationDto.applyCursorToQuery(query);
 
-      if (moodboards.length === 0) {
+      const moodboards = await Moodboard.find(query)
+        .sort({ createdAt: -1 })
+        .limit(paginationDto.limit + 1)
+        .lean();
+
+      const { results, meta } = paginationDto.processPaginationResults(moodboards);
+
+      if (results.length === 0) {
         return new NotFoundResponseModel('No se encontraron moodboards con ese título');
       }
 
-      return new SuccessResponseModel(moodboards, moodboards.length, 'Moodboards encontrados correctamente');
+      return new SuccessResponseModel(results, 'Moodboards encontrados correctamente', 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'buscar moodboards');
     }
@@ -308,7 +329,7 @@ export class MoodboardService {
       moodboard.phrases.push(cleanPhrase);
       const updatedMoodboard = await moodboard.save();
 
-      return new SuccessResponseModel(updatedMoodboard, 1, 'Frase agregada correctamente');
+      return new SuccessResponseModel(updatedMoodboard, 'Frase agregada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'agregar frase');
     }
@@ -334,7 +355,7 @@ export class MoodboardService {
       moodboard.phrases.splice(phraseIndex, 1);
       const updatedMoodboard = await moodboard.save();
 
-      return new SuccessResponseModel(updatedMoodboard, 1, 'Frase eliminada correctamente');
+      return new SuccessResponseModel(updatedMoodboard, 'Frase eliminada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'eliminar frase');
     }
@@ -370,7 +391,7 @@ export class MoodboardService {
       phraseToUpdate.phrase = cleanPhrase.phrase;
       const updatedMoodboard = await moodboard.save();
 
-      return new SuccessResponseModel(updatedMoodboard, 1, 'Frase actualizada correctamente');
+      return new SuccessResponseModel(updatedMoodboard, 'Frase actualizada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar frase');
     }

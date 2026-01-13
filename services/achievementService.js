@@ -28,15 +28,18 @@ export class AchievementService {
       const query = filterDto.toMongoQuery();
       const sort = filterDto.toMongoSort();
 
-      const achievements = await Achievement.find(query).sort(sort);
-      if (achievements.length === 0) {
+      const achievements = await Achievement.find(query)
+        .sort(sort)
+        .limit(filterDto.limit + 1)
+        .lean();
+
+      const { results, meta } = filterDto.processPaginationResults(achievements);
+
+      if (results.length === 0) {
         return new NotFoundResponseModel('No se encontraron plantillas de logros');
       }
-      return new SuccessResponseModel(
-        achievements,
-        achievements.length,
-        'Plantillas de logros obtenidas correctamente'
-      );
+
+      return new SuccessResponseModel(results, 'Plantillas de logros obtenidas correctamente', 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener plantillas de logros');
     }
@@ -53,7 +56,7 @@ export class AchievementService {
       if (!achievement) {
         return new NotFoundResponseModel('Plantilla de logro no encontrada');
       }
-      return new SuccessResponseModel(achievement, 1, 'Plantilla de logro obtenida correctamente');
+      return new SuccessResponseModel(achievement, 'Plantilla de logro obtenida correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener plantilla de logro');
     }
@@ -113,7 +116,7 @@ export class AchievementService {
         return new NotFoundResponseModel('Plantilla de logro no encontrada');
       }
 
-      return new SuccessResponseModel(achievement, 1, 'Plantilla de logro actualizada correctamente');
+      return new SuccessResponseModel(achievement, 'Plantilla de logro actualizada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar plantilla de logro');
     }
@@ -132,7 +135,7 @@ export class AchievementService {
         return new NotFoundResponseModel('Plantilla de logro no encontrada');
       }
 
-      return new SuccessResponseModel(achievement, 1, 'Plantilla de logro eliminada correctamente');
+      return new SuccessResponseModel(achievement, 'Plantilla de logro eliminada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'eliminar plantilla de logro');
     }
@@ -141,24 +144,35 @@ export class AchievementService {
   /**
    * Obtiene plantillas de logros por tipo
    * @param {string} type - Tipo de logro (task/goal/metric/streak)
+   * @param {Object} pagination - Opciones de paginación
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las plantillas filtradas o error
    */
-  static async getAchievementsByType(type) {
+  static async getAchievementsByType(type, pagination = {}) {
     try {
       if (!VALID_ACHIEVEMENT_TYPES.includes(type)) {
         return new BadRequestResponseModel(`El tipo debe ser uno de: ${VALID_ACHIEVEMENT_TYPES.join(', ')}`);
       }
 
-      const achievements = await Achievement.find({ type, isActive: true });
+      const paginationDto = new AchievementFilterDto(pagination);
+      const query = { type, isActive: true };
+      paginationDto.applyCursorToQuery(query);
 
-      if (achievements.length === 0) {
+      const achievements = await Achievement.find(query)
+        .sort({ createdAt: -1 })
+        .limit(paginationDto.limit + 1)
+        .lean();
+
+      const { results, meta } = paginationDto.processPaginationResults(achievements);
+
+      if (results.length === 0) {
         return new NotFoundResponseModel(`No se encontraron plantillas de logros de tipo ${type}`);
       }
 
       return new SuccessResponseModel(
-        achievements,
-        achievements.length,
-        `Plantillas de logros de tipo ${type} obtenidas correctamente`
+        results,
+        `Plantillas de logros de tipo ${type} obtenidas correctamente`,
+        200,
+        meta
       );
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener plantillas de logros por tipo');
@@ -194,7 +208,7 @@ export class AchievementService {
         }, {}),
       };
 
-      return new SuccessResponseModel(stats, 1, 'Estadísticas de plantillas de logros obtenidas correctamente');
+      return new SuccessResponseModel(stats, 'Estadísticas de plantillas de logros obtenidas correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener estadísticas de plantillas de logros');
     }

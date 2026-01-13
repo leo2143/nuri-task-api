@@ -1,9 +1,12 @@
+import { PaginationDto } from '../paginationDto.js';
+
 /**
  * DTO para filtrar usuarios
  * @class UserFilterDto
+ * @extends PaginationDto
  * @description Define la estructura y validaciones para filtrar usuarios
  */
-export class UserFilterDto {
+export class UserFilterDto extends PaginationDto {
   /**
    * @param {Object} data - Filtros de búsqueda
    * @param {string} [data.search] - Término de búsqueda para nombre o email
@@ -13,8 +16,11 @@ export class UserFilterDto {
    * @param {Date|string} [data.createdTo] - Usuario creado hasta
    * @param {string} [data.sortBy] - Campo por el cual ordenar
    * @param {string} [data.sortOrder] - Orden de clasificación (asc/desc)
+   * @param {string} [data.cursor] - Cursor para paginación
+   * @param {number} [data.limit] - Límite de resultados por página
    */
   constructor(data) {
+    super(data);
     if (data.search !== undefined) this.search = data.search;
     if (data.isAdmin !== undefined) this.isAdmin = data.isAdmin;
     if (data.isSubscribed !== undefined) this.isSubscribed = data.isSubscribed;
@@ -29,7 +35,8 @@ export class UserFilterDto {
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
-    const errors = [];
+    const parentValidation = super.validate();
+    const errors = [...parentValidation.errors];
 
     if (this.isAdmin !== undefined) {
       if (typeof this.isAdmin === 'string') {
@@ -113,6 +120,8 @@ export class UserFilterDto {
         query.createdAt.$lte = new Date(this.createdTo);
       }
     }
+
+    this.applyCursorToQuery(query);
 
     return query;
   }

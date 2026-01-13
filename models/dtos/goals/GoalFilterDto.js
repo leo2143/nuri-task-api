@@ -1,9 +1,12 @@
+import { PaginationDto } from '../paginationDto.js';
+
 /**
  * DTO para filtrar metas
  * @class GoalFilterDto
+ * @extends PaginationDto
  * @description Define la estructura y validaciones para filtrar metas
  */
-export class GoalFilterDto {
+export class GoalFilterDto extends PaginationDto {
   /**
    * @param {Object} data - Filtros de búsqueda
    * @param {string} [data.status] - Estado de la meta (active/paused/completed)
@@ -13,8 +16,11 @@ export class GoalFilterDto {
    * @param {Date|string} [data.dueDateTo] - Fecha límite hasta
    * @param {string} [data.sortBy] - Campo por el cual ordenar (createdAt, dueDate, priority)
    * @param {string} [data.sortOrder] - Orden de clasificación (asc/desc)
+   * @param {string} [data.cursor] - Cursor para paginación
+   * @param {number} [data.limit] - Límite de resultados por página
    */
   constructor(data) {
+    super(data);
     if (data.status !== undefined) this.status = data.status;
     if (data.priority !== undefined) this.priority = data.priority;
     if (data.search !== undefined) this.search = data.search;
@@ -30,7 +36,8 @@ export class GoalFilterDto {
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
-    const errors = [];
+    const parentValidation = super.validate();
+    const errors = [...parentValidation.errors];
 
     // Validar status si existe
     if (this.status !== undefined) {
@@ -117,6 +124,8 @@ export class GoalFilterDto {
     if (this.parentGoalId !== undefined) {
       query.parentGoalId = this.parentGoalId;
     }
+
+    this.applyCursorToQuery(query);
 
     return query;
   }

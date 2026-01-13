@@ -6,15 +6,21 @@
  * @property {number} status - Código de estado HTTP (200)
  * @property {string} message - Mensaje descriptivo
  * @property {*} data - Datos de la respuesta
- * @property {Object|null} meta - Metadatos adicionales (count, pagination, etc.)
+ * @property {Object|null} meta - Metadatos adicionales (count, nextCursor, hasMore, limit)
  */
 export class SuccessResponseModel {
-  constructor(data = null, count = null, message = null, status = 200) {
+  /**
+   * @param {*} data - Datos de la respuesta
+   * @param {string|null} message - Mensaje descriptivo
+   * @param {number} status - Código HTTP (default 200)
+   * @param {Object|null} meta - Metadatos (paginación, etc.)
+   */
+  constructor(data = null, message = null, status = 200, meta = null) {
     this.success = true;
     this.status = status;
     this.message = message;
     this.data = data;
-    this.meta = count !== null ? { count } : null;
+    this.meta = meta;
   }
 }
 

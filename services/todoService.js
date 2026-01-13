@@ -58,13 +58,16 @@ export class TodoService {
       const todos = await Todo.find(query)
         .select('title completed priority dueDate GoalId createdAt updatedAt')
         .sort(sort)
+        .limit(filterDto.limit + 1)
         .lean();
 
-      if (todos.length === 0) {
+      const { results, meta } = filterDto.processPaginationResults(todos);
+
+      if (results.length === 0) {
         return new NotFoundResponseModel('No se encontraron tareas con los filtros aplicados');
       }
 
-      return new SuccessResponseModel(todos, todos.length, 'Tareas obtenidas correctamente');
+      return new SuccessResponseModel(results, 'Tareas obtenidas correctamente', 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener tareas');
     }
@@ -85,7 +88,7 @@ export class TodoService {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
       }
 
-      return new SuccessResponseModel(todo, 1, 'Tarea obtenida correctamente');
+      return new SuccessResponseModel(todo, 'Tarea obtenida correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener tarea');
     }
@@ -103,7 +106,7 @@ export class TodoService {
       if (!todo) {
         return new NotFoundResponseModel('No se encontró la tarea con el título: ' + title);
       }
-      return new SuccessResponseModel(todo, 1, 'Tarea obtenida correctamente');
+      return new SuccessResponseModel(todo, 'Tarea obtenida correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener tarea por título');
     }
@@ -181,7 +184,7 @@ export class TodoService {
         await this._updateGoalTaskCounters(newGoalId, 'Goal nuevo');
       }
 
-      return new SuccessResponseModel(todo, 1, 'Tarea actualizada correctamente');
+      return new SuccessResponseModel(todo, 'Tarea actualizada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar tarea');
     }
@@ -226,7 +229,6 @@ export class TodoService {
 
       return new SuccessResponseModel(
         existingTodo,
-        1,
         `Tarea ${completed ? 'completada' : 'marcada como pendiente'} correctamente`
       );
     } catch (error) {
@@ -254,7 +256,7 @@ export class TodoService {
       // Actualizar contadores del goal si existía
       await this._updateGoalTaskCounters(goalId, 'Goal');
 
-      return new SuccessResponseModel(todo, 1, 'Tarea eliminada correctamente');
+      return new SuccessResponseModel(todo, 'Tarea eliminada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'eliminar tarea');
     }
@@ -264,18 +266,30 @@ export class TodoService {
    * Obtiene tareas por estado del usuario autenticado
    * @param {boolean} completed - Estado de completado
    * @param {string} userId - ID del usuario autenticado
+   * @param {Object} pagination - Opciones de paginación
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las tareas filtradas o error
    */
-  static async getTodosByStatus(completed, userId) {
+  static async getTodosByStatus(completed, userId, pagination = {}) {
     try {
-      const todos = await Todo.find({ completed, userId }).sort({ createdAt: -1 });
-      if (todos.length === 0) {
+      const paginationDto = new TodoFilterDto(pagination);
+      const query = { completed, userId };
+      paginationDto.applyCursorToQuery(query);
+
+      const todos = await Todo.find(query)
+        .sort({ createdAt: -1 })
+        .limit(paginationDto.limit + 1)
+        .lean();
+
+      const { results, meta } = paginationDto.processPaginationResults(todos);
+
+      if (results.length === 0) {
         return new NotFoundResponseModel(`No se encontraron tareas ${completed ? 'completadas' : 'pendientes'}`);
       }
       return new SuccessResponseModel(
-        todos,
-        todos.length,
-        `Tareas ${completed ? 'completadas' : 'pendientes'} obtenidas correctamente`
+        results,
+        `Tareas ${completed ? 'completadas' : 'pendientes'} obtenidas correctamente`,
+        200,
+        meta
       );
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener tareas por estado');
@@ -286,15 +300,26 @@ export class TodoService {
    * Obtiene tareas por meta del usuario autenticado
    * @param {string} goalId - ID de la meta
    * @param {string} userId - ID del usuario autenticado
+   * @param {Object} pagination - Opciones de paginación
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las tareas de la meta o error
    */
-  static async getTodosByGoalId(goalId, userId) {
+  static async getTodosByGoalId(goalId, userId, pagination = {}) {
     try {
-      const todos = await Todo.find({ GoalId: goalId, userId }).sort({ createdAt: -1 });
-      if (todos.length === 0) {
+      const paginationDto = new TodoFilterDto(pagination);
+      const query = { GoalId: goalId, userId };
+      paginationDto.applyCursorToQuery(query);
+
+      const todos = await Todo.find(query)
+        .sort({ createdAt: -1 })
+        .limit(paginationDto.limit + 1)
+        .lean();
+
+      const { results, meta } = paginationDto.processPaginationResults(todos);
+
+      if (results.length === 0) {
         return new NotFoundResponseModel(`No se encontraron tareas para la meta: ${goalId}`);
       }
-      return new SuccessResponseModel(todos, todos.length, `Tareas para la meta: ${goalId} obtenidas correctamente`);
+      return new SuccessResponseModel(results, `Tareas para la meta: ${goalId} obtenidas correctamente`, 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener tareas por meta');
     }
@@ -304,15 +329,26 @@ export class TodoService {
    * Obtiene tareas por prioridad del usuario autenticado
    * @param {string} priority - Prioridad (low/medium/high)
    * @param {string} userId - ID del usuario autenticado
+   * @param {Object} pagination - Opciones de paginación
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las tareas filtradas o error
    */
-  static async getTodosByPriority(priority, userId) {
+  static async getTodosByPriority(priority, userId, pagination = {}) {
     try {
-      const todos = await Todo.find({ priority, userId }).sort({ createdAt: -1 });
-      if (todos.length === 0) {
+      const paginationDto = new TodoFilterDto(pagination);
+      const query = { priority, userId };
+      paginationDto.applyCursorToQuery(query);
+
+      const todos = await Todo.find(query)
+        .sort({ createdAt: -1 })
+        .limit(paginationDto.limit + 1)
+        .lean();
+
+      const { results, meta } = paginationDto.processPaginationResults(todos);
+
+      if (results.length === 0) {
         return new NotFoundResponseModel(`No se encontraron tareas con prioridad: ${priority}`);
       }
-      return new SuccessResponseModel(todos, todos.length, `Tareas con prioridad ${priority} obtenidas correctamente`);
+      return new SuccessResponseModel(results, `Tareas con prioridad ${priority} obtenidas correctamente`, 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener tareas por prioridad');
     }
@@ -347,7 +383,7 @@ export class TodoService {
 
       await todo.save();
 
-      return new SuccessResponseModel(todo, 1, 'Comentario agregado correctamente');
+      return new SuccessResponseModel(todo, 'Comentario agregado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'agregar comentario');
     }
