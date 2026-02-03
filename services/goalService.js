@@ -119,13 +119,16 @@ export class GoalService {
         .populate('parentGoalId', POPULATE_PARENT_TITLE)
         .select('title status priority dueDate parentGoalId progress createdAt updatedAt')
         .sort(sort)
+        .limit(filterDto.limit + 1)
         .lean();
 
-      if (goals.length === 0) {
+      const { results, meta } = filterDto.processPaginationResults(goals);
+
+      if (results.length === 0) {
         return new NotFoundResponseModel('No se encontraron metas para este usuario');
       }
 
-      return new SuccessResponseModel(goals, goals.length, 'Metas obtenidas correctamente');
+      return new SuccessResponseModel(results, 'Metas obtenidas correctamente', 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener metas');
     }
@@ -144,7 +147,7 @@ export class GoalService {
       if (!goal) {
         return new NotFoundResponseModel('Meta no encontrada');
       }
-      return new SuccessResponseModel(goal, 1, 'Meta obtenida correctamente');
+      return new SuccessResponseModel(goal, 'Meta obtenida correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener meta');
     }
@@ -230,7 +233,7 @@ export class GoalService {
         console.log(chalk.green(`Estado cambiado: ${statusChange.oldStatus} → ${statusChange.newStatus}`));
       }
 
-      return new SuccessResponseModel(goal, 1, 'Meta actualizada correctamente');
+      return new SuccessResponseModel(goal, 'Meta actualizada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar meta');
     }
@@ -261,7 +264,7 @@ export class GoalService {
         await this._updateParentGoalCounters(parentGoalId);
       }
 
-      return new SuccessResponseModel({ id: goalId }, 1, 'Meta eliminada correctamente');
+      return new SuccessResponseModel({ id: goalId }, 'Meta eliminada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'eliminar meta');
     }
@@ -271,35 +274,59 @@ export class GoalService {
    * Obtiene metas por estado del usuario
    * @param {string} status - Estado de las metas (active/paused/completed)
    * @param {string} userId - ID del usuario
+   * @param {Object} pagination - Opciones de paginación
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las metas filtradas o error
    */
-  static async getGoalsByStatus(status, userId) {
+  static async getGoalsByStatus(status, userId, pagination = {}) {
     try {
-      const goals = await Goal.find({ status, userId }).sort({ createdAt: -1 });
-      if (goals.length === 0) {
+      const paginationDto = new GoalFilterDto(pagination);
+      const query = { status, userId };
+      paginationDto.applyCursorToQuery(query);
+
+      const goals = await Goal.find(query)
+        .sort({ createdAt: -1 })
+        .limit(paginationDto.limit + 1)
+        .lean();
+
+      const { results, meta } = paginationDto.processPaginationResults(goals);
+
+      if (results.length === 0) {
         return new NotFoundResponseModel(`No se encontraron metas con estado: ${status}`);
       }
-      return new SuccessResponseModel(goals, goals.length, `Metas ${status} obtenidas correctamente`);
+      return new SuccessResponseModel(results, `Metas ${status} obtenidas correctamente`, 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener metas por estado');
     }
   }
+
   /**
    * Obtiene metas por ID de la meta padre del usuario
    * @param {string} parentGoalId - ID de la meta padre
    * @param {string} userId - ID del usuario
+   * @param {Object} pagination - Opciones de paginación
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con las metas filtradas o error
    */
-  static async getGoalsByParentGoalId(parentGoalId, userId) {
+  static async getGoalsByParentGoalId(parentGoalId, userId, pagination = {}) {
     try {
-      const goals = await Goal.find({ parentGoalId: parentGoalId, userId: userId }).sort({ createdAt: -1 });
-      if (goals.length === 0) {
+      const paginationDto = new GoalFilterDto(pagination);
+      const query = { parentGoalId, userId };
+      paginationDto.applyCursorToQuery(query);
+
+      const goals = await Goal.find(query)
+        .sort({ createdAt: -1 })
+        .limit(paginationDto.limit + 1)
+        .lean();
+
+      const { results, meta } = paginationDto.processPaginationResults(goals);
+
+      if (results.length === 0) {
         return new NotFoundResponseModel(`No se encontraron metas con ID de meta padre: ${parentGoalId}`);
       }
       return new SuccessResponseModel(
-        goals,
-        goals.length,
-        `Metas con ID de meta padre: ${parentGoalId} obtenidas correctamente`
+        results,
+        `Metas con ID de meta padre: ${parentGoalId} obtenidas correctamente`,
+        200,
+        meta
       );
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener metas por ID de meta padre');
@@ -346,7 +373,7 @@ export class GoalService {
       // Actualizar contador de la nueva meta padre
       await this._updateParentGoalCounters(parentGoalId, 'Meta padre');
 
-      return new SuccessResponseModel(subgoal, 1, 'Submeta agregada correctamente');
+      return new SuccessResponseModel(subgoal, 'Submeta agregada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'agregar submeta');
     }
@@ -381,7 +408,7 @@ export class GoalService {
       if (!goal) {
         return new NotFoundResponseModel('Meta no encontrada');
       }
-      return new SuccessResponseModel(goal, 1, 'Comentario agregado correctamente');
+      return new SuccessResponseModel(goal, 'Comentario agregado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'agregar comentario');
     }
@@ -403,7 +430,9 @@ export class GoalService {
 
       const catalogGoals = CatalogGoalDto.fromArray(goals);
 
-      return new SuccessResponseModel(catalogGoals, catalogGoals.length, 'Catalogo de metas obtenida correctamente');
+      return new SuccessResponseModel(catalogGoals, 'Catalogo de metas obtenida correctamente', 200, {
+        count: catalogGoals.length,
+      });
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener lista simple de metas');
     }

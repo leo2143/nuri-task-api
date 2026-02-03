@@ -1,9 +1,11 @@
+import { PaginationDto } from '../paginationDto.js';
+
 /**
  * DTO para filtrar tareas
  * @class TodoFilterDto
  * @description Define la estructura y validaciones para filtrar tareas
  */
-export class TodoFilterDto {
+export class TodoFilterDto extends PaginationDto {
   /**
    * @param {Object} data - Filtros de búsqueda
    * @param {string} [data.search] - Término de búsqueda para título
@@ -12,17 +14,16 @@ export class TodoFilterDto {
    * @param {string} [data.GoalId] - Filtrar por meta específica
    * @param {Date|string} [data.dueDateFrom] - Fecha límite desde
    * @param {Date|string} [data.dueDateTo] - Fecha límite hasta
-   * @param {string} [data.sortBy] - Campo por el cual ordenar
    * @param {string} [data.sortOrder] - Orden de clasificación (asc/desc)
    */
   constructor(data) {
+    super(data);
     if (data.search !== undefined) this.search = data.search;
     if (data.completed !== undefined) this.completed = data.completed;
     if (data.priority !== undefined) this.priority = data.priority;
     if (data.GoalId !== undefined) this.GoalId = data.GoalId;
     if (data.dueDateFrom !== undefined) this.dueDateFrom = data.dueDateFrom;
     if (data.dueDateTo !== undefined) this.dueDateTo = data.dueDateTo;
-    this.sortBy = data.sortBy || 'createdAt';
     this.sortOrder = data.sortOrder || 'desc';
   }
 
@@ -31,8 +32,8 @@ export class TodoFilterDto {
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
-    const errors = [];
-
+    const parentValidation = super.validate();
+    const errors = [...parentValidation.errors]; // Incluye errores del padre
     // Validar completed si existe
     if (this.completed !== undefined) {
       // Puede venir como string desde query params
@@ -67,12 +68,6 @@ export class TodoFilterDto {
       if (isNaN(date.getTime())) {
         errors.push('La fecha hasta debe ser una fecha válida');
       }
-    }
-
-    // Validar sortBy
-    const validSortBy = ['createdAt', 'updatedAt', 'dueDate', 'priority', 'title', 'completed'];
-    if (this.sortBy && !validSortBy.includes(this.sortBy)) {
-      errors.push(`El campo de ordenamiento debe ser uno de: ${validSortBy.join(', ')}`);
     }
 
     // Validar sortOrder
@@ -120,16 +115,18 @@ export class TodoFilterDto {
         query.dueDate.$lte = new Date(this.dueDateTo);
       }
     }
+    this.applyCursorToQuery(query, this.sortOrder);
 
     return query;
   }
 
   /**
    * Obtiene el objeto de ordenamiento para MongoDB
+   * Siempre ordena por createdAt con el sortOrder especificado
    * @returns {Object} Sort object para MongoDB
    */
   toMongoSort() {
     const sortOrder = this.sortOrder === 'asc' ? 1 : -1;
-    return { [this.sortBy]: sortOrder };
+    return { createdAt: sortOrder };
   }
 }

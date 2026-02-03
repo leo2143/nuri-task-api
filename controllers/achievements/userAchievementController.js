@@ -8,12 +8,13 @@ export class UserAchievementController {
    * Obtiene todos los logros con el progreso del usuario
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
+   * @param {Object} req.query - Query params para paginación
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAllAchievementsWithProgress(req, res) {
     const userId = req.userId;
-    const result = await UserAchievementService.getAllAchievementsWithProgress(userId);
+    const result = await UserAchievementService.getAllAchievementsWithProgress(userId, req.query);
     res.status(result.status).json(result);
   }
 

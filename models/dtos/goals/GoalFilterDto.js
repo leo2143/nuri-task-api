@@ -1,9 +1,12 @@
+import { PaginationDto } from '../paginationDto.js';
+
 /**
  * DTO para filtrar metas
  * @class GoalFilterDto
+ * @extends PaginationDto
  * @description Define la estructura y validaciones para filtrar metas
  */
-export class GoalFilterDto {
+export class GoalFilterDto extends PaginationDto {
   /**
    * @param {Object} data - Filtros de búsqueda
    * @param {string} [data.status] - Estado de la meta (active/paused/completed)
@@ -11,16 +14,17 @@ export class GoalFilterDto {
    * @param {string} [data.search] - Término de búsqueda para título o descripción
    * @param {Date|string} [data.dueDateFrom] - Fecha límite desde
    * @param {Date|string} [data.dueDateTo] - Fecha límite hasta
-   * @param {string} [data.sortBy] - Campo por el cual ordenar (createdAt, dueDate, priority)
    * @param {string} [data.sortOrder] - Orden de clasificación (asc/desc)
+   * @param {string} [data.cursor] - Cursor para paginación
+   * @param {number} [data.limit] - Límite de resultados por página
    */
   constructor(data) {
+    super(data);
     if (data.status !== undefined) this.status = data.status;
     if (data.priority !== undefined) this.priority = data.priority;
     if (data.search !== undefined) this.search = data.search;
     if (data.dueDateFrom !== undefined) this.dueDateFrom = data.dueDateFrom;
     if (data.dueDateTo !== undefined) this.dueDateTo = data.dueDateTo;
-    this.sortBy = data.sortBy || 'createdAt';
     this.sortOrder = data.sortOrder || 'desc';
     if (data.parentGoalId !== undefined) this.parentGoalId = data.parentGoalId;
   }
@@ -30,7 +34,8 @@ export class GoalFilterDto {
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
-    const errors = [];
+    const parentValidation = super.validate();
+    const errors = [...parentValidation.errors];
 
     // Validar status si existe
     if (this.status !== undefined) {
@@ -62,12 +67,6 @@ export class GoalFilterDto {
       if (isNaN(date.getTime())) {
         errors.push('La fecha hasta debe ser una fecha válida');
       }
-    }
-
-    // Validar sortBy
-    const validSortBy = ['createdAt', 'updatedAt', 'dueDate', 'priority', 'title'];
-    if (this.sortBy && !validSortBy.includes(this.sortBy)) {
-      errors.push(`El campo de ordenamiento debe ser uno de: ${validSortBy.join(', ')}`);
     }
 
     // Validar sortOrder
@@ -118,15 +117,18 @@ export class GoalFilterDto {
       query.parentGoalId = this.parentGoalId;
     }
 
+    this.applyCursorToQuery(query, this.sortOrder);
+
     return query;
   }
 
   /**
    * Obtiene el objeto de ordenamiento para MongoDB
+   * Siempre ordena por createdAt con el sortOrder especificado
    * @returns {Object} Sort object para MongoDB
    */
   toMongoSort() {
     const sortOrder = this.sortOrder === 'asc' ? 1 : -1;
-    return { [this.sortBy]: sortOrder };
+    return { createdAt: sortOrder };
   }
 }

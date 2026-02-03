@@ -1,22 +1,26 @@
+import { PaginationDto } from '../paginationDto.js';
+
 /**
  * DTO para filtrar plantillas de logros
  * @class AchievementFilterDto
+ * @extends PaginationDto
  * @description Define la estructura y validaciones para filtrar plantillas de logros globales
  */
-export class AchievementFilterDto {
+export class AchievementFilterDto extends PaginationDto {
   /**
    * @param {Object} filters - Parámetros de filtro
    * @param {string} [filters.type] - Filtrar por tipo (task/goal/metric/streak)
    * @param {boolean} [filters.isActive] - Filtrar por estado activo
    * @param {string} [filters.search] - Buscar en título o descripción
-   * @param {string} [filters.sortBy] - Campo por el cual ordenar (title, type, targetCount, createdAt)
    * @param {string} [filters.sortOrder] - Orden de clasificación (asc/desc)
+   * @param {string} [filters.cursor] - Cursor para paginación
+   * @param {number} [filters.limit] - Límite de resultados por página
    */
   constructor(filters = {}) {
+    super(filters);
     this.type = filters.type;
     this.isActive = filters.isActive;
     this.search = filters.search;
-    this.sortBy = filters.sortBy || 'createdAt';
     this.sortOrder = filters.sortOrder || 'desc';
   }
 
@@ -25,7 +29,8 @@ export class AchievementFilterDto {
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
-    const errors = [];
+    const parentValidation = super.validate();
+    const errors = [...parentValidation.errors];
 
     // Validar type si existe
     if (this.type) {
@@ -38,12 +43,6 @@ export class AchievementFilterDto {
     // Validar isActive si existe
     if (this.isActive !== undefined && typeof this.isActive !== 'boolean') {
       errors.push('isActive debe ser un valor booleano');
-    }
-
-    // Validar sortBy
-    const validSortFields = ['title', 'type', 'targetCount', 'createdAt', 'updatedAt'];
-    if (this.sortBy && !validSortFields.includes(this.sortBy)) {
-      errors.push(`sortBy debe ser uno de: ${validSortFields.join(', ')}`);
     }
 
     // Validar sortOrder
@@ -83,15 +82,18 @@ export class AchievementFilterDto {
       ];
     }
 
+    this.applyCursorToQuery(query, this.sortOrder);
+
     return query;
   }
 
   /**
    * Convierte el DTO a un objeto de ordenamiento de MongoDB
+   * Siempre ordena por createdAt con el sortOrder especificado
    * @returns {Object} Objeto de ordenamiento de MongoDB
    */
   toMongoSort() {
     const sortOrder = this.sortOrder === 'asc' ? 1 : -1;
-    return { [this.sortBy]: sortOrder };
+    return { createdAt: sortOrder };
   }
 }

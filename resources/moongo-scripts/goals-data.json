@@ -1,8 +1,5 @@
 [
   {
-    "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef21"
-    },
     "title": "Dominar Node.js",
     "description": "Convertirse en un desarrollador experto en Node.js",
     "priority": "high",
@@ -35,9 +32,6 @@
     "__v": 0
   },
   {
-    "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef22"
-    },
     "title": "Crear Portfolio Web",
     "description": "Desarrollar un portfolio personal profesional",
     "priority": "medium",
@@ -70,9 +64,6 @@
     "__v": 0
   },
   {
-    "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef23"
-    },
     "title": "Aprender React",
     "description": "Dominar React y su ecosistema",
     "priority": "high",
@@ -105,9 +96,6 @@
     "__v": 0
   },
   {
-    "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef24"
-    },
     "title": "Obtener Certificación AWS",
     "description": "Certificarse en AWS Solutions Architect",
     "priority": "medium",
@@ -140,9 +128,6 @@
     "__v": 0
   },
   {
-    "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef25"
-    },
     "title": "Mejorar Inglés Técnico",
     "description": "Alcanzar nivel avanzado en inglés técnico",
     "priority": "low",
@@ -175,9 +160,6 @@
     "__v": 0
   },
   {
-    "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef26"
-    },
     "title": "Desarrollar App Móvil",
     "description": "Crear una aplicación móvil con React Native",
     "priority": "high",
@@ -210,9 +192,6 @@
     "__v": 0
   },
   {
-    "_id": {
-      "$oid": "68d1e7f577ec3fe8073cef27"
-    },
     "title": "Contribuir a Open Source",
     "description": "Hacer contribuciones significativas a proyectos open source",
     "priority": "medium",

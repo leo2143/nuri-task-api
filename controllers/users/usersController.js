@@ -88,17 +88,17 @@ export class UsersController {
   /**
    * Obtiene todos los usuarios con filtros opcionales
    * @param {Object} req - Objeto request de Express
-   * @param {Object} req.query - Query parameters para filtros
+   * @param {Object} req.query - Query parameters para filtros y paginación
    * @param {string} [req.query.search] - Término de búsqueda en nombre
+   * @param {string} [req.query.cursor] - Cursor para paginación
+   * @param {number} [req.query.limit] - Límite de resultados por página
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAllUsers(req, res) {
     try {
-      // Extraer filtros de query parameters
-      const filters = {
-        search: req.query.search,
-      };
+      // Pasar todos los query params como filtros (incluye paginación)
+      const filters = req.query;
 
       const result = await UserService.getAllUsers(filters);
       res.status(result.status).json(result);

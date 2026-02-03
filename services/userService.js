@@ -52,13 +52,16 @@ export class UserService {
       const users = await User.find(query)
         .select('name email profileImageUrl subscription createdAt updatedAt')
         .sort(sort)
+        .limit(filterDto.limit + 1)
         .lean();
 
-      if (users.length === 0) {
+      const { results, meta } = filterDto.processPaginationResults(users);
+
+      if (results.length === 0) {
         return new NotFoundResponseModel('No se encontraron usuarios con los filtros aplicados');
       }
 
-      return new SuccessResponseModel(users, users.length, 'Usuarios obtenidos correctamente');
+      return new SuccessResponseModel(results, 'Usuarios obtenidos correctamente', 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener usuarios');
     }
@@ -78,7 +81,7 @@ export class UserService {
         return new NotFoundResponseModel(`No se encontró el usuario con el id: ${id} en la base de datos`);
       }
 
-      return new SuccessResponseModel(user, 1, 'Usuario obtenido correctamente');
+      return new SuccessResponseModel(user, 'Usuario obtenido correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener usuario');
     }
@@ -97,7 +100,7 @@ export class UserService {
         return new NotFoundResponseModel('Usuario no encontrado');
       }
 
-      return new SuccessResponseModel(user, 1, 'Perfil obtenido correctamente');
+      return new SuccessResponseModel(user, 'Perfil obtenido correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener perfil');
     }
@@ -226,7 +229,7 @@ export class UserService {
         return new NotFoundResponseModel(`No se encontró el usuario con el id: ${id} en la base de datos`);
       }
 
-      return new SuccessResponseModel(user, 1, 'Usuario actualizado correctamente');
+      return new SuccessResponseModel(user, 'Usuario actualizado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar usuario');
     }
@@ -284,7 +287,7 @@ export class UserService {
       delete userResponse.resetPasswordToken;
       delete userResponse.resetPasswordExpires;
 
-      return new SuccessResponseModel(userResponse, 1, 'Usuario actualizado correctamente');
+      return new SuccessResponseModel(userResponse, 'Usuario actualizado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar usuario admin');
     }
@@ -301,7 +304,7 @@ export class UserService {
         return new NotFoundResponseModel(`No se encontró el usuario con el id: ${id} en la base de datos`);
       }
 
-      return new SuccessResponseModel(user, 1, 'Usuario eliminado correctamente');
+      return new SuccessResponseModel(user, 'Usuario eliminado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'eliminar usuario');
     }
@@ -345,7 +348,6 @@ export class UserService {
           token,
           user: userResponse,
         },
-        1,
         'Login exitoso'
       );
     } catch (error) {
@@ -380,7 +382,7 @@ export class UserService {
       user.password = hashedPassword;
       await user.save();
 
-      return new SuccessResponseModel(null, 1, 'Contraseña actualizada correctamente');
+      return new SuccessResponseModel(null, 'Contraseña actualizada correctamente');
     } catch (error) {
       console.error(chalk.red('Error al cambiar la contraseña:', error));
       return new ErrorResponseModel('Error al cambiar la contraseña');
@@ -439,7 +441,6 @@ export class UserService {
           email: user.email,
           message: 'Token válido',
         },
-        1,
         'Token verificado correctamente'
       );
     } catch (error) {
@@ -483,7 +484,6 @@ export class UserService {
           message: 'Contraseña actualizada exitosamente',
           email: user.email,
         },
-        1,
         'Contraseña reseteada correctamente'
       );
     } catch (error) {
@@ -517,7 +517,6 @@ export class UserService {
           temporaryPassword: newPassword,
           message: 'Contraseña reseteada. El usuario debe cambiarla en su próximo login.',
         },
-        1,
         'Contraseña reseteada correctamente'
       );
     } catch (error) {
@@ -553,7 +552,7 @@ export class UserService {
       response.devToken = devToken;
     }
 
-    return new SuccessResponseModel(response, 1, 'Email de recuperación enviado');
+    return new SuccessResponseModel(response, 'Email de recuperación enviado');
   }
 
   /**

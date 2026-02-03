@@ -5,24 +5,22 @@ import { TodoService } from '../../services/todoService.js';
  */
 export class TodoController {
   /**
-   * Obtiene todas las tareas con filtros opcionales
+   * Obtiene todas las tareas con filtros opcionales y paginación
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.query - Query parameters para filtros
    * @param {string} [req.query.search] - Término de búsqueda en título
    * @param {boolean} [req.query.completed] - Filtrar por estado completado
    * @param {string} [req.query.priority] - Filtrar por prioridad
+   * @param {string} [req.query.cursor] - Cursor para paginación
+   * @param {number} [req.query.limit] - Límite de resultados por página
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAllTodos(req, res) {
     try {
       const userId = req.userId;
-      // Extraer filtros de query parameters
-      const filters = {
-        search: req.query.search,
-        completed: req.query.completed,
-        priority: req.query.priority,
-      };
+      // Pasar todos los query params como filtros (incluye paginación)
+      const filters = req.query;
 
       const result = await TodoService.getAllTodos(filters, userId);
       res.status(result.status).json(result);
@@ -102,12 +100,13 @@ export class TodoController {
    * Obtiene todas las tareas completadas del usuario autenticado
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.query - Query params para paginación
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getCompletedTodos(req, res) {
     const userId = req.userId;
-    const result = await TodoService.getTodosByStatus(true, userId);
+    const result = await TodoService.getTodosByStatus(true, userId, req.query);
     res.status(result.status).json(result);
   }
 
@@ -115,12 +114,13 @@ export class TodoController {
    * Obtiene todas las tareas pendientes del usuario autenticado
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.query - Query params para paginación
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getPendingTodos(req, res) {
     const userId = req.userId;
-    const result = await TodoService.getTodosByStatus(false, userId);
+    const result = await TodoService.getTodosByStatus(false, userId, req.query);
     res.status(result.status).json(result);
   }
 
@@ -128,13 +128,14 @@ export class TodoController {
    * Obtiene todas las tareas de una meta específica
    * @param {Object} req - Objeto request de Express
    * @param {string} req.params.goalId - ID de la meta
+   * @param {Object} req.query - Query params para paginación
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getTodosByGoalId(req, res) {
     const goalId = req.params.goalId;
     const userId = req.userId;
-    const result = await TodoService.getTodosByGoalId(goalId, userId);
+    const result = await TodoService.getTodosByGoalId(goalId, userId, req.query);
     res.status(result.status).json(result);
   }
 

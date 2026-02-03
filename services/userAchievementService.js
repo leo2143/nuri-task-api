@@ -3,6 +3,7 @@ import Achievement from '../models/achievementModel.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel } from '../models/responseModel.js';
 import { IncrementProgressDto } from '../models/dtos/achievements/index.js';
+import { PaginationDto } from '../models/dtos/paginationDto.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 
 const POPULATE_USER_FIELDS = 'name email avatar';
@@ -20,25 +21,39 @@ export class UserAchievementService {
   /**
    * Obtiene todos los logros con el progreso del usuario
    * @param {string} userId - ID del usuario
+   * @param {Object} pagination - Opciones de paginación
    * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Respuesta con los logros y el progreso del usuario
    */
-  static async getAllAchievementsWithProgress(userId) {
+  static async getAllAchievementsWithProgress(userId, pagination = {}) {
     try {
-      // Obtener todos los logros activos
-      const achievements = await Achievement.find({ isActive: true }).lean();
+      const paginationDto = new PaginationDto(pagination);
+      const query = { isActive: true };
+      paginationDto.applyCursorToQuery(query);
 
-      // Obtener el progreso del usuario para todos los logros
-      const userProgress = await UserAchievement.find({ user: userId }).lean();
+      // Obtener logros activos con paginación
+      const achievements = await Achievement.find(query)
+        .sort({ createdAt: -1 })
+        .limit(paginationDto.limit + 1)
+        .lean();
+
+      const { results: paginatedAchievements, meta } = paginationDto.processPaginationResults(achievements);
+
+      // Obtener el progreso del usuario para los logros paginados
+      const achievementIds = paginatedAchievements.map(a => a._id);
+      const userProgress = await UserAchievement.find({
+        user: userId,
+        achievement: { $in: achievementIds },
+      }).lean();
 
       const progressMap = new Map(userProgress.map(progress => [progress.achievement.toString(), progress]));
 
       // Combinar logros con el progreso del usuario
-      const result = achievements.map(achievement => ({
+      const result = paginatedAchievements.map(achievement => ({
         ...achievement,
         userProgress: progressMap.get(achievement._id.toString()) || DEFAULT_PROGRESS,
       }));
 
-      return new SuccessResponseModel(result, result.length, 'Logros obtenidos correctamente');
+      return new SuccessResponseModel(result, 'Logros obtenidos correctamente', 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener logros con progreso');
     }
@@ -69,12 +84,11 @@ export class UserAchievementService {
             achievement: achievementData,
             ...DEFAULT_PROGRESS,
           },
-          1,
           'Progreso de logro obtenido correctamente'
         );
       }
 
-      return new SuccessResponseModel(userAchievement, 1, 'Progreso de logro obtenido correctamente');
+      return new SuccessResponseModel(userAchievement, 'Progreso de logro obtenido correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener progreso de logro');
     }
@@ -130,7 +144,7 @@ export class UserAchievementService {
 
       await userAchievement.populate('achievement');
 
-      return new SuccessResponseModel(userAchievement, 1, 'Progreso actualizado correctamente');
+      return new SuccessResponseModel(userAchievement, 'Progreso actualizado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'incrementar progreso');
     }
@@ -165,7 +179,7 @@ export class UserAchievementService {
         completionRate: totalAchievements > 0 ? ((statusCounts.completed / totalAchievements) * 100).toFixed(2) : 0,
       };
 
-      return new SuccessResponseModel(stats, 1, 'Estadísticas de logros obtenidas correctamente');
+      return new SuccessResponseModel(stats, 'Estadísticas de logros obtenidas correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener estadísticas de logros');
     }
@@ -185,7 +199,7 @@ export class UserAchievementService {
         return new NotFoundResponseModel('No se encontró progreso para este logro');
       }
 
-      return new SuccessResponseModel(userAchievement, 1, 'Progreso reseteado correctamente');
+      return new SuccessResponseModel(userAchievement, 'Progreso reseteado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'resetear progreso');
     }

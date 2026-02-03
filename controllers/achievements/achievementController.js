@@ -7,20 +7,17 @@ export class AchievementController {
   /**
    * Obtiene todas las plantillas de logros con filtros opcionales
    * @param {Object} req - Objeto request de Express
-   * @param {Object} req.query - Parámetros de consulta (type, isActive, search, sortBy, sortOrder)
+   * @param {Object} req.query - Parámetros de consulta (type, isActive, search, sortBy, sortOrder, cursor, limit)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAllAchievements(req, res) {
-    const filters = {
-      type: req.query.type,
-      search: req.query.search,
-      sortBy: req.query.sortBy,
-      sortOrder: req.query.sortOrder,
-    };
+    // Pasar todos los query params como filtros (incluye paginación)
+    const filters = { ...req.query };
 
-    if (req.query.isActive !== undefined) {
-      filters.isActive = req.query.isActive === 'true';
+    // Convertir isActive a booleano si existe
+    if (filters.isActive !== undefined) {
+      filters.isActive = filters.isActive === 'true';
     }
 
     const result = await AchievementService.getAllAchievements(filters);
@@ -89,12 +86,13 @@ export class AchievementController {
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.params - Parámetros de URL
    * @param {string} req.params.type - Tipo de logro
+   * @param {Object} req.query - Query params para paginación
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAchievementsByType(req, res) {
     const { type } = req.params;
-    const result = await AchievementService.getAchievementsByType(type);
+    const result = await AchievementService.getAchievementsByType(type, req.query);
     res.status(result.status).json(result);
   }
 

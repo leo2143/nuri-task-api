@@ -30,8 +30,8 @@ export const errorHandler = (err, req, res, next) => {
  * @param {Object} req - Objeto request de Express
  * @param {Object} res - Objeto response de Express
  * @returns {void} No retorna valor, envía respuesta de salud
-   * Endpoint que responde si el servidor está funcionando correctamente
+ * Endpoint que responde si el servidor está funcionando correctamente
  */
 export const healthCheck = (req, res) => {
-  res.status(200).json(new SuccessResponseModel(null, 0, 'Servidor funcionando correctamente'));
+  res.status(200).json(new SuccessResponseModel(null, 'Servidor funcionando correctamente'));
 };

@@ -1,9 +1,12 @@
+import { PaginationDto } from '../paginationDto.js';
+
 /**
  * DTO para filtrar usuarios
  * @class UserFilterDto
+ * @extends PaginationDto
  * @description Define la estructura y validaciones para filtrar usuarios
  */
-export class UserFilterDto {
+export class UserFilterDto extends PaginationDto {
   /**
    * @param {Object} data - Filtros de búsqueda
    * @param {string} [data.search] - Término de búsqueda para nombre o email
@@ -11,16 +14,17 @@ export class UserFilterDto {
    * @param {boolean} [data.isSubscribed] - Filtrar por usuarios con suscripción activa
    * @param {Date|string} [data.createdFrom] - Usuario creado desde
    * @param {Date|string} [data.createdTo] - Usuario creado hasta
-   * @param {string} [data.sortBy] - Campo por el cual ordenar
    * @param {string} [data.sortOrder] - Orden de clasificación (asc/desc)
+   * @param {string} [data.cursor] - Cursor para paginación
+   * @param {number} [data.limit] - Límite de resultados por página
    */
   constructor(data) {
+    super(data);
     if (data.search !== undefined) this.search = data.search;
     if (data.isAdmin !== undefined) this.isAdmin = data.isAdmin;
     if (data.isSubscribed !== undefined) this.isSubscribed = data.isSubscribed;
     if (data.createdFrom !== undefined) this.createdFrom = data.createdFrom;
     if (data.createdTo !== undefined) this.createdTo = data.createdTo;
-    this.sortBy = data.sortBy || 'createdAt';
     this.sortOrder = data.sortOrder || 'desc';
   }
 
@@ -29,7 +33,8 @@ export class UserFilterDto {
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
-    const errors = [];
+    const parentValidation = super.validate();
+    const errors = [...parentValidation.errors];
 
     if (this.isAdmin !== undefined) {
       if (typeof this.isAdmin === 'string') {
@@ -63,11 +68,6 @@ export class UserFilterDto {
       if (isNaN(date.getTime())) {
         errors.push('La fecha hasta debe ser una fecha válida');
       }
-    }
-
-    const validSortBy = ['createdAt', 'updatedAt', 'name', 'email'];
-    if (this.sortBy && !validSortBy.includes(this.sortBy)) {
-      errors.push(`El campo de ordenamiento debe ser uno de: ${validSortBy.join(', ')}`);
     }
 
     const validSortOrder = ['asc', 'desc'];
@@ -114,15 +114,18 @@ export class UserFilterDto {
       }
     }
 
+    this.applyCursorToQuery(query, this.sortOrder);
+
     return query;
   }
 
   /**
    * Obtiene el objeto de ordenamiento para MongoDB
+   * Siempre ordena por createdAt con el sortOrder especificado
    * @returns {Object} Sort object para MongoDB
    */
   toMongoSort() {
     const sortOrder = this.sortOrder === 'asc' ? 1 : -1;
-    return { [this.sortBy]: sortOrder };
+    return { createdAt: sortOrder };
   }
 }

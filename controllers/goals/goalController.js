@@ -8,21 +8,14 @@ export class GoalController {
    * Obtiene todas las metas del usuario autenticado con filtros opcionales
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
-   * @param {Object} req.query - Query parameters (status, priority, search, dueDateFrom, dueDateTo, sortBy, sortOrder)
+   * @param {Object} req.query - Query parameters (status, priority, search, dueDateFrom, dueDateTo, sortBy, sortOrder, cursor, limit)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getAllGoals(req, res) {
     const userId = req.userId;
-    const filters = {
-      status: req.query.status,
-      priority: req.query.priority,
-      search: req.query.search,
-      dueDateFrom: req.query.dueDateFrom,
-      dueDateTo: req.query.dueDateTo,
-      sortBy: req.query.sortBy,
-      sortOrder: req.query.sortOrder,
-    };
+    // Pasar todos los query params como filtros (incluye paginación)
+    const filters = req.query;
     const result = await GoalService.getAllGoals(userId, filters);
     res.status(result.status).json(result);
   }
@@ -96,26 +89,27 @@ export class GoalController {
    * Obtiene metas activas
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.query - Query params para paginación
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getActiveGoals(req, res) {
     const userId = req.userId;
-    const result = await GoalService.getGoalsByStatus('active', userId);
+    const result = await GoalService.getGoalsByStatus('active', userId, req.query);
     res.status(result.status).json(result);
   }
 
   /**
    * Obtiene metas pausadas
-   *@route GET /goals/paused
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.query - Query params para paginación
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getPausedGoals(req, res) {
     const userId = req.userId;
-    const result = await GoalService.getGoalsByStatus('paused', userId);
+    const result = await GoalService.getGoalsByStatus('paused', userId, req.query);
     res.status(result.status).json(result);
   }
 
@@ -123,12 +117,13 @@ export class GoalController {
    * Obtiene metas completadas
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.query - Query params para paginación
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getCompletedGoals(req, res) {
     const userId = req.userId;
-    const result = await GoalService.getGoalsByStatus('completed', userId);
+    const result = await GoalService.getGoalsByStatus('completed', userId, req.query);
     res.status(result.status).json(result);
   }
 
@@ -155,13 +150,14 @@ export class GoalController {
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} req.params - Parámetros de la URL
    * @param {string} req.params.id - ID de la meta padre
+   * @param {Object} req.query - Query params para paginación
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    */
   static async getGoalsByParentGoalId(req, res) {
     const { id } = req.params;
     const userId = req.userId;
-    const result = await GoalService.getGoalsByParentGoalId(id, userId);
+    const result = await GoalService.getGoalsByParentGoalId(id, userId, req.query);
     res.status(result.status).json(result);
   }
 
