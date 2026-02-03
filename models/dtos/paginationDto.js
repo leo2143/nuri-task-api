@@ -52,12 +52,13 @@ export class PaginationDto {
   /**
    * Aplica condición del cursor al query de MongoDB
    * @param {Object} query - Query object existente
+   * @param {string} sortOrder - Orden de clasificación ('asc' o 'desc')
    * @returns {Object} Query con cursor agregado
    */
-  applyCursorToQuery(query) {
+  applyCursorToQuery(query, sortOrder = 'desc') {
     if (this.cursor) {
-      // Convertir a ObjectId para comparación correcta
-      query._id = { $lt: new mongoose.Types.ObjectId(this.cursor) };
+      const operator = sortOrder === 'asc' ? '$gt' : '$lt';
+      query._id = { [operator]: mongoose.Types.ObjectId.createFromHexString(this.cursor) };
     }
     return query;
   }

@@ -14,7 +14,6 @@ export class GoalFilterDto extends PaginationDto {
    * @param {string} [data.search] - Término de búsqueda para título o descripción
    * @param {Date|string} [data.dueDateFrom] - Fecha límite desde
    * @param {Date|string} [data.dueDateTo] - Fecha límite hasta
-   * @param {string} [data.sortBy] - Campo por el cual ordenar (createdAt, dueDate, priority)
    * @param {string} [data.sortOrder] - Orden de clasificación (asc/desc)
    * @param {string} [data.cursor] - Cursor para paginación
    * @param {number} [data.limit] - Límite de resultados por página
@@ -26,7 +25,6 @@ export class GoalFilterDto extends PaginationDto {
     if (data.search !== undefined) this.search = data.search;
     if (data.dueDateFrom !== undefined) this.dueDateFrom = data.dueDateFrom;
     if (data.dueDateTo !== undefined) this.dueDateTo = data.dueDateTo;
-    this.sortBy = data.sortBy || 'createdAt';
     this.sortOrder = data.sortOrder || 'desc';
     if (data.parentGoalId !== undefined) this.parentGoalId = data.parentGoalId;
   }
@@ -69,12 +67,6 @@ export class GoalFilterDto extends PaginationDto {
       if (isNaN(date.getTime())) {
         errors.push('La fecha hasta debe ser una fecha válida');
       }
-    }
-
-    // Validar sortBy
-    const validSortBy = ['createdAt', 'updatedAt', 'dueDate', 'priority', 'title'];
-    if (this.sortBy && !validSortBy.includes(this.sortBy)) {
-      errors.push(`El campo de ordenamiento debe ser uno de: ${validSortBy.join(', ')}`);
     }
 
     // Validar sortOrder
@@ -125,17 +117,18 @@ export class GoalFilterDto extends PaginationDto {
       query.parentGoalId = this.parentGoalId;
     }
 
-    this.applyCursorToQuery(query);
+    this.applyCursorToQuery(query, this.sortOrder);
 
     return query;
   }
 
   /**
    * Obtiene el objeto de ordenamiento para MongoDB
+   * Siempre ordena por createdAt con el sortOrder especificado
    * @returns {Object} Sort object para MongoDB
    */
   toMongoSort() {
     const sortOrder = this.sortOrder === 'asc' ? 1 : -1;
-    return { [this.sortBy]: sortOrder };
+    return { createdAt: sortOrder };
   }
 }

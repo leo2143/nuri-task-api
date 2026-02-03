@@ -14,7 +14,6 @@ export class TodoFilterDto extends PaginationDto {
    * @param {string} [data.GoalId] - Filtrar por meta específica
    * @param {Date|string} [data.dueDateFrom] - Fecha límite desde
    * @param {Date|string} [data.dueDateTo] - Fecha límite hasta
-   * @param {string} [data.sortBy] - Campo por el cual ordenar
    * @param {string} [data.sortOrder] - Orden de clasificación (asc/desc)
    */
   constructor(data) {
@@ -25,7 +24,6 @@ export class TodoFilterDto extends PaginationDto {
     if (data.GoalId !== undefined) this.GoalId = data.GoalId;
     if (data.dueDateFrom !== undefined) this.dueDateFrom = data.dueDateFrom;
     if (data.dueDateTo !== undefined) this.dueDateTo = data.dueDateTo;
-    this.sortBy = data.sortBy || 'createdAt';
     this.sortOrder = data.sortOrder || 'desc';
   }
 
@@ -70,12 +68,6 @@ export class TodoFilterDto extends PaginationDto {
       if (isNaN(date.getTime())) {
         errors.push('La fecha hasta debe ser una fecha válida');
       }
-    }
-
-    // Validar sortBy
-    const validSortBy = ['createdAt', 'updatedAt', 'dueDate', 'priority', 'title', 'completed'];
-    if (this.sortBy && !validSortBy.includes(this.sortBy)) {
-      errors.push(`El campo de ordenamiento debe ser uno de: ${validSortBy.join(', ')}`);
     }
 
     // Validar sortOrder
@@ -123,17 +115,18 @@ export class TodoFilterDto extends PaginationDto {
         query.dueDate.$lte = new Date(this.dueDateTo);
       }
     }
-    this.applyCursorToQuery(query);
+    this.applyCursorToQuery(query, this.sortOrder);
 
     return query;
   }
 
   /**
    * Obtiene el objeto de ordenamiento para MongoDB
+   * Siempre ordena por createdAt con el sortOrder especificado
    * @returns {Object} Sort object para MongoDB
    */
   toMongoSort() {
     const sortOrder = this.sortOrder === 'asc' ? 1 : -1;
-    return { [this.sortBy]: sortOrder };
+    return { createdAt: sortOrder };
   }
 }

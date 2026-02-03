@@ -14,7 +14,6 @@ export class UserFilterDto extends PaginationDto {
    * @param {boolean} [data.isSubscribed] - Filtrar por usuarios con suscripción activa
    * @param {Date|string} [data.createdFrom] - Usuario creado desde
    * @param {Date|string} [data.createdTo] - Usuario creado hasta
-   * @param {string} [data.sortBy] - Campo por el cual ordenar
    * @param {string} [data.sortOrder] - Orden de clasificación (asc/desc)
    * @param {string} [data.cursor] - Cursor para paginación
    * @param {number} [data.limit] - Límite de resultados por página
@@ -26,7 +25,6 @@ export class UserFilterDto extends PaginationDto {
     if (data.isSubscribed !== undefined) this.isSubscribed = data.isSubscribed;
     if (data.createdFrom !== undefined) this.createdFrom = data.createdFrom;
     if (data.createdTo !== undefined) this.createdTo = data.createdTo;
-    this.sortBy = data.sortBy || 'createdAt';
     this.sortOrder = data.sortOrder || 'desc';
   }
 
@@ -70,11 +68,6 @@ export class UserFilterDto extends PaginationDto {
       if (isNaN(date.getTime())) {
         errors.push('La fecha hasta debe ser una fecha válida');
       }
-    }
-
-    const validSortBy = ['createdAt', 'updatedAt', 'name', 'email'];
-    if (this.sortBy && !validSortBy.includes(this.sortBy)) {
-      errors.push(`El campo de ordenamiento debe ser uno de: ${validSortBy.join(', ')}`);
     }
 
     const validSortOrder = ['asc', 'desc'];
@@ -121,17 +114,18 @@ export class UserFilterDto extends PaginationDto {
       }
     }
 
-    this.applyCursorToQuery(query);
+    this.applyCursorToQuery(query, this.sortOrder);
 
     return query;
   }
 
   /**
    * Obtiene el objeto de ordenamiento para MongoDB
+   * Siempre ordena por createdAt con el sortOrder especificado
    * @returns {Object} Sort object para MongoDB
    */
   toMongoSort() {
     const sortOrder = this.sortOrder === 'asc' ? 1 : -1;
-    return { [this.sortBy]: sortOrder };
+    return { createdAt: sortOrder };
   }
 }
