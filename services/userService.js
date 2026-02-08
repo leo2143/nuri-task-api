@@ -12,6 +12,7 @@ import chalk from 'chalk';
 import { EmailService } from './emailService.js';
 import { UserServiceHelpers } from './helpers/userServiceHelpers.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
+import { MoodboardService } from './moodboardService.js';
 import {
   CreateUserDto,
   CreateAdminUserDto,
@@ -108,6 +109,7 @@ export class UserService {
 
   /**
    * Crea un nuevo usuario en la base de datos
+   * También crea automáticamente el moodboard único del usuario
    */
   static async createUser(userData) {
     try {
@@ -136,6 +138,10 @@ export class UserService {
       });
 
       const savedUser = await user.save();
+
+      // Crear moodboard único para el nuevo usuario
+      await MoodboardService.createMoodboardForUser(savedUser._id);
+
       const userResponse = savedUser.toObject();
       delete userResponse.password;
       delete userResponse.resetPasswordToken;
@@ -150,6 +156,7 @@ export class UserService {
 
   /**
    * Crea un usuario con control admin completo
+   * También crea automáticamente el moodboard único del usuario
    */
   static async createAdminUser(userData) {
     try {
@@ -188,6 +195,10 @@ export class UserService {
       });
 
       const savedUser = await user.save();
+
+      // Crear moodboard único para el nuevo usuario
+      await MoodboardService.createMoodboardForUser(savedUser._id);
+
       const userResponse = savedUser.toObject();
       delete userResponse.password;
       delete userResponse.resetPasswordToken;

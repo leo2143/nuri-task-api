@@ -1,29 +1,25 @@
 import Moodboard from '../models/moodboardModel.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
-import {
-  CreateMoodboardDto,
-  UpdateMoodboardDto,
-  AddImageDto,
-  AddPhraseDto,
-  UpdatePhraseDto,
-} from '../models/dtos/moodboard/index.js';
-import { PaginationDto } from '../models/dtos/paginationDto.js';
+import { UpdateMoodboardDto, AddImageDto } from '../models/dtos/moodboard/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
+import { CloudinaryHelper } from './helpers/cloudinaryHelper.js';
 
 const MAX_IMAGES_PER_MOODBOARD = 6;
-const POPULATE_USER_FIELDS = 'name email avatar';
 
 /**
- * Servicio para manejar la lógica de negocio de moodboards
+ * Servicio para manejar la lógica de negocio del moodboard único del usuario
+ * Cada usuario tiene exactamente un moodboard (relación 1:1)
  */
 export class MoodboardService {
   /**
-   * Busca un moodboard por ID y usuario
+   * Busca el moodboard único del usuario
+   * @param {string} userId - ID del usuario
+   * @returns {Promise<{moodboard: Object|null, error: NotFoundResponseModel|null}>}
    * @private
    */
-  static async _findMoodboardByIdAndUser(id, userId) {
-    const moodboard = await Moodboard.findOne({ _id: id, userId });
+  static async _findMoodboardByUser(userId) {
+    const moodboard = await Moodboard.findOne({ userId });
 
     if (!moodboard) {
       return { moodboard: null, error: new NotFoundResponseModel('Moodboard no encontrado') };
@@ -33,44 +29,13 @@ export class MoodboardService {
   }
 
   /**
-   * Obtiene todos los moodboards del usuario autenticado
+   * Obtiene el moodboard único del usuario autenticado
    * @param {string} userId - ID del usuario autenticado
-   * @param {Object} pagination - Opciones de paginación
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista de moodboards o error
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
    */
-  static async getAllMoodboards(userId, pagination = {}) {
+  static async getMoodboard(userId) {
     try {
-      const paginationDto = new PaginationDto(pagination);
-      const query = { userId };
-      paginationDto.applyCursorToQuery(query);
-
-      const moodboards = await Moodboard.find(query)
-        .sort({ createdAt: -1 })
-        .limit(paginationDto.limit + 1)
-        .lean();
-
-      const { results, meta } = paginationDto.processPaginationResults(moodboards);
-
-      if (results.length === 0) {
-        return new NotFoundResponseModel('No se encontraron moodboards para este usuario');
-      }
-
-      return new SuccessResponseModel(results, 'Moodboards obtenidos correctamente', 200, meta);
-    } catch (error) {
-      return ErrorHandler.handleDatabaseError(error, 'obtener moodboards');
-    }
-  }
-
-  /**
-   * Obtiene un moodboard específico por ID del usuario autenticado
-   * @param {string} id - ID del moodboard
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el moodboard o error
-   * Incluye populate de userId (User) para obtener información completa
-   */
-  static async getMoodboardById(id, userId) {
-    try {
-      const moodboard = await Moodboard.findOne({ _id: id, userId }).populate('userId', POPULATE_USER_FIELDS);
+      const moodboard = await Moodboard.findOne({ userId });
 
       if (!moodboard) {
         return new NotFoundResponseModel('Moodboard no encontrado');
@@ -83,27 +48,16 @@ export class MoodboardService {
   }
 
   /**
-   * Crea un nuevo moodboard para el usuario autenticado
-   * @param {Object} moodboardData - Datos del moodboard a crear
-   * @param {string} moodboardData.title - Título del moodboard (requerido)
-   * @param {Array} [moodboardData.images=[]] - Array de imágenes
-   * @param {Array} [moodboardData.phrases=[]] - Array de frases inspiradoras
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con el moodboard creado o error
+   * Crea el moodboard inicial para un usuario recién registrado
+   * Método interno, se llama automáticamente al registrar usuario
+   * @param {string} userId - ID del usuario
+   * @returns {Promise<CreatedResponseModel|ErrorResponseModel>}
    */
-  static async createMoodboard(moodboardData, userId) {
+  static async createMoodboardForUser(userId) {
     try {
-      const createDto = new CreateMoodboardDto(moodboardData);
-      const validation = createDto.validate();
-
-      if (!validation.isValid) {
-        return new BadRequestResponseModel(validation.errors.join(', '));
-      }
-
-      const cleanData = createDto.toPlainObject();
       const moodboard = new Moodboard({
-        ...cleanData,
         userId,
+        images: [],
       });
 
       const savedMoodboard = await moodboard.save();
@@ -114,16 +68,13 @@ export class MoodboardService {
   }
 
   /**
-   * Actualiza un moodboard existente del usuario autenticado
-   * @param {string} id - ID del moodboard
+   * Actualiza el moodboard del usuario (imágenes en batch)
    * @param {Object} moodboardData - Datos a actualizar
-   * @param {string} [moodboardData.title] - Título del moodboard
    * @param {Array} [moodboardData.images] - Array de imágenes
-   * @param {Array} [moodboardData.phrases] - Array de frases
    * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el moodboard actualizado o error
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
    */
-  static async updateMoodboard(id, moodboardData, userId) {
+  static async updateMoodboard(moodboardData, userId) {
     try {
       const updateDto = new UpdateMoodboardDto(moodboardData);
       const validation = updateDto.validate();
@@ -133,7 +84,7 @@ export class MoodboardService {
       }
 
       const cleanData = updateDto.toPlainObject();
-      const moodboard = await Moodboard.findOneAndUpdate({ _id: id, userId }, cleanData, {
+      const moodboard = await Moodboard.findOneAndUpdate({ userId }, cleanData, {
         new: true,
         runValidators: true,
       });
@@ -149,37 +100,15 @@ export class MoodboardService {
   }
 
   /**
-   * Elimina un moodboard del usuario autenticado
-   * @param {string} id - ID del moodboard
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta de confirmación o error
-   */
-  static async deleteMoodboard(id, userId) {
-    try {
-      const moodboard = await Moodboard.findOneAndDelete({ _id: id, userId });
-
-      if (!moodboard) {
-        return new NotFoundResponseModel('Moodboard no encontrado');
-      }
-
-      return new SuccessResponseModel({ id }, 'Moodboard eliminado correctamente');
-    } catch (error) {
-      return ErrorHandler.handleDatabaseError(error, 'eliminar moodboard');
-    }
-  }
-
-  /**
-   * Agrega una imagen a un moodboard existente
-   * @param {string} id - ID del moodboard
+   * Agrega una imagen al moodboard del usuario
    * @param {Object} imageData - Datos de la imagen
    * @param {string} imageData.imageUrl - URL de la imagen (requerido)
    * @param {string} imageData.imageAlt - Texto alternativo (requerido)
    * @param {number} imageData.imagePositionNumber - Posición de la imagen (requerido)
    * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el moodboard actualizado o error
-   * Permite agregar una imagen al moodboard. Límite máximo: 6 imágenes por moodboard
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
    */
-  static async addImage(id, imageData, userId) {
+  static async addImage(imageData, userId) {
     try {
       const addImageDto = new AddImageDto(imageData);
       const validation = addImageDto.validate();
@@ -188,7 +117,7 @@ export class MoodboardService {
         return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
-      const { moodboard: existingMoodboard, error } = await this._findMoodboardByIdAndUser(id, userId);
+      const { moodboard: existingMoodboard, error } = await this._findMoodboardByUser(userId);
       if (error) return error;
 
       if (existingMoodboard.images.length >= MAX_IMAGES_PER_MOODBOARD) {
@@ -199,7 +128,7 @@ export class MoodboardService {
 
       const cleanImage = addImageDto.toPlainObject();
       const moodboard = await Moodboard.findOneAndUpdate(
-        { _id: id, userId },
+        { userId },
         { $push: { images: cleanImage } },
         { new: true, runValidators: true }
       );
@@ -211,16 +140,28 @@ export class MoodboardService {
   }
 
   /**
-   * Elimina una imagen de un moodboard
-   * @param {string} id - ID del moodboard
+   * Elimina una imagen del moodboard del usuario
    * @param {string} imageId - ID de la imagen a eliminar
    * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el moodboard actualizado o error
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
    */
-  static async removeImage(id, imageId, userId) {
+  static async removeImage(imageId, userId) {
     try {
+      // Buscar el moodboard y la imagen antes de eliminar
+      const { moodboard: existingMoodboard, error } = await this._findMoodboardByUser(userId);
+      if (error) return error;
+
+      const imageToDelete = existingMoodboard.images.id(imageId);
+      if (!imageToDelete) {
+        return new NotFoundResponseModel('Imagen no encontrada en el moodboard');
+      }
+
+      // Guardar la URL antes de eliminar
+      const imageUrl = imageToDelete.imageUrl;
+
+      // Eliminar de MongoDB PRIMERO
       const moodboard = await Moodboard.findOneAndUpdate(
-        { _id: id, userId },
+        { userId },
         {
           $pull: {
             images: { _id: imageId },
@@ -233,6 +174,9 @@ export class MoodboardService {
         return new NotFoundResponseModel('Moodboard no encontrado');
       }
 
+      // Eliminar de Cloudinary DESPUÉS (si falla, solo queda imagen huérfana)
+      await CloudinaryHelper.deleteImage(imageUrl);
+
       return new SuccessResponseModel(moodboard, 'Imagen eliminada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'eliminar imagen');
@@ -240,19 +184,18 @@ export class MoodboardService {
   }
 
   /**
-   * Actualiza una imagen específica de un moodboard
-   * @param {string} id - ID del moodboard
+   * Actualiza una imagen específica del moodboard del usuario
    * @param {string} imageId - ID de la imagen a actualizar
    * @param {Object} imageData - Datos de la imagen a actualizar
    * @param {string} [imageData.imageUrl] - URL de la imagen
    * @param {string} [imageData.imageAlt] - Texto alternativo
    * @param {number} [imageData.imagePositionNumber] - Posición de la imagen
    * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el moodboard actualizado o error
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
    */
-  static async updateImage(id, imageId, imageData, userId) {
+  static async updateImage(imageId, imageData, userId) {
     try {
-      const { moodboard, error } = await this._findMoodboardByIdAndUser(id, userId);
+      const { moodboard, error } = await this._findMoodboardByUser(userId);
       if (error) return error;
 
       const image = moodboard.images.id(imageId);
@@ -260,11 +203,20 @@ export class MoodboardService {
         return new NotFoundResponseModel('Imagen no encontrada');
       }
 
+      // Guardar la URL antigua si se va a cambiar
+      const oldImageUrl = imageData.imageUrl !== undefined && imageData.imageUrl !== image.imageUrl ? image.imageUrl : null;
+
+      // Actualizar campos en MongoDB PRIMERO
       if (imageData.imageUrl !== undefined) image.imageUrl = imageData.imageUrl;
       if (imageData.imageAlt !== undefined) image.imageAlt = imageData.imageAlt;
       if (imageData.imagePositionNumber !== undefined) image.imagePositionNumber = imageData.imagePositionNumber;
 
       const updatedMoodboard = await moodboard.save();
+
+      // Eliminar la imagen antigua de Cloudinary DESPUÉS (si cambió la URL)
+      if (oldImageUrl) {
+        await CloudinaryHelper.deleteImage(oldImageUrl);
+      }
 
       return new SuccessResponseModel(updatedMoodboard, 'Imagen actualizada correctamente');
     } catch (error) {
@@ -272,128 +224,96 @@ export class MoodboardService {
     }
   }
 
-  /**
-   * Busca moodboards por título del usuario autenticado
-   * @param {string} searchTerm - Término de búsqueda
-   * @param {string} userId - ID del usuario autenticado
-   * @param {Object} pagination - Opciones de paginación
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con los moodboards encontrados o error
-   */
-  static async searchByTitle(searchTerm, userId, pagination = {}) {
-    try {
-      const paginationDto = new PaginationDto(pagination);
-      const query = {
-        userId,
-        title: { $regex: searchTerm, $options: 'i' },
-      };
-      paginationDto.applyCursorToQuery(query);
+  // =========================================================================
+  // COMENTADO: Funcionalidad de frases pendiente de definir
+  // =========================================================================
 
-      const moodboards = await Moodboard.find(query)
-        .sort({ createdAt: -1 })
-        .limit(paginationDto.limit + 1)
-        .lean();
+  // /**
+  //  * Agrega una frase al moodboard del usuario
+  //  * @param {Object} phraseData - Datos de la frase a agregar
+  //  * @param {string} phraseData.phrase - Texto de la frase (requerido)
+  //  * @param {string} userId - ID del usuario autenticado
+  //  * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+  //  */
+  // static async addPhrase(phraseData, userId) {
+  //   try {
+  //     const addPhraseDto = new AddPhraseDto(phraseData);
+  //     const validation = addPhraseDto.validate();
 
-      const { results, meta } = paginationDto.processPaginationResults(moodboards);
+  //     if (!validation.isValid) {
+  //       return new BadRequestResponseModel(validation.errors.join(', '));
+  //     }
 
-      if (results.length === 0) {
-        return new NotFoundResponseModel('No se encontraron moodboards con ese título');
-      }
+  //     const { moodboard, error } = await this._findMoodboardByUser(userId);
+  //     if (error) return error;
 
-      return new SuccessResponseModel(results, 'Moodboards encontrados correctamente', 200, meta);
-    } catch (error) {
-      return ErrorHandler.handleDatabaseError(error, 'buscar moodboards');
-    }
-  }
+  //     const cleanPhrase = addPhraseDto.toPlainObject();
+  //     moodboard.phrases.push(cleanPhrase);
+  //     const updatedMoodboard = await moodboard.save();
 
-  /**
-   * Agrega una frase a un moodboard existente del usuario autenticado
-   * @param {string} id - ID del moodboard
-   * @param {Object} phraseData - Datos de la frase a agregar
-   * @param {string} phraseData.phrase - Texto de la frase (requerido)
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el moodboard actualizado o error
-   */
-  static async addPhrase(id, phraseData, userId) {
-    try {
-      const addPhraseDto = new AddPhraseDto(phraseData);
-      const validation = addPhraseDto.validate();
+  //     return new SuccessResponseModel(updatedMoodboard, 'Frase agregada correctamente');
+  //   } catch (error) {
+  //     return ErrorHandler.handleDatabaseError(error, 'agregar frase');
+  //   }
+  // }
 
-      if (!validation.isValid) {
-        return new BadRequestResponseModel(validation.errors.join(', '));
-      }
+  // /**
+  //  * Elimina una frase del moodboard del usuario
+  //  * @param {string} phraseId - ID de la frase a eliminar
+  //  * @param {string} userId - ID del usuario autenticado
+  //  * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+  //  */
+  // static async removePhrase(phraseId, userId) {
+  //   try {
+  //     const { moodboard, error } = await this._findMoodboardByUser(userId);
+  //     if (error) return error;
 
-      const { moodboard, error } = await this._findMoodboardByIdAndUser(id, userId);
-      if (error) return error;
+  //     const phraseIndex = moodboard.phrases.findIndex(p => p._id.toString() === phraseId);
+  //     if (phraseIndex === -1) {
+  //       return new NotFoundResponseModel('Frase no encontrada en el moodboard');
+  //     }
 
-      const cleanPhrase = addPhraseDto.toPlainObject();
-      moodboard.phrases.push(cleanPhrase);
-      const updatedMoodboard = await moodboard.save();
+  //     moodboard.phrases.splice(phraseIndex, 1);
+  //     const updatedMoodboard = await moodboard.save();
 
-      return new SuccessResponseModel(updatedMoodboard, 'Frase agregada correctamente');
-    } catch (error) {
-      return ErrorHandler.handleDatabaseError(error, 'agregar frase');
-    }
-  }
+  //     return new SuccessResponseModel(updatedMoodboard, 'Frase eliminada correctamente');
+  //   } catch (error) {
+  //     return ErrorHandler.handleDatabaseError(error, 'eliminar frase');
+  //   }
+  // }
 
-  /**
-   * Elimina una frase de un moodboard del usuario autenticado
-   * @param {string} id - ID del moodboard
-   * @param {string} phraseId - ID de la frase a eliminar
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el moodboard actualizado o error
-   */
-  static async removePhrase(id, phraseId, userId) {
-    try {
-      const { moodboard, error } = await this._findMoodboardByIdAndUser(id, userId);
-      if (error) return error;
+  // /**
+  //  * Actualiza una frase del moodboard del usuario
+  //  * @param {string} phraseId - ID de la frase a actualizar
+  //  * @param {Object} phraseData - Nuevos datos de la frase
+  //  * @param {string} phraseData.phrase - Nuevo texto de la frase
+  //  * @param {string} userId - ID del usuario autenticado
+  //  * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+  //  */
+  // static async updatePhrase(phraseId, phraseData, userId) {
+  //   try {
+  //     const updatePhraseDto = new UpdatePhraseDto(phraseData);
+  //     const validation = updatePhraseDto.validate();
 
-      const phraseIndex = moodboard.phrases.findIndex(p => p._id.toString() === phraseId);
-      if (phraseIndex === -1) {
-        return new NotFoundResponseModel('Frase no encontrada en el moodboard');
-      }
+  //     if (!validation.isValid) {
+  //       return new BadRequestResponseModel(validation.errors.join(', '));
+  //     }
 
-      moodboard.phrases.splice(phraseIndex, 1);
-      const updatedMoodboard = await moodboard.save();
+  //     const { moodboard, error } = await this._findMoodboardByUser(userId);
+  //     if (error) return error;
 
-      return new SuccessResponseModel(updatedMoodboard, 'Frase eliminada correctamente');
-    } catch (error) {
-      return ErrorHandler.handleDatabaseError(error, 'eliminar frase');
-    }
-  }
+  //     const phraseToUpdate = moodboard.phrases.id(phraseId);
+  //     if (!phraseToUpdate) {
+  //       return new NotFoundResponseModel('Frase no encontrada en el moodboard');
+  //     }
 
-  /**
-   * Actualiza una frase de un moodboard del usuario autenticado
-   * @param {string} id - ID del moodboard
-   * @param {string} phraseId - ID de la frase a actualizar
-   * @param {Object} phraseData - Nuevos datos de la frase
-   * @param {string} phraseData.phrase - Nuevo texto de la frase
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el moodboard actualizado o error
-   */
-  static async updatePhrase(id, phraseId, phraseData, userId) {
-    try {
-      const updatePhraseDto = new UpdatePhraseDto(phraseData);
-      const validation = updatePhraseDto.validate();
+  //     const cleanPhrase = updatePhraseDto.toPlainObject();
+  //     phraseToUpdate.phrase = cleanPhrase.phrase;
+  //     const updatedMoodboard = await moodboard.save();
 
-      if (!validation.isValid) {
-        return new BadRequestResponseModel(validation.errors.join(', '));
-      }
-
-      const { moodboard, error } = await this._findMoodboardByIdAndUser(id, userId);
-      if (error) return error;
-
-      const phraseToUpdate = moodboard.phrases.id(phraseId);
-      if (!phraseToUpdate) {
-        return new NotFoundResponseModel('Frase no encontrada en el moodboard');
-      }
-
-      const cleanPhrase = updatePhraseDto.toPlainObject();
-      phraseToUpdate.phrase = cleanPhrase.phrase;
-      const updatedMoodboard = await moodboard.save();
-
-      return new SuccessResponseModel(updatedMoodboard, 'Frase actualizada correctamente');
-    } catch (error) {
-      return ErrorHandler.handleDatabaseError(error, 'actualizar frase');
-    }
-  }
+  //     return new SuccessResponseModel(updatedMoodboard, 'Frase actualizada correctamente');
+  //   } catch (error) {
+  //     return ErrorHandler.handleDatabaseError(error, 'actualizar frase');
+  //   }
+  // }
 }
