@@ -24,7 +24,14 @@ export class MetricsService {
       const metrics = await this._findOrCreateMetrics(userId);
       const populatedMetrics = await Metrics.findById(metrics._id).populate('userId', POPULATE_USER_FIELDS);
 
-      return new SuccessResponseModel(populatedMetrics, 'Métricas del usuario obtenidas correctamente');
+      const achievementsProgress = await this._calculateAchievementsProgress(userId);
+
+      const response = {
+        ...populatedMetrics.toObject(),
+        achievementsProgress,
+      };
+
+      return new SuccessResponseModel(response, 'Métricas del usuario obtenidas correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener métricas del usuario');
     }
@@ -200,5 +207,25 @@ export class MetricsService {
     }
 
     return metrics;
+  }
+
+  /**
+   * Calcula el porcentaje de logros completados por el usuario
+   * @param {string} userId - ID del usuario
+   * @returns {Promise<Object>} { completed, total, percentage }
+   */
+  static async _calculateAchievementsProgress(userId) {
+    const [completedCount, totalCount] = await Promise.all([
+      UserAchievement.countDocuments({ user: userId, status: 'completed' }),
+      Achievement.countDocuments({ isActive: true }),
+    ]);
+
+    const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    return {
+      completed: completedCount,
+      total: totalCount,
+      percentage,
+    };
   }
 }

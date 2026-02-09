@@ -760,98 +760,7 @@
       "name": "metrics",
       "item": [
         {
-          "name": "history",
-          "item": [
-            {
-              "name": "add history entry",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token_auth}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n    \"progress\": 25,\r\n    \"date\": \"2025-11-01T10:00:00.000Z\"\r\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{localhost}}/api/metrics/:id/history",
-                  "host": [
-                    "{{localhost}}"
-                  ],
-                  "path": [
-                    "api",
-                    "metrics",
-                    ":id",
-                    "history"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "690a8d6d7671f29dc9adda2d"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "dashboard",
-          "item": []
-        },
-        {
-          "name": "create metric",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token_auth}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"GoalId\": \"690a89556e4eb6dfe729668f\",\r\n    \"currentProgress\": 0,\r\n    \"notes\": \"Comenzando seguimiento de la meta\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{localhost}}/api/metrics",
-              "host": [
-                "{{localhost}}"
-              ],
-              "path": [
-                "api",
-                "metrics"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "all metrics",
+          "name": "get user metrics",
           "request": {
             "auth": {
               "type": "bearer",
@@ -879,7 +788,7 @@
           "response": []
         },
         {
-          "name": "update metric",
+          "name": "get motivational dashboard",
           "request": {
             "auth": {
               "type": "bearer",
@@ -891,39 +800,24 @@
                 }
               ]
             },
-            "method": "PUT",
+            "method": "GET",
             "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"currentProgress\": 75,\r\n    \"notes\": \"Excelente progreso esta semana. Completé 3 módulos importantes.\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
             "url": {
-              "raw": "{{localhost}}/api/metrics/:id",
+              "raw": "{{localhost}}/api/metrics/dashboard",
               "host": [
                 "{{localhost}}"
               ],
               "path": [
                 "api",
                 "metrics",
-                ":id"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "690a8d6d7671f29dc9adda2d"
-                }
+                "dashboard"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "delete metric",
+          "name": "check and update streaks",
           "request": {
             "auth": {
               "type": "bearer",
@@ -935,17 +829,46 @@
                 }
               ]
             },
-            "method": "DELETE",
+            "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{localhost}}/api/metrics/68f426bb63e5a138787a108a",
+              "raw": "{{localhost}}/api/metrics/check-streaks",
               "host": [
                 "{{localhost}}"
               ],
               "path": [
                 "api",
                 "metrics",
-                "68f426bb63e5a138787a108a"
+                "check-streaks"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get admin dashboard stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/admin/dashboard",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "dashboard"
               ]
             }
           },
