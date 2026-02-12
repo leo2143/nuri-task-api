@@ -1608,6 +1608,90 @@
         ]
       }
     },
+    "/api/metrics/current-streak": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "summary": "Obtiene solo la racha actual del usuario",
+        "description": "Retorna únicamente el valor de currentStreak para mostrar en el home",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Racha actual obtenida correctamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "status": {
+                  "type": "number",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Racha actual obtenida correctamente"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "currentStreak": {
+                      "type": "number",
+                      "example": 5
+                    }
+                  }
+                },
+                "meta": {}
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          },
+          "404": {
+            "description": "Métricas del usuario no encontradas",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "status": {
+                  "type": "number",
+                  "example": 404
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Métricas del usuario no encontradas"
+                },
+                "data": {},
+                "meta": {}
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/metrics/check-streaks": {
       "post": {
         "tags": [

@@ -59,6 +59,23 @@ export class MetricsController {
   }
 
   /**
+   * Obtiene solo la racha actual del usuario
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   */
+  static async getCurrentStreak(req, res) {
+    try {
+      const userId = req.userId;
+      const result = await MetricsService.getCurrentStreak(userId);
+      res.status(result.status).json(result);
+    } catch (error) {
+      console.error('Error al obtener racha actual:', error);
+      res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
+    }
+  }
+
+  /**
    * Obtiene estadísticas generales del sistema para el dashboard de admin
    * @param {Object} req - Objeto request de Express
    * @param {Object} res - Objeto response de Express

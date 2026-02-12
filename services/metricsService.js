@@ -149,6 +149,28 @@ export class MetricsService {
   }
 
   /**
+   * Obtiene solo la racha actual del usuario
+   * @param {string} userId - ID del usuario
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+   */
+  static async getCurrentStreak(userId) {
+    try {
+      const metrics = await Metrics.findOne({ userId }).select('currentStreak');
+
+      if (!metrics) {
+        return new NotFoundResponseModel('Métricas del usuario no encontradas');
+      }
+
+      return new SuccessResponseModel(
+        { currentStreak: metrics.currentStreak },
+        'Racha actual obtenida correctamente'
+      );
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'obtener racha actual');
+    }
+  }
+
+  /**
    * Elimina las métricas del usuario - solo para testing/admin
    */
   static async deleteUserMetrics(userId) {
