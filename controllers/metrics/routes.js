@@ -28,6 +28,38 @@ export const setupMetricRoutes = app => {
     return MetricsController.getMetricDashboard(req, res);
   });
 
+  app.get('/api/metrics/current-streak', validateToken, (req, res) => {
+    // #swagger.tags = ['Metrics']
+    // #swagger.summary = 'Obtiene solo la racha actual del usuario'
+    // #swagger.description = 'Retorna únicamente el valor de currentStreak para mostrar en el home'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    /* #swagger.responses[200] = {
+         description: 'Racha actual obtenida correctamente',
+         schema: {
+           success: true,
+           status: 200,
+           message: 'Racha actual obtenida correctamente',
+           data: {
+             currentStreak: 5
+           },
+           meta: null
+         }
+    } */
+    /* #swagger.responses[404] = {
+         description: 'Métricas del usuario no encontradas',
+         schema: {
+           success: false,
+           status: 404,
+           message: 'Métricas del usuario no encontradas',
+           data: null,
+           meta: null
+         }
+    } */
+    return MetricsController.getCurrentStreak(req, res);
+  });
+
   app.post('/api/metrics/check-streaks', validateToken, (req, res) => {
     // #swagger.tags = ['Metrics']
     // #swagger.summary = 'Verifica y actualiza las rachas del usuario'

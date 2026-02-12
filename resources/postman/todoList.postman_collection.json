@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "6134f209-90c2-4a4b-ad05-5e5a2556506d",
+    "_postman_id": "cbbac50b-e2de-453b-aca8-9d7156566178",
     "name": "todoList",
-    "schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "20131533",
-    "_collection_link": "https://x55555-0653.postman.co/workspace/x-Workspace~452e73db-648e-4fa2-8c57-05f9b499c1b5/collection/20131533-6134f209-90c2-4a4b-ad05-5e5a2556506d?action=share&source=collection_link&creator=20131533"
+    "_collection_link": "https://go.postman.co/collection/20131533-cbbac50b-e2de-453b-aca8-9d7156566178?source=collection_link"
   },
   "item": [
     {
@@ -15,13 +15,26 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
-            "url": "{{localhost}}/api/todos"
+            "url": {
+              "raw": "{{localhost}}/api/todos",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "todos"
+              ]
+            }
           },
           "response": []
         },
@@ -30,16 +43,27 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
             "url": {
               "raw": "{{localhost}}/api/goals/:goalId/todos",
-              "host": ["{{localhost}}"],
-              "path": ["api", "goals", ":goalId", "todos"],
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "goals",
+                ":goalId",
+                "todos"
+              ],
               "variable": [
                 {
                   "key": "goalId",
@@ -55,22 +79,35 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"title\": \"Nueva tarea\",\r\n    \"description\": \"Descripción de la nueva tarea\",\r\n    \"priority\": \"high\",\r\n    \"dueDate\": \"2024-12-31T23:59:59.000Z\"\r\n}",
+              "raw": "{\r\n    \"title\": \"Nueva tarea\",\r\n    \"description\": \"Descripción de la nueva tarea\",\r\n    \"priority\": \"high\",\r\n    \"dueDate\": \"2024-12-31T23:59:59.000Z\",\r\n    \"GoalId\":\"68d1e7f577ec3fe8073cef22\"\r\n\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "url": "{{localhost}}/api/todos"
+            "url": {
+              "raw": "{{localhost}}/api/todos",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "todos"
+              ]
+            }
           },
           "response": []
         },
@@ -79,13 +116,27 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
-            "url": "{{localhost}}/api/todos/68d1e7f577ec3fe8073cef11"
+            "url": {
+              "raw": "{{localhost}}/api/todos/69101213d1b854487ccb89a7",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "todos",
+                "69101213d1b854487ccb89a7"
+              ]
+            }
           },
           "response": []
         },
@@ -94,39 +145,19 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "PUT",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"title\": \"Tarea actualizada\",\r\n    \"completed\": true,\r\n    \"priority\": \"medium\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{localhost}}/api/todos/68d1e7f577ec3fe8073cef11"
-          },
-          "response": []
-        },
-        {
-          "name": "update todo state (completed)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"completed\": true\r\n}",
+              "raw": "{\r\n    \"title\": \"Tarea actualizada\",\r\n    \"completed\": true,\r\n    \"priority\": \"medium\",\r\n    \"GoalId\":\"690a89556e4eb6dfe729668f\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -134,14 +165,14 @@
               }
             },
             "url": {
-              "raw": "{{localhost}}/api/todos/:id/state",
-              "host": ["{{localhost}}"],
-              "path": ["api", "todos", ":id", "state"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "68d1e7f577ec3fe8073cef11"
-                }
+              "raw": "{{localhost}}/api/todos/690a88f16e4eb6dfe7296686",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "todos",
+                "690a88f16e4eb6dfe7296686"
               ]
             }
           },
@@ -152,13 +183,27 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "DELETE",
             "header": [],
-            "url": "{{localhost}}/api/todos/68d1e7f577ec3fe8073cef03"
+            "url": {
+              "raw": "{{localhost}}/api/todos/68d1e7f577ec3fe8073cef03",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "todos",
+                "68d1e7f577ec3fe8073cef03"
+              ]
+            }
           },
           "response": []
         },
@@ -167,13 +212,27 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
-            "url": "{{localhost}}/api/todos/completed"
+            "url": {
+              "raw": "{{localhost}}/api/todos/completed",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "todos",
+                "completed"
+              ]
+            }
           },
           "response": []
         },
@@ -182,13 +241,27 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
-            "url": "{{localhost}}/api/todos/pending"
+            "url": {
+              "raw": "{{localhost}}/api/todos/pending",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "todos",
+                "pending"
+              ]
+            }
           },
           "response": []
         },
@@ -197,16 +270,25 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
             "url": {
               "raw": "{{localhost}}/api/todos?completed=false",
-              "host": ["{{localhost}}"],
-              "path": ["api", "todos"],
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "todos"
+              ],
               "query": [
                 {
                   "key": "completed",
@@ -222,16 +304,25 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
             "url": {
               "raw": "{{localhost}}/api/todos?priority=high",
-              "host": ["{{localhost}}"],
-              "path": ["api", "todos"],
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "todos"
+              ],
               "query": [
                 {
                   "key": "priority",
@@ -247,16 +338,25 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
             "url": {
               "raw": "{{localhost}}/api/todos?search=node&completed=false&priority=high",
-              "host": ["{{localhost}}"],
-              "path": ["api", "todos"],
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "todos"
+              ],
               "query": [
                 {
                   "key": "search",
@@ -280,9 +380,13 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "POST",
             "header": [],
@@ -297,12 +401,19 @@
             },
             "url": {
               "raw": "{{localhost}}/api/todos/:id/comments",
-              "host": ["{{localhost}}"],
-              "path": ["api", "todos", ":id", "comments"],
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "todos",
+                ":id",
+                "comments"
+              ],
               "variable": [
                 {
                   "key": "id",
-                  "value": ""
+                  "value": "690a88f16e4eb6dfe7296686"
                 }
               ]
             }
@@ -319,22 +430,35 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"title\": \"Aprender Node.js\",\r\n    \"description\": \"Dominar Node.js y Express para desarrollo backend\",\r\n    \"status\": \"active\",\r\n    \"priority\": \"high\",\r\n    \"dueDate\": \"2024-12-31T23:59:59.000Z\",\r\n    \"smart\": {\r\n        \"specific\": \"Crear una API REST completa con Node.js y Express\",\r\n        \"measurable\": \"Implementar 10 endpoints funcionales\",\r\n        \"achievable\": \"Dedicar 2 horas diarias durante 3 meses\",\r\n        \"relevant\": \"Necesario para mi carrera como desarrollador\",\r\n        \"timeBound\": \"Completar antes del 31 de diciembre de 2024\"\r\n    }\r\n}",
+              "raw": "{\r\n    \"title\": \"Aprender Node.js\",\r\n    \"description\": \"Dominar Node.js y Express para desarrollo backend\",\r\n    \"status\": \"active\",\r\n    \"priority\": \"high\",\r\n    \"dueDate\": \"2024-12-31T23:59:59.000Z\",\r\n    \"parentGoalId\":\"68d1e7f577ec3fe8073cef24\",\r\n\r\n    \"smart\": {\r\n        \"specific\": \"Crear una API REST completa con Node.js y Express\",\r\n        \"measurable\": \"Implementar 10 endpoints funcionales\",\r\n        \"achievable\": \"Dedicar 2 horas diarias durante 3 meses\",\r\n        \"relevant\": \"Necesario para mi carrera como desarrollador\",\r\n        \"timeBound\": \"Completar antes del 31 de diciembre de 2024\"\r\n    }\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "url": "{{localhost}}/api/goals"
+            "url": {
+              "raw": "{{localhost}}/api/goals",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "goals"
+              ]
+            }
           },
           "response": []
         },
@@ -343,21 +467,60 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{localhost}}/api/goals/:goaldId",
-              "host": ["{{localhost}}"],
-              "path": ["api", "goals", ":goaldId"],
+              "raw": "{{localhost}}/api/goals/:id",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "goals",
+                ":id"
+              ],
               "variable": [
                 {
-                  "key": "goaldId",
-                  "value": ""
+                  "key": "id",
+                  "value": "691b8c44067152a2d4c82031"
                 }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all goal",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/goals/",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "goals",
+                ""
               ]
             }
           },
@@ -368,22 +531,42 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "PUT",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"title\": \"Aprender Node.js - Actualizado\",\r\n    \"status\": \"completed\",\r\n    \"priority\": \"medium\"\r\n}",
+              "raw": "{\r\n    \"title\": \"Aprender Node.js - Actualizado\",\r\n    \"status\": \"completed\",\r\n    \"priority\": \"medium\",\r\n    \"parentGoalId\":\"68d1e7f577ec3fe8073cef24\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "url": "http://localhost:{{localhost}}/api/goals/68d1e7f577ec3fe8073cef10"
+            "url": {
+              "raw": "{{localhost}}/api/goals/:id",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "goals",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -392,13 +575,27 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "DELETE",
             "header": [],
-            "url": "{{localhost}}/api/goals/68d1e7f577ec3fe8073cef25"
+            "url": {
+              "raw": "{{localhost}}/api/goals/68d1e7f577ec3fe8073cef25",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "goals",
+                "68d1e7f577ec3fe8073cef25"
+              ]
+            }
           },
           "response": []
         },
@@ -407,13 +604,27 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
-            "url": "{{localhost}}/api/goals/active"
+            "url": {
+              "raw": "{{localhost}}/api/goals/active",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "goals",
+                "active"
+              ]
+            }
           },
           "response": []
         },
@@ -422,13 +633,56 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
-            "url": "{{localhost}}/api/goals/paused"
+            "url": {
+              "raw": "{{localhost}}/api/goals/paused",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "goals",
+                "paused"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get catalog",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/goals/catalogs",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "goals",
+                "catalogs"
+              ]
+            }
           },
           "response": []
         },
@@ -437,13 +691,27 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
-            "url": "{{localhost}}/api/goals/completed"
+            "url": {
+              "raw": "{{localhost}}/api/goals/completed",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "goals",
+                "completed"
+              ]
+            }
           },
           "response": []
         },
@@ -452,9 +720,13 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "POST",
             "header": [],
@@ -467,7 +739,18 @@
                 }
               }
             },
-            "url": "{{localhost}}/api/goals/68f45523333bcc8e810632d1/comments"
+            "url": {
+              "raw": "{{localhost}}/api/goals/68f45523333bcc8e810632d1/comments",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "goals",
+                "68f45523333bcc8e810632d1",
+                "comments"
+              ]
+            }
           },
           "response": []
         }
@@ -477,32 +760,59 @@
       "name": "metrics",
       "item": [
         {
-          "name": "get my metrics",
+          "name": "get user metrics",
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
-            "url": "{{localhost}}/api/metrics"
+            "url": {
+              "raw": "{{localhost}}/api/metrics",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "metrics"
+              ]
+            }
           },
           "response": []
         },
         {
-          "name": "get dashboard",
+          "name": "get motivational dashboard",
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
-            "url": "{{localhost}}/api/metrics/dashboard"
+            "url": {
+              "raw": "{{localhost}}/api/metrics/dashboard",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "metrics",
+                "dashboard"
+              ]
+            }
           },
           "response": []
         },
@@ -511,13 +821,56 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "POST",
             "header": [],
-            "url": "{{localhost}}/api/metrics/check-streaks"
+            "url": {
+              "raw": "{{localhost}}/api/metrics/check-streaks",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "metrics",
+                "check-streaks"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get admin dashboard stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/admin/dashboard",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "dashboard"
+              ]
+            }
           },
           "response": []
         }
@@ -530,19 +883,23 @@
           "name": "images",
           "item": [
             {
-              "name": "create moodboard images",
+              "name": "add image",
               "request": {
                 "auth": {
                   "type": "bearer",
-                  "bearer": {
-                    "token": "{{token_auth}}"
-                  }
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token_auth}}",
+                      "type": "string"
+                    }
+                  ]
                 },
                 "method": "POST",
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n \"imageAlt\": \"moodboard\",\r\n \"imagePositionNumber\": 2\r\n}",
+                  "raw": "{\r\n    \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n    \"imageAlt\": \"moodboard image\",\r\n    \"imagePositionNumber\": 1\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -550,33 +907,37 @@
                   }
                 },
                 "url": {
-                  "raw": "{{localhost}}/api/moodboards/:id/images",
-                  "host": ["{{localhost}}"],
-                  "path": ["api", "moodboards", ":id", "images"],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "68f45a92db5669a667804a3c"
-                    }
+                  "raw": "{{localhost}}/api/moodboard/images",
+                  "host": [
+                    "{{localhost}}"
+                  ],
+                  "path": [
+                    "api",
+                    "moodboard",
+                    "images"
                   ]
                 }
               },
               "response": []
             },
             {
-              "name": "update moodboard images",
+              "name": "update image",
               "request": {
                 "auth": {
                   "type": "bearer",
-                  "bearer": {
-                    "token": "{{token_auth}}"
-                  }
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token_auth}}",
+                      "type": "string"
+                    }
+                  ]
                 },
                 "method": "PUT",
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n \"imageAlt\": \"moodboard\",\r\n \"imagePositionNumber\": 2\r\n}",
+                  "raw": "{\r\n    \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n    \"imageAlt\": \"updated moodboard image\",\r\n    \"imagePositionNumber\": 2\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -584,14 +945,17 @@
                   }
                 },
                 "url": {
-                  "raw": "{{localhost}}/api/moodboards/:id/images/:imageId",
-                  "host": ["{{localhost}}"],
-                  "path": ["api", "moodboards", ":id", "images", ":imageId"],
+                  "raw": "{{localhost}}/api/moodboard/images/:imageId",
+                  "host": [
+                    "{{localhost}}"
+                  ],
+                  "path": [
+                    "api",
+                    "moodboard",
+                    "images",
+                    ":imageId"
+                  ],
                   "variable": [
-                    {
-                      "key": "id",
-                      "value": ""
-                    },
                     {
                       "key": "imageId",
                       "value": ""
@@ -602,34 +966,32 @@
               "response": []
             },
             {
-              "name": "delete moodboard images",
+              "name": "delete image",
               "request": {
                 "auth": {
                   "type": "bearer",
-                  "bearer": {
-                    "token": "{{token_auth}}"
-                  }
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token_auth}}",
+                      "type": "string"
+                    }
+                  ]
                 },
                 "method": "DELETE",
                 "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n    \"title\": \"prueba moodboard\",\r\n    \"images\": [\r\n        {\r\n            \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n            \"imageAlt\": \"moodboard\",\r\n            \"imagePositionNumber\": 1\r\n        }\r\n    ],\r\n    \"phrases\": []\r\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
                 "url": {
-                  "raw": "{{localhost}}/api/moodboards/:id/images/:imageId",
-                  "host": ["{{localhost}}"],
-                  "path": ["api", "moodboards", ":id", "images", ":imageId"],
+                  "raw": "{{localhost}}/api/moodboard/images/:imageId",
+                  "host": [
+                    "{{localhost}}"
+                  ],
+                  "path": [
+                    "api",
+                    "moodboard",
+                    "images",
+                    ":imageId"
+                  ],
                   "variable": [
-                    {
-                      "key": "id",
-                      "value": ""
-                    },
                     {
                       "key": "imageId",
                       "value": ""
@@ -642,183 +1004,51 @@
           ]
         },
         {
-          "name": "phrases",
-          "item": [
-            {
-              "name": "create moodboard phrases",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": {
-                    "token": "{{token_auth}}"
-                  }
-                },
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n    \"phrase\": \"prueba moodboard\"\r\n\r\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{localhost}}/api/moodboards/:id/phrases",
-                  "host": ["{{localhost}}"],
-                  "path": ["api", "moodboards", ":id", "phrases"],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "68f45a92db5669a667804a3c"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "update moodboard phrases",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": {
-                    "token": "{{token_auth}}"
-                  }
-                },
-                "method": "PUT",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n    \"title\": \"prueba moodboard\",\r\n    \"images\": [\r\n        {\r\n            \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n            \"imageAlt\": \"moodboard\",\r\n            \"imagePositionNumber\": 1\r\n        }\r\n    ],\r\n    \"phrases\": []\r\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{localhost}}/api/moodboards/:id/phrases/:phraseId",
-                  "host": ["{{localhost}}"],
-                  "path": ["api", "moodboards", ":id", "phrases", ":phraseId"],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": ""
-                    },
-                    {
-                      "key": "phraseId",
-                      "value": ""
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "delete moodboard phrases",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": {
-                    "token": "{{token_auth}}"
-                  }
-                },
-                "method": "DELETE",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n    \"title\": \"prueba moodboard\",\r\n    \"images\": [\r\n        {\r\n            \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n            \"imageAlt\": \"moodboard\",\r\n            \"imagePositionNumber\": 1\r\n        }\r\n    ],\r\n    \"phrases\": []\r\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{localhost}}/api/moodboards/:id/phrases/:phraseId",
-                  "host": ["{{localhost}}"],
-                  "path": ["api", "moodboards", ":id", "phrases", ":phraseId"],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": ""
-                    },
-                    {
-                      "key": "phraseId",
-                      "value": ""
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "create moodboard",
+          "name": "get moodboard",
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"title\": \"prueba moodboard\",\r\n    \"images\": [\r\n        {\r\n            \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n            \"imageAlt\": \"moodboard\",\r\n            \"imagePositionNumber\": 1\r\n        }\r\n    ],\r\n    \"phrases\": []\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
                 }
-              }
-            },
-            "url": "{{localhost}}/api/moodboards"
-          },
-          "response": []
-        },
-        {
-          "name": "get moodboard by id",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              ]
             },
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{localhost}}/api/moodboards/:id",
-              "host": ["{{localhost}}"],
-              "path": ["api", "moodboards", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "68f45a92db5669a667804a3c"
-                }
+              "raw": "{{localhost}}/api/moodboard",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "moodboard"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "update moodboard",
+          "name": "update moodboard (batch images)",
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "PUT",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"title\": \"prueba moodboard\",\r\n    \"images\": [\r\n        {\r\n            \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n            \"imageAlt\": \"moodboardsas\",\r\n            \"imagePositionNumber\": 1\r\n        }\r\n    ],\r\n    \"phrases\": []\r\n}",
+              "raw": "{\r\n    \"images\": [\r\n        {\r\n            \"imageUrl\": \"https://i.pinimg.com/736x/06/a9/00/06a90094eb64a685c1bedd4b8f047e91.jpg\",\r\n            \"imageAlt\": \"moodboard image 1\",\r\n            \"imagePositionNumber\": 1\r\n        },\r\n        {\r\n            \"imageUrl\": \"https://i.pinimg.com/736x/example2.jpg\",\r\n            \"imageAlt\": \"moodboard image 2\",\r\n            \"imagePositionNumber\": 2\r\n        }\r\n    ]\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -826,46 +1056,15 @@
               }
             },
             "url": {
-              "raw": "{{localhost}}/api/moodboards/:id",
-              "host": ["{{localhost}}"],
-              "path": ["api", "moodboards", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "68f45a92db5669a667804a3c"
-                }
+              "raw": "{{localhost}}/api/moodboard",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "moodboard"
               ]
             }
-          },
-          "response": []
-        },
-        {
-          "name": "delete moodboard",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "DELETE",
-            "header": [],
-            "url": "{{localhost}}/api/moodboards/68d1e7f577ec3fe8073cef25"
-          },
-          "response": []
-        },
-        {
-          "name": "all moodboard",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
-            },
-            "method": "GET",
-            "header": [],
-            "url": "{{localhost}}/api/moodboards"
           },
           "response": []
         }
@@ -907,7 +1106,17 @@
                 }
               }
             },
-            "url": "{{localhost}}/api/users/login"
+            "url": {
+              "raw": "{{localhost}}/api/users/login",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
+            }
           },
           "response": []
         },
@@ -925,7 +1134,44 @@
                 }
               }
             },
-            "url": "{{localhost}}/api/users"
+            "url": {
+              "raw": "{{localhost}}/api/users",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "forgot password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"leitoorellana58@gmail.com\"\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{localhost}}/api/users/forgot-password",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "forgot-password"
+              ]
+            }
           },
           "response": []
         },
@@ -934,9 +1180,13 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "PUT",
             "header": [],
@@ -949,7 +1199,17 @@
                 }
               }
             },
-            "url": "{{localhost}}/api/users/change-password"
+            "url": {
+              "raw": "{{localhost}}/api/users/change-password",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "change-password"
+              ]
+            }
           },
           "response": []
         },
@@ -958,13 +1218,26 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
-            "url": "{{localhost}}/api/users"
+            "url": {
+              "raw": "{{localhost}}/api/users",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            }
           },
           "response": []
         },
@@ -973,13 +1246,27 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "GET",
             "header": [],
-            "url": "{{localhost}}/api/users/68d1e7f577ec3fe8073cefec"
+            "url": {
+              "raw": "{{localhost}}/api/users/68d1e7f577ec3fe8073cefec",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "68d1e7f577ec3fe8073cefec"
+              ]
+            }
           },
           "response": []
         },
@@ -988,9 +1275,13 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "PUT",
             "header": [],
@@ -1003,7 +1294,17 @@
                 }
               }
             },
-            "url": "{{localhost}}/api/users/68d2cf072897f6a7a500a4b5"
+            "url": {
+              "raw": "{{localhost}}/api/users/68d2cf072897f6a7a500a4b5",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "68d2cf072897f6a7a500a4b5"
+              ]
+            }
           },
           "response": []
         },
@@ -1012,13 +1313,27 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "DELETE",
             "header": [],
-            "url": "{{localhost}}/api/users/68d2cf072897f6a7a500a4b5"
+            "url": {
+              "raw": "{{localhost}}/api/users/68d2cf072897f6a7a500a4b5",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "68d2cf072897f6a7a500a4b5"
+              ]
+            }
           },
           "response": []
         },
@@ -1027,9 +1342,13 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "PUT",
             "header": [],
@@ -1044,8 +1363,16 @@
             },
             "url": {
               "raw": "{{localhost}}/api/admin/users/:id/reset-password",
-              "host": ["{{localhost}}"],
-              "path": ["api", "admin", "users", ":id", "reset-password"],
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                ":id",
+                "reset-password"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -1055,21 +1382,347 @@
             }
           },
           "response": []
+        }
+      ]
+    },
+    {
+      "name": "achievements",
+      "item": [
+        {
+          "name": "user",
+          "item": [
+            {
+              "name": "all user achievements",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token_auth}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{localhost}}/api/user/achievements",
+                  "host": [
+                    "{{localhost}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "achievements"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get user achievements by progress",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token_auth}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{localhost}}/api/user/achievements/progress",
+                  "host": [
+                    "{{localhost}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "achievements",
+                    "progress"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get user achievements by stats",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token_auth}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{localhost}}/api/user/achievements/stats",
+                  "host": [
+                    "{{localhost}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "achievements",
+                    "stats"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "increment user achievements",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token_auth}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"amount\": 49\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/user/achievements/:id/progress",
+                  "host": [
+                    "{{localhost}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "achievements",
+                    ":id",
+                    "progress"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68fc2f0a668d25ff1c48d208"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get user achievements by id",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token_auth}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{localhost}}/api/user/achievements/:id/progress",
+                  "host": [
+                    "{{localhost}}"
+                  ],
+                  "path": [
+                    "api",
+                    "user",
+                    "achievements",
+                    ":id",
+                    "progress"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "68fc2f0a668d25ff1c48d1ff"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
         },
         {
-          "name": "reset password auto-generate (admin)",
+          "name": "get achievements by id",
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": {
-                "token": "{{token_auth}}"
-              }
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
             },
-            "method": "PUT",
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/achievements/:id",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "achievements",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get achievements by type",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/achievements/type/:type",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "achievements",
+                "type",
+                ":type"
+              ],
+              "variable": [
+                {
+                  "key": "type",
+                  "value": "task"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get achievements by stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/achievements/stats",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "achievements",
+                "stats"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "all achievements",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/achievements",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "achievements"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "create achievements",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\r\n  \"title\": \"Maestro de Tareas\",\r\n  \"description\": \"Completa 10 tareas exitosamente\",\r\n  \"targetCount\": 10,\r\n  \"type\": \"task\",\r\n  \"reward\": \"Insignia de Plata\",\r\n  \"isActive\": true\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1077,13 +1730,91 @@
               }
             },
             "url": {
-              "raw": "{{localhost}}/api/admin/users/:id/reset-password",
-              "host": ["{{localhost}}"],
-              "path": ["api", "admin", "users", ":id", "reset-password"],
+              "raw": "{{localhost}}/api/achievements",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "achievements"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update achievements",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"title\": \"Maestro de Tareas\",\r\n  \"description\": \"Completa 20 tareas exitosamente\",\r\n  \"targetCount\": 10,\r\n  \"type\": \"task\",\r\n  \"reward\": \"Insignia de Plata\",\r\n  \"isActive\": true\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{localhost}}/api/achievements/:id",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "achievements",
+                ":id"
+              ],
               "variable": [
                 {
                   "key": "id",
-                  "value": "68d2cf072897f6a7a500a4b5"
+                  "value": "68fc0452c94c444fcbd2e218"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete achievements",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_auth}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{localhost}}/api/achievements/:id",
+              "host": [
+                "{{localhost}}"
+              ],
+              "path": [
+                "api",
+                "achievements",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "68fc0452c94c444fcbd2e218"
                 }
               ]
             }
@@ -1097,7 +1828,15 @@
       "request": {
         "method": "GET",
         "header": [],
-        "url": "{{localhost}}/health"
+        "url": {
+          "raw": "{{localhost}}/health",
+          "host": [
+            "{{localhost}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
       },
       "response": []
     }

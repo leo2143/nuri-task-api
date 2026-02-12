@@ -4,57 +4,220 @@
       "$oid": "78e2f8a588fd4af9184def01"
     },
     "userId": {
-      "$oid": "68d2cf072897f6a7a500a4b5"
+      "$oid": "6981410957c57f40bd6c49b3"
     },
-    "currentStreak": 4,
-    "bestStreak": 7,
-    "totalTasksCompleted": 12,
-    "totalGoalsCompleted": 1,
-    "lastActivityDate": "2024-01-22T00:00:00.000Z",
+    "currentStreak": 5,
+    "bestStreak": 12,
+    "totalTasksCompleted": 28,
+    "totalGoalsCompleted": 3,
+    "lastActivityDate": "2024-01-25T00:00:00.000Z",
     "history": [
-      {
-        "date": "2024-01-08T00:00:00.000Z",
-        "tasksCompleted": 2
-      },
-      {
-        "date": "2024-01-09T00:00:00.000Z",
-        "tasksCompleted": 3
-      },
-      {
-        "date": "2024-01-10T00:00:00.000Z",
-        "tasksCompleted": 1
-      },
-      {
-        "date": "2024-01-11T00:00:00.000Z",
-        "tasksCompleted": 2
-      },
-      {
-        "date": "2024-01-15T00:00:00.000Z",
-        "tasksCompleted": 1
-      },
-      {
-        "date": "2024-01-16T00:00:00.000Z",
-        "tasksCompleted": 1
-      },
-      {
-        "date": "2024-01-17T00:00:00.000Z",
-        "tasksCompleted": 1
-      },
-      {
-        "date": "2024-01-22T00:00:00.000Z",
-        "tasksCompleted": 1
-      }
+      { "date": "2024-01-10T00:00:00.000Z", "tasksCompleted": 4 },
+      { "date": "2024-01-11T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-12T00:00:00.000Z", "tasksCompleted": 5 },
+      { "date": "2024-01-20T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-21T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-22T00:00:00.000Z", "tasksCompleted": 4 },
+      { "date": "2024-01-23T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-24T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-25T00:00:00.000Z", "tasksCompleted": 2 }
     ],
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-22T00:00:00.000Z",
-    "__v": 0
+    "createdAt": "2024-01-01T10:00:00.000Z",
+    "updatedAt": "2024-01-25T00:00:00.000Z"
   },
   {
     "_id": {
       "$oid": "78e2f8a588fd4af9184def02"
     },
     "userId": {
-      "$oid": "68d1e7f577ec3fe8073cefec"
+      "$oid": "6981410957c57f40bd6c49b4"
+    },
+    "currentStreak": 8,
+    "bestStreak": 15,
+    "totalTasksCompleted": 45,
+    "totalGoalsCompleted": 5,
+    "lastActivityDate": "2024-01-25T00:00:00.000Z",
+    "history": [
+      { "date": "2024-01-05T00:00:00.000Z", "tasksCompleted": 5 },
+      { "date": "2024-01-06T00:00:00.000Z", "tasksCompleted": 4 },
+      { "date": "2024-01-07T00:00:00.000Z", "tasksCompleted": 6 },
+      { "date": "2024-01-15T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-18T00:00:00.000Z", "tasksCompleted": 4 },
+      { "date": "2024-01-19T00:00:00.000Z", "tasksCompleted": 5 },
+      { "date": "2024-01-20T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-21T00:00:00.000Z", "tasksCompleted": 4 },
+      { "date": "2024-01-22T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-23T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-24T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-25T00:00:00.000Z", "tasksCompleted": 3 }
+    ],
+    "createdAt": "2024-01-02T10:00:00.000Z",
+    "updatedAt": "2024-01-25T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "78e2f8a588fd4af9184def03"
+    },
+    "userId": {
+      "$oid": "6981410957c57f40bd6c49b5"
+    },
+    "currentStreak": 2,
+    "bestStreak": 5,
+    "totalTasksCompleted": 12,
+    "totalGoalsCompleted": 1,
+    "lastActivityDate": "2024-01-24T00:00:00.000Z",
+    "history": [
+      { "date": "2024-01-10T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-15T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-16T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-23T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-24T00:00:00.000Z", "tasksCompleted": 3 }
+    ],
+    "createdAt": "2024-01-03T10:00:00.000Z",
+    "updatedAt": "2024-01-24T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "78e2f8a588fd4af9184def04"
+    },
+    "userId": {
+      "$oid": "6981410957c57f40bd6c49b6"
+    },
+    "currentStreak": 3,
+    "bestStreak": 7,
+    "totalTasksCompleted": 18,
+    "totalGoalsCompleted": 2,
+    "lastActivityDate": "2024-01-25T00:00:00.000Z",
+    "history": [
+      { "date": "2024-01-08T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-09T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-12T00:00:00.000Z", "tasksCompleted": 4 },
+      { "date": "2024-01-20T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-23T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-24T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-25T00:00:00.000Z", "tasksCompleted": 2 }
+    ],
+    "createdAt": "2024-01-04T10:00:00.000Z",
+    "updatedAt": "2024-01-25T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "78e2f8a588fd4af9184def05"
+    },
+    "userId": {
+      "$oid": "6981410957c57f40bd6c49b7"
+    },
+    "currentStreak": 0,
+    "bestStreak": 4,
+    "totalTasksCompleted": 8,
+    "totalGoalsCompleted": 1,
+    "lastActivityDate": "2024-01-18T00:00:00.000Z",
+    "history": [
+      { "date": "2024-01-10T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-11T00:00:00.000Z", "tasksCompleted": 1 },
+      { "date": "2024-01-12T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-18T00:00:00.000Z", "tasksCompleted": 3 }
+    ],
+    "createdAt": "2024-01-05T10:00:00.000Z",
+    "updatedAt": "2024-01-18T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "78e2f8a588fd4af9184def06"
+    },
+    "userId": {
+      "$oid": "6981410957c57f40bd6c49b8"
+    },
+    "currentStreak": 1,
+    "bestStreak": 3,
+    "totalTasksCompleted": 6,
+    "totalGoalsCompleted": 0,
+    "lastActivityDate": "2024-01-25T00:00:00.000Z",
+    "history": [
+      { "date": "2024-01-15T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-20T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-25T00:00:00.000Z", "tasksCompleted": 2 }
+    ],
+    "createdAt": "2024-01-06T10:00:00.000Z",
+    "updatedAt": "2024-01-25T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "78e2f8a588fd4af9184def07"
+    },
+    "userId": {
+      "$oid": "6981410957c57f40bd6c49b9"
+    },
+    "currentStreak": 4,
+    "bestStreak": 6,
+    "totalTasksCompleted": 15,
+    "totalGoalsCompleted": 2,
+    "lastActivityDate": "2024-01-25T00:00:00.000Z",
+    "history": [
+      { "date": "2024-01-08T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-09T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-15T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-22T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-23T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-24T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-25T00:00:00.000Z", "tasksCompleted": 2 }
+    ],
+    "createdAt": "2024-01-07T10:00:00.000Z",
+    "updatedAt": "2024-01-25T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "78e2f8a588fd4af9184def08"
+    },
+    "userId": {
+      "$oid": "6981410957c57f40bd6c49ba"
+    },
+    "currentStreak": 0,
+    "bestStreak": 2,
+    "totalTasksCompleted": 4,
+    "totalGoalsCompleted": 0,
+    "lastActivityDate": "2024-01-12T00:00:00.000Z",
+    "history": [
+      { "date": "2024-01-10T00:00:00.000Z", "tasksCompleted": 1 },
+      { "date": "2024-01-11T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-12T00:00:00.000Z", "tasksCompleted": 1 }
+    ],
+    "createdAt": "2024-01-08T10:00:00.000Z",
+    "updatedAt": "2024-01-12T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "78e2f8a588fd4af9184def09"
+    },
+    "userId": {
+      "$oid": "6981410957c57f40bd6c49bb"
+    },
+    "currentStreak": 6,
+    "bestStreak": 10,
+    "totalTasksCompleted": 32,
+    "totalGoalsCompleted": 4,
+    "lastActivityDate": "2024-01-25T00:00:00.000Z",
+    "history": [
+      { "date": "2024-01-05T00:00:00.000Z", "tasksCompleted": 4 },
+      { "date": "2024-01-06T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-10T00:00:00.000Z", "tasksCompleted": 5 },
+      { "date": "2024-01-15T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-20T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-21T00:00:00.000Z", "tasksCompleted": 2 },
+      { "date": "2024-01-22T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-23T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-24T00:00:00.000Z", "tasksCompleted": 3 },
+      { "date": "2024-01-25T00:00:00.000Z", "tasksCompleted": 3 }
+    ],
+    "createdAt": "2024-01-09T10:00:00.000Z",
+    "updatedAt": "2024-01-25T00:00:00.000Z"
+  },
+  {
+    "_id": {
+      "$oid": "78e2f8a588fd4af9184def10"
+    },
+    "userId": {
+      "$oid": "6981410957c57f40bd6c49bc"
     },
     "currentStreak": 0,
     "bestStreak": 0,
@@ -62,38 +225,23 @@
     "totalGoalsCompleted": 0,
     "lastActivityDate": null,
     "history": [],
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z",
-    "__v": 0
+    "createdAt": "2024-01-10T10:00:00.000Z",
+    "updatedAt": "2024-01-10T10:00:00.000Z"
   },
   {
     "_id": {
-      "$oid": "78e2f8a588fd4af9184def03"
+      "$oid": "78e2f8a588fd4af9184def11"
     },
     "userId": {
-      "$oid": "68d1e7f577ec3fe8073cef01"
+      "$oid": "6981410957c57f40bd6c49bd"
     },
-    "currentStreak": 1,
-    "bestStreak": 3,
-    "totalTasksCompleted": 5,
+    "currentStreak": 0,
+    "bestStreak": 0,
+    "totalTasksCompleted": 0,
     "totalGoalsCompleted": 0,
-    "lastActivityDate": "2024-01-20T00:00:00.000Z",
-    "history": [
-      {
-        "date": "2024-01-05T00:00:00.000Z",
-        "tasksCompleted": 2
-      },
-      {
-        "date": "2024-01-12T00:00:00.000Z",
-        "tasksCompleted": 2
-      },
-      {
-        "date": "2024-01-20T00:00:00.000Z",
-        "tasksCompleted": 1
-      }
-    ],
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-20T00:00:00.000Z",
-    "__v": 0
+    "lastActivityDate": null,
+    "history": [],
+    "createdAt": "2024-01-11T10:00:00.000Z",
+    "updatedAt": "2024-01-11T10:00:00.000Z"
   }
 ]

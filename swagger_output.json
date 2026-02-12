@@ -107,21 +107,6 @@
         "description": "Retorna una lista de todas las tareas del usuario autenticado con filtros opcionales",
         "parameters": [
           {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "completed",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "priority",
-            "in": "query",
-            "type": "string"
-          },
-          {
             "name": "authorization",
             "in": "header",
             "type": "string"
@@ -583,11 +568,6 @@
         "summary": "Obtiene todos los usuarios (solo admin)",
         "description": "",
         "parameters": [
-          {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
           {
             "name": "authorization",
             "in": "header",
@@ -1055,41 +1035,6 @@
         "summary": "Obtiene todas las metas del usuario",
         "description": "Retorna todas las metas con campos de tracking (totalTasks, completedTasks, progress)",
         "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "priority",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "dueDateFrom",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "dueDateTo",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sortBy",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sortOrder",
-            "in": "query",
-            "type": "string"
-          },
           {
             "name": "authorization",
             "in": "header",
@@ -1663,6 +1608,90 @@
         ]
       }
     },
+    "/api/metrics/current-streak": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "summary": "Obtiene solo la racha actual del usuario",
+        "description": "Retorna únicamente el valor de currentStreak para mostrar en el home",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Racha actual obtenida correctamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "status": {
+                  "type": "number",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Racha actual obtenida correctamente"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "currentStreak": {
+                      "type": "number",
+                      "example": 5
+                    }
+                  }
+                },
+                "meta": {}
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          },
+          "404": {
+            "description": "Métricas del usuario no encontradas",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "status": {
+                  "type": "number",
+                  "example": 404
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Métricas del usuario no encontradas"
+                },
+                "data": {},
+                "meta": {}
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/metrics/check-streaks": {
       "post": {
         "tags": [
@@ -1769,96 +1798,14 @@
         ]
       }
     },
-    "/api/moodboards": {
+    "/api/moodboard": {
       "get": {
         "tags": [
-          "Moodboards"
+          "Moodboard"
         ],
-        "summary": "Obtiene todos los moodboards del usuario",
+        "summary": "Obtiene el moodboard del usuario autenticado",
         "description": "",
         "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "Moodboards"
-        ],
-        "summary": "Crea un nuevo moodboard",
-        "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "description": "Datos del moodboard",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "title": {
-                  "type": "string",
-                  "example": "Metas 2025"
-                },
-                "images": {
-                  "type": "array",
-                  "example": [],
-                  "items": {}
-                },
-                "phrases": {
-                  "type": "array",
-                  "example": [],
-                  "items": {}
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/moodboards/{id}": {
-      "get": {
-        "tags": [
-          "Moodboards"
-        ],
-        "summary": "Obtiene un moodboard por su ID",
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID del moodboard"
-          },
           {
             "name": "authorization",
             "in": "header",
@@ -1878,53 +1825,46 @@
       },
       "put": {
         "tags": [
-          "Moodboards"
+          "Moodboard"
         ],
-        "summary": "Actualiza un moodboard existente",
+        "summary": "Actualiza el moodboard del usuario (imágenes en batch)",
         "description": "",
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID del moodboard"
-          },
           {
             "name": "authorization",
             "in": "header",
             "type": "string"
-          }
-        ],
-        "responses": {
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "Moodboards"
-        ],
-        "summary": "Elimina un moodboard",
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID del moodboard"
           },
           {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
+            "name": "body",
+            "in": "body",
+            "description": "Datos del moodboard a actualizar",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "imageUrl": {
+                        "type": "string",
+                        "example": "https://example.com/image.jpg"
+                      },
+                      "imageAlt": {
+                        "type": "string",
+                        "example": "Descripción"
+                      },
+                      "imagePositionNumber": {
+                        "type": "number",
+                        "example": 1
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -1939,21 +1879,14 @@
         ]
       }
     },
-    "/api/moodboards/{id}/images": {
+    "/api/moodboard/images": {
       "post": {
         "tags": [
-          "Moodboards"
+          "Moodboard"
         ],
         "summary": "Agrega una imagen al moodboard (máximo 6)",
         "description": "",
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID del moodboard"
-          },
           {
             "name": "authorization",
             "in": "header",
@@ -1995,22 +1928,15 @@
         ]
       }
     },
-    "/api/moodboards/{id}/images/{imageId}": {
+    "/api/moodboard/images/{imageId}": {
       "delete": {
         "tags": [
-          "Moodboards"
+          "Moodboard"
         ],
         "summary": "Elimina una imagen del moodboard",
         "description": "",
         "parameters": [
           {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID del moodboard"
-          },
-          {
             "name": "imageId",
             "in": "path",
             "required": true,
@@ -2036,19 +1962,12 @@
       },
       "put": {
         "tags": [
-          "Moodboards"
+          "Moodboard"
         ],
         "summary": "Actualiza una imagen del moodboard",
         "description": "",
         "parameters": [
           {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID del moodboard"
-          },
-          {
             "name": "imageId",
             "in": "path",
             "required": true,
@@ -2059,180 +1978,29 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
-          }
-        ],
-        "responses": {
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/moodboards/{id}/phrases": {
-      "post": {
-        "tags": [
-          "Moodboards"
-        ],
-        "summary": "Agrega una frase motivacional al moodboard",
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID del moodboard"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           },
           {
             "name": "body",
             "in": "body",
-            "description": "Datos de la frase",
+            "description": "Datos a actualizar de la imagen",
             "required": true,
             "schema": {
               "type": "object",
               "properties": {
-                "phrase": {
+                "imageUrl": {
                   "type": "string",
-                  "example": "El éxito es la suma de pequeños esfuerzos"
+                  "example": "https://example.com/new-image.jpg"
+                },
+                "imageAlt": {
+                  "type": "string",
+                  "example": "Nueva descripción"
+                },
+                "imagePositionNumber": {
+                  "type": "number",
+                  "example": 2
                 }
               }
             }
-          }
-        ],
-        "responses": {
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/moodboards/{id}/phrases/{phraseId}": {
-      "delete": {
-        "tags": [
-          "Moodboards"
-        ],
-        "summary": "Elimina una frase del moodboard",
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID del moodboard"
-          },
-          {
-            "name": "phraseId",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID de la frase"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "Moodboards"
-        ],
-        "summary": "Actualiza una frase del moodboard",
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID del moodboard"
-          },
-          {
-            "name": "phraseId",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID de la frase"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "description": "Nueva frase",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "phrase": {
-                  "type": "string",
-                  "example": "Cada día es una nueva oportunidad"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/moodboards/search": {
-      "get": {
-        "tags": [
-          "Moodboards"
-        ],
-        "summary": "Busca moodboards por título",
-        "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "title",
-            "in": "query",
-            "description": "Término de búsqueda",
-            "required": true,
-            "type": "string"
           }
         ],
         "responses": {
@@ -2255,31 +2023,6 @@
         "summary": "Obtiene todos los logros (solo admin)",
         "description": "",
         "parameters": [
-          {
-            "name": "type",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "search",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sortBy",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "sortOrder",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "isActive",
-            "in": "query",
-            "type": "string"
-          },
           {
             "name": "authorization",
             "in": "header",
