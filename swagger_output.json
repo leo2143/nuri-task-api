@@ -35,6 +35,10 @@
     {
       "name": "User Achievements",
       "description": "Progreso personal de logros"
+    },
+    {
+      "name": "Cloudinary",
+      "description": "Operaciones con imágenes en Cloudinary"
     }
   ],
   "schemes": [
@@ -807,6 +811,71 @@
         "responses": {
           "default": {
             "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/user/profile-image": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Actualiza solo la foto de perfil del usuario autenticado",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "URL de la nueva imagen de perfil",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "profileImageUrl": {
+                  "type": "string",
+                  "example": "https://example.com/new-avatar.jpg"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Elimina la foto de perfil del usuario autenticado",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal Server Error"
           }
         },
         "security": [
@@ -1884,7 +1953,7 @@
         "tags": [
           "Moodboard"
         ],
-        "summary": "Agrega una imagen al moodboard (máximo 6)",
+        "summary": "Agrega una imagen al moodboard",
         "description": "",
         "parameters": [
           {
@@ -2421,6 +2490,47 @@
         "responses": {
           "default": {
             "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/cloudinary/image": {
+      "delete": {
+        "tags": [
+          "Cloudinary"
+        ],
+        "summary": "Elimina una imagen de Cloudinary directamente (sin actualizar MongoDB)",
+        "description": "Útil para limpiar imágenes huérfanas. Solo elimina de Cloudinary, no actualiza ningún documento.",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "URL de la imagen en Cloudinary a eliminar",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "imageUrl": {
+                  "type": "string",
+                  "example": "https://res.cloudinary.com/example/image/upload/v1234567890/folder/image.jpg"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal Server Error"
           }
         },
         "security": [

@@ -1,3 +1,5 @@
+import { ValidationHelpers } from '../../../services/helpers/validationHelpers.js';
+
 /**
  * DTO para crear un nuevo moodboard (uso interno)
  * Se utiliza automaticamente al registrar un usuario
@@ -28,9 +30,12 @@ export class CreateMoodboardDto {
 
     // Validar cada imagen
     this.images.forEach((image, index) => {
-      if (!image.imageUrl || typeof image.imageUrl !== 'string' || image.imageUrl.trim() === '') {
-        errors.push(`Imagen ${index + 1}: La URL es requerida`);
-      }
+      const imageUrlError = ValidationHelpers.validateImageUrl(
+        image.imageUrl,
+        true,
+        `Imagen ${index + 1}: La URL`
+      );
+      if (imageUrlError) errors.push(imageUrlError);
       if (!image.imageAlt || typeof image.imageAlt !== 'string' || image.imageAlt.trim() === '') {
         errors.push(`Imagen ${index + 1}: El texto alternativo es requerido`);
       }

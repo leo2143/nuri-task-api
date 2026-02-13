@@ -197,18 +197,19 @@ export class MoodboardService {
 
       // Guardar la URL antigua si se va a cambiar
       const oldImageUrl = imageData.imageUrl !== undefined && imageData.imageUrl !== image.imageUrl ? image.imageUrl : null;
+      const newImageUrl = imageData.imageUrl;
 
-      // Actualizar campos en MongoDB PRIMERO
-      if (imageData.imageUrl !== undefined) image.imageUrl = imageData.imageUrl;
-      if (imageData.imageAlt !== undefined) image.imageAlt = imageData.imageAlt;
-      if (imageData.imagePositionNumber !== undefined) image.imagePositionNumber = imageData.imagePositionNumber;
-
-      const updatedMoodboard = await moodboard.save();
-
-      // Eliminar la imagen antigua de Cloudinary DESPUÉS (si cambió la URL)
-      if (oldImageUrl) {
-        await CloudinaryHelper.deleteImage(oldImageUrl);
-      }
+      // Actualizar en MongoDB PRIMERO y eliminar de Cloudinary DESPUÉS
+      const updatedMoodboard = await CloudinaryHelper.updateImageWithCleanup(
+        oldImageUrl,
+        newImageUrl,
+        async () => {
+          if (imageData.imageUrl !== undefined) image.imageUrl = imageData.imageUrl;
+          if (imageData.imageAlt !== undefined) image.imageAlt = imageData.imageAlt;
+          if (imageData.imagePositionNumber !== undefined) image.imagePositionNumber = imageData.imagePositionNumber;
+          return await moodboard.save();
+        }
+      );
 
       return new SuccessResponseModel(updatedMoodboard, 'Imagen actualizada correctamente');
     } catch (error) {

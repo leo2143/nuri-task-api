@@ -127,6 +127,45 @@ export class UsersController {
     res.status(result.status).json(result);
   }
 
+  /**
+   * Actualiza solo la foto de perfil del usuario autenticado
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.userId - ID del usuario (del token)
+   * @param {Object} req.body - Datos de la imagen de perfil
+   * @param {string} req.body.profileImageUrl - URL de la nueva imagen de perfil
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   */
+  static async updateProfileImage(req, res) {
+    try {
+      const userId = req.userId;
+      const imageData = req.body;
+      const result = await UserService.updateProfileImage(userId, imageData);
+      res.status(result.status).json(result);
+    } catch (error) {
+      console.error('Error en updateProfileImage:', error);
+      res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
+    }
+  }
+
+  /**
+   * Elimina solo la foto de perfil del usuario autenticado
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.userId - ID del usuario (del token)
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   */
+  static async deleteProfileImage(req, res) {
+    try {
+      const userId = req.userId;
+      const result = await UserService.deleteProfileImage(userId);
+      res.status(result.status).json(result);
+    } catch (error) {
+      console.error('Error en deleteProfileImage:', error);
+      res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
+    }
+  }
+
   static async deleteUser(req, res) {
     const id = req.params.id;
     const user = await UserService.deleteUser(id);

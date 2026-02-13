@@ -1,4 +1,5 @@
 import { CreateAchievementDto } from './CreateAchievementDto.js';
+import { ValidationHelpers } from '../../../services/helpers/validationHelpers.js';
 
 /**
  * DTO para actualizar una plantilla de logro existente (Solo administradores)
@@ -38,12 +39,7 @@ export class UpdateAchievementDto extends CreateAchievementDto {
    */
   _validateImageUrl() {
     if (this.imageUrl === undefined) return null;
-
-    if (this.imageUrl !== null && (typeof this.imageUrl !== 'string' || this.imageUrl.trim() === '')) {
-      return 'La URL de la imagen debe ser válida';
-    }
-
-    return null;
+    return ValidationHelpers.validateImageUrl(this.imageUrl, false, 'La URL de la imagen');
   }
 
   /**

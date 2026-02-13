@@ -1,3 +1,5 @@
+import { ValidationHelpers } from '../../../services/helpers/validationHelpers.js';
+
 /**
  * DTO para agregar una imagen a un moodboard
  * @class AddImageDto
@@ -24,9 +26,8 @@ export class AddImageDto {
     const errors = [];
 
     // Validar imageUrl
-    if (!this.imageUrl || typeof this.imageUrl !== 'string' || this.imageUrl.trim() === '') {
-      errors.push('La URL de la imagen es requerida y debe ser un string válido');
-    }
+    const imageUrlError = ValidationHelpers.validateImageUrl(this.imageUrl, true, 'La URL de la imagen');
+    if (imageUrlError) errors.push(imageUrlError);
 
     // Validar imageAlt
     if (!this.imageAlt || typeof this.imageAlt !== 'string' || this.imageAlt.trim() === '') {
