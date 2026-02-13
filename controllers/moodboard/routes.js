@@ -41,10 +41,10 @@ export const setupMoodboardRoutes = app => {
     return MoodboardController.updateMoodboard(req, res);
   });
 
-  // Agregar una imagen al moodboard
+  // Agrega una imagen al moodboard
   app.post('/api/moodboard/images', validateToken, (req, res) => {
     // #swagger.tags = ['Moodboard']
-    // #swagger.summary = 'Agrega una imagen al moodboard (máximo 6)'
+    // #swagger.summary = 'Agrega una imagen al moodboard'
     /* #swagger.parameters['body'] = {
          in: 'body',
          description: 'Datos de la imagen',

@@ -5,8 +5,6 @@ import { UpdateMoodboardDto, AddImageDto } from '../models/dtos/moodboard/index.
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { CloudinaryHelper } from './helpers/cloudinaryHelper.js';
 
-const MAX_IMAGES_PER_MOODBOARD = 6;
-
 /**
  * Servicio para manejar la lógica de negocio del moodboard único del usuario
  * Cada usuario tiene exactamente un moodboard (relación 1:1)
@@ -119,12 +117,6 @@ export class MoodboardService {
 
       const { moodboard: existingMoodboard, error } = await this._findMoodboardByUser(userId);
       if (error) return error;
-
-      if (existingMoodboard.images.length >= MAX_IMAGES_PER_MOODBOARD) {
-        return new BadRequestResponseModel(
-          `El moodboard ya tiene el máximo de ${MAX_IMAGES_PER_MOODBOARD} imágenes permitidas`
-        );
-      }
 
       const cleanImage = addImageDto.toPlainObject();
       const moodboard = await Moodboard.findOneAndUpdate(

@@ -1,0 +1,166 @@
+[{
+  "_id": {
+    "$oid": "6981410957c57f40bd6c49b3"
+  },
+  "name": "leonardo",
+  "email": "leonardo@gmail.com",
+  "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+  "isAdmin": true,
+  "__v": 0,
+  "profileImageUrl": "https://cdn.myanimelist.net/images/characters/3/535003.jpg",
+  "subscription": {
+    "isActive": false
+  },
+  "createdAt": "2024-01-01T10:00:00.000Z",
+  "updatedAt": "2024-01-01T10:00:00.000Z"
+},
+{
+  "_id": {
+    "$oid": "6981410957c57f40bd6c49b4"
+  },
+  "name": "david",
+  "email": "david@gmail.com",
+  "password": "$2b$10$cqIOU92VnWkDL5UonfZXleb3JEa09HbKkrZxPhVJWsu.RUuSFkcJq",
+  "isAdmin": true,
+  "__v": 0,
+  "profileImageUrl": "https://cdn.myanimelist.net/images/characters/3/535003.jpg",
+  "subscription": {
+    "isActive": true,
+    "startDate": {
+      "$date": "2025-12-15T02:31:20.290Z"
+    },
+    "endDate": {
+      "$date": "2026-01-14T02:31:20.290Z"
+    }
+  },
+  "createdAt": "2024-01-02T10:00:00.000Z",
+  "updatedAt": "2024-01-02T10:00:00.000Z"
+},
+{
+  "_id": {
+    "$oid": "6981410957c57f40bd6c49b5"
+  },
+  "name": "Juan Pérez",
+  "email": "juan@ejemplo.com",
+  "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+  "isAdmin": false,
+  "__v": 0,
+  "createdAt": "2024-01-03T10:00:00.000Z",
+  "updatedAt": "2024-01-03T10:00:00.000Z"
+},
+{
+  "_id": {
+    "$oid": "6981410957c57f40bd6c49b6"
+  },
+  "name": "María García",
+  "email": "maria@ejemplo.com",
+  "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+  "isAdmin": false,
+  "__v": 0,
+  "createdAt": "2024-01-04T10:00:00.000Z",
+  "updatedAt": "2024-01-04T10:00:00.000Z"
+},
+{
+  "_id": {
+    "$oid": "6981410957c57f40bd6c49b7"
+  },
+  "name": "Carlos López",
+  "email": "carlos@ejemplo.com",
+  "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+  "isAdmin": false,
+  "__v": 0,
+  "createdAt": "2024-01-05T10:00:00.000Z",
+  "updatedAt": "2024-01-05T10:00:00.000Z"
+},
+{
+  "_id": {
+    "$oid": "6981410957c57f40bd6c49b8"
+  },
+  "name": "Ana Martínez",
+  "email": "ana@ejemplo.com",
+  "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
+  "isAdmin": false,
+  "__v": 0,
+  "createdAt": "2024-01-06T10:00:00.000Z",
+  "updatedAt": "2024-01-06T10:00:00.000Z"
+},
+{
+  "_id": {
+    "$oid": "6981410957c57f40bd6c49b9"
+  },
+  "name": "Leo",
+  "email": "leitoorellana58@gmail.com",
+  "password": "$2b$10$syfrsQMebgjDvIvVLKe.geP2egWlVotQVUzRXTLf7W.AIZMQUy3Bu",
+  "isAdmin": false,
+  "__v": 0,
+  "resetPasswordExpires": null,
+  "resetPasswordToken": null,
+  "createdAt": "2024-01-07T10:00:00.000Z",
+  "updatedAt": "2024-01-07T10:00:00.000Z"
+},
+{
+  "_id": {
+    "$oid": "6981410957c57f40bd6c49ba"
+  },
+  "name": "daniel",
+  "email": "fcorellana.26@gmail.com",
+  "password": "$2b$10$/pl/3.jx1lGhdggq2qgRN.u3oSj89gtUd2YEfBtzt1BAAYBH1cPIK",
+  "isAdmin": false,
+  "resetPasswordToken": null,
+  "resetPasswordExpires": null,
+  "__v": 0,
+  "createdAt": "2024-01-08T10:00:00.000Z",
+  "updatedAt": "2024-01-08T10:00:00.000Z"
+},
+{
+  "_id": {
+    "$oid": "6981410957c57f40bd6c49bb"
+  },
+  "name": "leonardo david orellana",
+  "email": "david2@gmail.com",
+  "password": "$2b$10$nfKpXD2upC0myNhyj1pig.kpr0ym86XXkVLKjK3zfrB76u5/aOi92",
+  "isAdmin": true,
+  "resetPasswordToken": null,
+  "resetPasswordExpires": null,
+  "__v": 0,
+  "profileImageUrl": "https://cdn.myanimelist.net/images/characters/3/535003.jpg",
+  "subscription": {
+    "isActive": false
+  },
+  "createdAt": "2024-01-09T10:00:00.000Z",
+  "updatedAt": "2024-01-09T10:00:00.000Z"
+},
+{
+  "_id": {
+    "$oid": "6981410957c57f40bd6c49bc"
+  },
+  "name": "leonardo david orellana",
+  "email": "leitoorellana51@gmail.com",
+  "password": "$2b$10$BhU2MPuOD6JEBTe2rZY8xukOyxg2llVcvzsqpeq22ATmuDxzo7cSe",
+  "isAdmin": false,
+  "resetPasswordToken": null,
+  "resetPasswordExpires": null,
+  "__v": 0,
+  "createdAt": "2024-01-10T10:00:00.000Z",
+  "updatedAt": "2024-01-10T10:00:00.000Z"
+},
+{
+  "_id": {
+    "$oid": "6981410957c57f40bd6c49bd"
+  },
+  "name": "Nuevo Usuario",
+  "email": "nuevo@example.com",
+  "password": "$2b$10$Dms2X94pcjfjjz1Uk0Z3YOMCd2zcZlKyo8HzFBitmZQoBwlsSK7xu",
+  "isAdmin": false,
+  "subscription": {
+    "isActive": false,
+    "startDate": null,
+    "endDate": null
+  },
+  "resetPasswordToken": null,
+  "resetPasswordExpires": null,
+  "profileImageUrl": null,
+  "__v": 0,
+  "createdAt": "2024-01-11T10:00:00.000Z",
+  "updatedAt": "2024-01-11T10:00:00.000Z"
+}]

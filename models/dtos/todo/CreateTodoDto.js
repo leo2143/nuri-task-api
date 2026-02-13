@@ -1,9 +1,12 @@
+import { BaseValidationDto } from '../BaseValidationDto.js';
+
 /**
  * DTO para crear una nueva tarea
  * @class CreateTodoDto
+ * @extends BaseValidationDto
  * @description Define la estructura y validaciones para crear una tarea
  */
-export class CreateTodoDto {
+export class CreateTodoDto extends BaseValidationDto {
   /**
    * @param {Object} data - Datos de la tarea
    * @param {string} data.title - Título de la tarea (requerido)
@@ -14,63 +17,11 @@ export class CreateTodoDto {
    * @param {string} [data.GoalId] - ID de la meta asociada
    */
   constructor(data) {
-    this.title = data.title;
+    super(data);
     this.description = data.description || '';
     this.priority = data.priority || 'medium';
-    this.dueDate = data.dueDate || null;
     this.completed = data.completed !== undefined ? data.completed : false;
     this.GoalId = data.GoalId || null;
-  }
-
-  /**
-   * Valida el título
-   * @param {boolean} required - Si el campo es requerido
-   * @returns {string|null} Mensaje de error o null si es válido
-   */
-  _validateTitle(required = true) {
-    if (this.title === undefined) return null;
-
-    if (required && (!this.title || typeof this.title !== 'string' || this.title.trim() === '')) {
-      return 'El título es requerido y debe ser un string válido';
-    }
-
-    if (!required && this.title !== undefined) {
-      if (typeof this.title !== 'string' || this.title.trim() === '') {
-        return 'El título debe ser un string válido';
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Valida la prioridad
-   * @returns {string|null} Mensaje de error o null si es válido
-   */
-  _validatePriority() {
-    if (this.priority === undefined) return null;
-
-    const validPriorities = ['low', 'medium', 'high'];
-    if (!validPriorities.includes(this.priority)) {
-      return `La prioridad debe ser una de: ${validPriorities.join(', ')}`;
-    }
-
-    return null;
-  }
-
-  /**
-   * Valida la fecha límite
-   * @returns {string|null} Mensaje de error o null si es válido
-   */
-  _validateDueDate() {
-    if (this.dueDate === undefined || this.dueDate === null) return null;
-
-    const date = new Date(this.dueDate);
-    if (isNaN(date.getTime())) {
-      return 'La fecha límite debe ser una fecha válida';
-    }
-
-    return null;
   }
 
   /**
@@ -92,17 +43,12 @@ export class CreateTodoDto {
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
-    const errors = [];
+    const parentValidation = super.validate();
+    const errors = [...parentValidation.errors];
 
-    // Usar métodos reutilizables
+    // Validar título (requerido en este DTO)
     const titleError = this._validateTitle(true);
     if (titleError) errors.push(titleError);
-
-    const priorityError = this._validatePriority();
-    if (priorityError) errors.push(priorityError);
-
-    const dueDateError = this._validateDueDate();
-    if (dueDateError) errors.push(dueDateError);
 
     const completedError = this._validateCompleted();
     if (completedError) errors.push(completedError);
@@ -118,11 +64,10 @@ export class CreateTodoDto {
    * @returns {Object} Objeto plano con los datos
    */
   toPlainObject() {
+    const baseData = super.toPlainObject();
     const result = {
-      title: this.title.trim(),
+      ...baseData,
       description: this.description.trim(),
-      priority: this.priority,
-      dueDate: this.dueDate,
       completed: this.completed,
     };
 

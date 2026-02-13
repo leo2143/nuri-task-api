@@ -42,11 +42,6 @@ export class CreateMoodboardDto {
       }
     });
 
-    // Validar máximo 6 imágenes
-    if (this.images.length > 6) {
-      errors.push('No se pueden agregar más de 6 imágenes');
-    }
-
     return errors;
   }
 
