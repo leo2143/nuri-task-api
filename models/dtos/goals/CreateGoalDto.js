@@ -1,9 +1,12 @@
+import { BaseValidationDto } from '../BaseValidationDto.js';
+
 /**
  * DTO para crear una nueva meta
  * @class CreateGoalDto
+ * @extends BaseValidationDto
  * @description Define la estructura y validaciones para crear una meta
  */
-export class CreateGoalDto {
+export class CreateGoalDto extends BaseValidationDto {
   /**
    * @param {Object} data - Datos de la meta
    * @param {string} data.title - Título de la meta (requerido)
@@ -20,80 +23,13 @@ export class CreateGoalDto {
    * @param {Array} [data.comments] - Comentarios iniciales
    */
   constructor(data) {
-    this.title = data.title;
+    super(data);
     this.description = data.description || '';
     this.status = data.status || 'active';
     this.priority = data.priority || 'medium';
-    this.dueDate = data.dueDate || null;
     this.smart = data.smart;
     this.comments = data.comments || [];
     this.parentGoalId = data.parentGoalId || null;
-  }
-
-  /**
-   * Valida el título
-   * @param {boolean} required - Si el campo es requerido
-   * @returns {string|null} Mensaje de error o null si es válido
-   */
-  _validateTitle(required = true) {
-    if (this.title === undefined) return null;
-
-    if (required && (!this.title || typeof this.title !== 'string' || this.title.trim() === '')) {
-      return 'El título es requerido y debe ser un string válido';
-    }
-
-    if (!required && this.title !== undefined) {
-      if (typeof this.title !== 'string' || this.title.trim() === '') {
-        return 'El título debe ser un string válido';
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Valida el status
-   * @returns {string|null} Mensaje de error o null si es válido
-   */
-  _validateStatus() {
-    if (this.status === undefined) return null;
-
-    const validStatuses = ['active', 'paused', 'completed'];
-    if (!validStatuses.includes(this.status)) {
-      return `El estado debe ser uno de: ${validStatuses.join(', ')}`;
-    }
-
-    return null;
-  }
-
-  /**
-   * Valida la prioridad
-   * @returns {string|null} Mensaje de error o null si es válido
-   */
-  _validatePriority() {
-    if (this.priority === undefined) return null;
-
-    const validPriorities = ['low', 'medium', 'high'];
-    if (!validPriorities.includes(this.priority)) {
-      return `La prioridad debe ser una de: ${validPriorities.join(', ')}`;
-    }
-
-    return null;
-  }
-
-  /**
-   * Valida la fecha límite
-   * @returns {string|null} Mensaje de error o null si es válido
-   */
-  _validateDueDate() {
-    if (this.dueDate === undefined || this.dueDate === null) return null;
-
-    const date = new Date(this.dueDate);
-    if (isNaN(date.getTime())) {
-      return 'La fecha límite debe ser una fecha válida';
-    }
-
-    return null;
   }
 
   /**
@@ -135,23 +71,12 @@ export class CreateGoalDto {
    * @returns {Object} Objeto con isValid y errores
    */
   validate() {
-    const errors = [];
+    const parentValidation = super.validate();
+    const errors = [...parentValidation.errors];
 
-    // Validar título (requerido)
+    // Validar título (requerido en este DTO)
     const titleError = this._validateTitle(true);
     if (titleError) errors.push(titleError);
-
-    // Validar status
-    const statusError = this._validateStatus();
-    if (statusError) errors.push(statusError);
-
-    // Validar priority
-    const priorityError = this._validatePriority();
-    if (priorityError) errors.push(priorityError);
-
-    // Validar dueDate
-    const dueDateError = this._validateDueDate();
-    if (dueDateError) errors.push(dueDateError);
 
     // Validar smart (requerido)
     const smartErrors = this._validateSmart(true);
@@ -168,12 +93,10 @@ export class CreateGoalDto {
    * @returns {Object} Objeto plano con los datos
    */
   toPlainObject() {
+    const baseData = super.toPlainObject();
     return {
-      title: this.title.trim(),
+      ...baseData,
       description: this.description.trim(),
-      status: this.status,
-      priority: this.priority,
-      dueDate: this.dueDate,
       smart: {
         specific: this.smart.specific.trim(),
         measurable: this.smart.measurable.trim(),
