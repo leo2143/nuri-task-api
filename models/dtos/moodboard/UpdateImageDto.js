@@ -1,3 +1,5 @@
+import { ValidationHelpers } from '../../../services/helpers/validationHelpers.js';
+
 /**
  * DTO para actualizar una imagen de un moodboard
  * @class UpdateImageDto
@@ -25,9 +27,8 @@ export class UpdateImageDto {
 
     // Validar imageUrl si existe
     if (this.imageUrl !== undefined) {
-      if (typeof this.imageUrl !== 'string' || this.imageUrl.trim() === '') {
-        errors.push('La URL debe ser un string válido');
-      }
+      const imageUrlError = ValidationHelpers.validateImageUrl(this.imageUrl, false, 'La URL');
+      if (imageUrlError) errors.push(imageUrlError);
     }
 
     // Validar imageAlt si existe

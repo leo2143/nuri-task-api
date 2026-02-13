@@ -23,6 +23,8 @@ import {
   LoginUserDto,
   UserFilterDto,
 } from '../models/dtos/users/index.js';
+import { UpdateProfileImageDto } from '../models/dtos/users/UpdateProfileImageDto.js';
+import { CloudinaryHelper } from './helpers/cloudinaryHelper.js';
 
 dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET || 'tu_clave_secreta_super_segura';
@@ -104,6 +106,90 @@ export class UserService {
       return new SuccessResponseModel(user, 'Perfil obtenido correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener perfil');
+    }
+  }
+
+  /**
+   * Actualiza solo la foto de perfil del usuario autenticado
+   * @param {string} userId - ID del usuario autenticado
+   * @param {Object} imageData - Datos de la imagen de perfil
+   * @param {string} imageData.profileImageUrl - URL de la nueva imagen de perfil
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+   */
+  static async updateProfileImage(userId, imageData) {
+    try {
+      const updateDto = new UpdateProfileImageDto(imageData);
+      const validation = updateDto.validate();
+
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
+      }
+
+      // Buscar el usuario y guardar la URL antigua
+      const user = await User.findById(userId);
+      if (!user) {
+        return new NotFoundResponseModel('Usuario no encontrado');
+      }
+
+      const oldImageUrl = user.profileImageUrl;
+      const cleanData = updateDto.toPlainObject();
+
+      // Actualizar en MongoDB PRIMERO y eliminar de Cloudinary DESPUÉS
+      const updatedUser = await CloudinaryHelper.updateImageWithCleanup(
+        oldImageUrl,
+        cleanData.profileImageUrl,
+        async () => {
+          user.profileImageUrl = cleanData.profileImageUrl;
+          return await user.save();
+        }
+      );
+
+      const userResponse = updatedUser.toObject();
+      delete userResponse.password;
+      delete userResponse.resetPasswordToken;
+      delete userResponse.resetPasswordExpires;
+
+      return new SuccessResponseModel(userResponse, 'Foto de perfil actualizada correctamente');
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'actualizar foto de perfil');
+    }
+  }
+
+  /**
+   * Elimina solo la foto de perfil del usuario autenticado
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+   */
+  static async deleteProfileImage(userId) {
+    try {
+      // Buscar el usuario y guardar la URL antigua
+      const user = await User.findById(userId);
+      if (!user) {
+        return new NotFoundResponseModel('Usuario no encontrado');
+      }
+
+      const oldImageUrl = user.profileImageUrl;
+
+      // Si no hay imagen, no hay nada que eliminar
+      if (!oldImageUrl) {
+        return new BadRequestResponseModel('El usuario no tiene foto de perfil para eliminar');
+      }
+
+      // Eliminar de MongoDB PRIMERO (establecer a null)
+      user.profileImageUrl = null;
+      const updatedUser = await user.save();
+
+      // Eliminar de Cloudinary DESPUÉS
+      await CloudinaryHelper.deleteImage(oldImageUrl);
+
+      const userResponse = updatedUser.toObject();
+      delete userResponse.password;
+      delete userResponse.resetPasswordToken;
+      delete userResponse.resetPasswordExpires;
+
+      return new SuccessResponseModel(userResponse, 'Foto de perfil eliminada correctamente');
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'eliminar foto de perfil');
     }
   }
 

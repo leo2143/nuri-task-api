@@ -71,5 +71,48 @@ export class CloudinaryHelper {
       };
     }
   }
+
+  /**
+   * Actualiza un campo de imagen y elimina la imagen antigua de Cloudinary
+   * Sigue el patrón: actualizar en MongoDB PRIMERO, eliminar de Cloudinary DESPUÉS
+   * @param {string} oldImageUrl - URL de la imagen antigua (puede ser null/undefined)
+   * @param {string} newImageUrl - Nueva URL de la imagen
+   * @param {Function} updateAndSaveFn - Función async que actualiza el campo y guarda el documento
+   * @returns {Promise<Object>} Documento actualizado
+   * @example
+   * // Actualizar foto de perfil (campo directo)
+   * const user = await User.findById(userId);
+   * const oldUrl = user.profileImageUrl;
+   * const updatedUser = await CloudinaryHelper.updateImageWithCleanup(
+   *   oldUrl,
+   *   newImageUrl,
+   *   async () => {
+   *     user.profileImageUrl = newImageUrl;
+   *     return await user.save();
+   *   }
+   * );
+   * @example
+   * // Actualizar imagen en subdocumento (moodboard)
+   * const oldUrl = image.imageUrl;
+   * const updatedMoodboard = await CloudinaryHelper.updateImageWithCleanup(
+   *   oldUrl,
+   *   newImageUrl,
+   *   async () => {
+   *     image.imageUrl = newImageUrl;
+   *     return await moodboard.save();
+   *   }
+   * );
+   */
+  static async updateImageWithCleanup(oldImageUrl, newImageUrl, updateAndSaveFn) {
+    // Guardar en MongoDB PRIMERO (usando la función proporcionada)
+    const updatedDocument = await updateAndSaveFn();
+
+    // Eliminar la imagen antigua de Cloudinary DESPUÉS (si existía y cambió)
+    if (oldImageUrl && oldImageUrl !== newImageUrl) {
+      await this.deleteImage(oldImageUrl);
+    }
+
+    return updatedDocument;
+  }
 }
 

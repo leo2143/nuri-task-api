@@ -130,6 +130,32 @@ export const setupUserRoutes = app => {
     return UsersController.getProfile(req, res);
   });
 
+  app.put('/api/user/profile-image', validateToken, (req, res) => {
+    // #swagger.tags = ['Users']
+    // #swagger.summary = 'Actualiza solo la foto de perfil del usuario autenticado'
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'URL de la nueva imagen de perfil',
+         required: true,
+         schema: {
+           profileImageUrl: 'https://example.com/new-avatar.jpg'
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return UsersController.updateProfileImage(req, res);
+  });
+
+  app.delete('/api/user/profile-image', validateToken, (req, res) => {
+    // #swagger.tags = ['Users']
+    // #swagger.summary = 'Elimina la foto de perfil del usuario autenticado'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return UsersController.deleteProfileImage(req, res);
+  });
+
   app.get('/api/users', validateAdminToken, (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Obtiene todos los usuarios (solo admin)'

@@ -1,3 +1,5 @@
+import { ValidationHelpers } from '../../../services/helpers/validationHelpers.js';
+
 /**
  * DTO para crear una nueva plantilla de logro (Solo administradores)
  * @class CreateAchievementDto
@@ -129,11 +131,7 @@ export class CreateAchievementDto {
    * @returns {string|null} Mensaje de error o null si es válido
    */
   _validateImageUrl() {
-    if (!this.imageUrl || typeof this.imageUrl !== 'string' || this.imageUrl.trim() === '') {
-      return 'La URL de la imagen es requerida y debe ser un string válido';
-    }
-
-    return null;
+    return ValidationHelpers.validateImageUrl(this.imageUrl, true, 'La URL de la imagen');
   }
 
   /**
