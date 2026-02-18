@@ -40,7 +40,8 @@ export class TodoService {
    * @param {string} [filters.priority] - Filtrar por prioridad
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la lista resumida de tareas o error
-   * Devuelve solo información mínima (id, title, completed, priority, dueDate, dates)
+   * Devuelve información mínima (id, title, completed, priority, dueDate, dates, goalId, goalTitle)
+   * Incluye el ID y título de la meta asociada si existe
    * Para información completa, usar getTodoById
    */
   static async getAllTodos(filters = {}, userId) {
@@ -56,6 +57,7 @@ export class TodoService {
       const sort = filterDto.toMongoSort();
 
       const todos = await Todo.find(query)
+        .populate('GoalId', 'title')
         .select('title completed priority dueDate GoalId createdAt updatedAt')
         .sort(sort)
         .limit(filterDto.limit + 1)
@@ -67,7 +69,17 @@ export class TodoService {
         return new NotFoundResponseModel('No se encontraron tareas con los filtros aplicados');
       }
 
-      return new SuccessResponseModel(results, 'Tareas obtenidas correctamente', 200, meta);
+      const transformedResults = results.map(todo => {
+        const goalId = todo.GoalId?._id?.toString() || todo.GoalId?.toString() || null;
+        const { GoalId, ...rest } = todo;
+        return {
+          ...rest,
+          goalId,
+          goalTitle: todo.GoalId?.title || null,
+        };
+      });
+
+      return new SuccessResponseModel(transformedResults, 'Tareas obtenidas correctamente', 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener tareas');
     }
