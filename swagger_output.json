@@ -1136,7 +1136,7 @@
           {
             "name": "body",
             "in": "body",
-            "description": "Datos de la meta",
+            "description": "Datos de la meta (status se establece automáticamente en active)",
             "required": true,
             "schema": {
               "type": "object",
@@ -1149,9 +1149,13 @@
                   "type": "string",
                   "example": "Dominar backend con Node.js"
                 },
-                "status": {
+                "reason": {
                   "type": "string",
-                  "example": "active"
+                  "example": "Para mejorar mi carrera profesional"
+                },
+                "priority": {
+                  "type": "string",
+                  "example": "high"
                 },
                 "dueDate": {
                   "type": "string",
@@ -1354,7 +1358,7 @@
           "Goals"
         ],
         "summary": "Actualiza completamente una meta",
-        "description": "Actualiza una meta completa. DEBES enviar TODOS los campos requeridos (title, description, status, priority, dueDate, smart). Si cambia el status, actualiza automáticamente el progreso de metas padre.",
+        "description": "Actualiza una meta completa. DEBES enviar title (requerido), los demás campos son opcionales. Si cambia el status, actualiza automáticamente el progreso de metas padre.",
         "parameters": [
           {
             "name": "id",
@@ -1384,6 +1388,10 @@
                   "type": "string",
                   "example": "Dominar backend con Node.js"
                 },
+                "reason": {
+                  "type": "string",
+                  "example": "Para mejorar mi carrera profesional"
+                },
                 "status": {
                   "type": "string",
                   "example": "active"
@@ -1395,31 +1403,6 @@
                 "dueDate": {
                   "type": "string",
                   "example": "2025-12-31T23:59:59.000Z"
-                },
-                "smart": {
-                  "type": "object",
-                  "properties": {
-                    "specific": {
-                      "type": "string",
-                      "example": "Completar curso de Node.js"
-                    },
-                    "measurable": {
-                      "type": "string",
-                      "example": "100% del curso"
-                    },
-                    "achievable": {
-                      "type": "string",
-                      "example": "Con dedicación diaria"
-                    },
-                    "relevant": {
-                      "type": "string",
-                      "example": "Para mi carrera"
-                    },
-                    "timeBound": {
-                      "type": "string",
-                      "example": "En 3 meses"
-                    }
-                  }
                 },
                 "parentGoalId": {}
               }
@@ -1478,58 +1461,6 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/goals/{id}/comments": {
-      "post": {
-        "tags": [
-          "Goals"
-        ],
-        "summary": "Agrega un comentario a una meta",
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID de la meta"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "description": "Datos del comentario",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "text": {
-                  "type": "string",
-                  "example": "Avancé 50% esta semana"
-                },
-                "author": {
-                  "type": "string",
-                  "example": "Juan Pérez"
-                }
-              }
-            }
           }
         ],
         "responses": {

@@ -128,23 +128,6 @@ export class GoalController {
   }
 
   /**
-   * Agrega un comentario a la meta
-   * @param {Object} req - Objeto request de Express
-   * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
-   * @param {Object} req.params - Parámetros de la URL
-   * @param {string} req.params.id - ID de la meta
-   * @param {Object} req.body - Datos del comentario
-   * @param {Object} res - Objeto response de Express
-   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   */
-  static async addComment(req, res) {
-    const { id } = req.params;
-    const commentData = req.body;
-    const userId = req.userId;
-    const result = await GoalService.addComment(id, commentData, userId);
-    res.status(result.status).json(result);
-  }
-  /**
    * Obtiene metas por ID de la meta padre
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)

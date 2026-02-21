@@ -9,61 +9,39 @@ import { BaseValidationDto } from '../BaseValidationDto.js';
 export class CreateGoalDto extends BaseValidationDto {
   /**
    * @param {Object} data - Datos de la meta
-   * @param {string} data.title - Título de la meta (requerido)
-   * @param {string} [data.description] - Descripción de la meta
-   * @param {string} [data.status] - Estado de la meta (active/paused/completed)
+   * @param {string} data.title - Título de la meta (requerido, máximo 50 caracteres)
+   * @param {string} [data.description] - Descripción de la meta (opcional, máximo 100 caracteres)
+   * @param {string} [data.reason] - Razón de importancia de la meta (opcional, máximo 50 caracteres)
    * @param {string} [data.priority] - Prioridad de la meta (low/medium/high)
    * @param {Date|string} [data.dueDate] - Fecha límite de la meta
-   * @param {Object} data.smart - Criterios SMART (requerido)
-   * @param {string} data.smart.specific - Criterio específico (requerido)
-   * @param {string} data.smart.measurable - Criterio medible (requerido)
-   * @param {string} data.smart.achievable - Criterio alcanzable (requerido)
-   * @param {string} data.smart.relevant - Criterio relevante (requerido)
-   * @param {string} data.smart.timeBound - Criterio con tiempo límite (requerido)
-   * @param {Array} [data.comments] - Comentarios iniciales
+   * @param {string} [data.parentGoalId] - ID de la meta padre (para submetas)
    */
   constructor(data) {
     super(data);
     this.description = data.description || '';
-    this.status = data.status || 'active';
+    this.reason = data.reason || '';
+    this.status = 'active';
     this.priority = data.priority || 'medium';
-    this.smart = data.smart;
-    this.comments = data.comments || [];
     this.parentGoalId = data.parentGoalId || null;
   }
 
   /**
-   * Valida los criterios SMART
-   * @param {boolean} required - Si el campo es requerido
-   * @returns {string[]} Array de mensajes de error
+   * Valida la razón de importancia
+   * @returns {string|null} Mensaje de error o null si es válido
    */
-  _validateSmart(required = true) {
-    const errors = [];
+  _validateReason() {
+    if (this.reason === undefined || this.reason === null) return null;
 
-    if (!this.smart) {
-      if (required) {
-        errors.push('Los criterios SMART son requeridos');
-      }
-      return errors;
+    if (typeof this.reason !== 'string') {
+      return 'La razón de importancia debe ser un string válido';
     }
 
-    if (typeof this.smart !== 'object') {
-      errors.push('Los criterios SMART son requeridos');
-      return errors;
+    const trimmedReason = this.reason.trim();
+    if (trimmedReason && trimmedReason.length > 50) {
+      return 'La razón de importancia no puede superar los 50 caracteres';
     }
 
-    const smartFields = ['specific', 'measurable', 'achievable', 'relevant', 'timeBound'];
-    smartFields.forEach(field => {
-      if (this.smart[field] !== undefined) {
-        if (typeof this.smart[field] !== 'string' || this.smart[field].trim() === '') {
-          errors.push(`El criterio SMART '${field}' debe ser un string válido`);
-        }
-      } else if (required) {
-        errors.push(`El criterio SMART '${field}' es requerido y debe ser un string válido`);
-      }
-    });
-
-    return errors;
+    return null;
   }
 
   /**
@@ -78,9 +56,13 @@ export class CreateGoalDto extends BaseValidationDto {
     const titleError = this._validateTitle(true);
     if (titleError) errors.push(titleError);
 
-    // Validar smart (requerido)
-    const smartErrors = this._validateSmart(true);
-    errors.push(...smartErrors);
+    // Validar descripción
+    const descriptionError = this._validateDescription(false);
+    if (descriptionError) errors.push(descriptionError);
+
+    // Validar razón de importancia
+    const reasonError = this._validateReason();
+    if (reasonError) errors.push(reasonError);
 
     return {
       isValid: errors.length === 0,
@@ -97,14 +79,8 @@ export class CreateGoalDto extends BaseValidationDto {
     return {
       ...baseData,
       description: this.description.trim(),
-      smart: {
-        specific: this.smart.specific.trim(),
-        measurable: this.smart.measurable.trim(),
-        achievable: this.smart.achievable.trim(),
-        relevant: this.smart.relevant.trim(),
-        timeBound: this.smart.timeBound.trim(),
-      },
-      comments: this.comments,
+      reason: this.reason.trim(),
+      status: this.status,
       parentGoalId: this.parentGoalId,
     };
   }

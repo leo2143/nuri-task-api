@@ -5,17 +5,16 @@ import mongoose from 'mongoose';
  * @typedef {Object} GoalSchema
  * @property {string} title - Título de la meta (requerido)
  * @property {string} description - Descripción de la meta
+ * @property {string} reason - Razón de importancia de la meta
  * @property {string} status - Estado de la meta (active/paused/completed)
  * @property {string} priority - Prioridad de la meta (low/medium/high)
  * @property {Date} dueDate - Fecha límite de la meta
- * @property {Object} smart - Criterios SMART de la meta
- * @property {string} smart.specific - Criterio específico
- * @property {string} smart.measurable - Criterio medible
- * @property {string} smart.achievable - Criterio alcanzable
- * @property {string} smart.relevant - Criterio relevante
- * @property {string} smart.timeBound - Criterio con tiempo límite
- * @property {Array} metrics - Progreso semanal
- * @property {Array} comments - Feedback o histórico
+ * @property {mongoose.Types.ObjectId} parentGoalId - ID de la meta padre (para submetas)
+ * @property {number} totalSubGoals - Total de submetas
+ * @property {number} completedSubGoals - Submetas completadas
+ * @property {number} totalTasks - Total de tareas
+ * @property {number} completedTasks - Tareas completadas
+ * @property {number} progress - Progreso de la meta (0-100)
  * @property {mongoose.Types.ObjectId} userId - ID del usuario propietario (requerido)
  * @property {Date} createdAt - Fecha de creación (automático)
  * @property {Date} updatedAt - Fecha de última actualización (automático)
@@ -52,32 +51,10 @@ const goalSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    smart: {
-      specific: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-      measurable: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-      achievable: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-      relevant: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-      timeBound: {
-        type: String,
-        required: true,
-        trim: true,
-      },
+    reason: {
+      type: String,
+      trim: true,
+      default: '',
     },
     parentGoalId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -110,24 +87,6 @@ const goalSchema = new mongoose.Schema(
       max: 100,
       default: 0,
     },
-    comments: [
-      {
-        text: {
-          type: String,
-          required: true,
-          trim: true,
-        },
-        author: {
-          type: String,
-          required: true,
-          trim: true,
-        },
-        date: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

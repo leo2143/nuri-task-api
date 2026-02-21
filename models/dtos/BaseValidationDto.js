@@ -40,6 +40,15 @@ export class BaseValidationDto {
       }
     }
 
+    const trimmedTitle = this.title?.trim();
+    if (trimmedTitle && trimmedTitle.length < 3) {
+      return 'El título debe tener al menos 3 caracteres';
+    }
+
+    if (trimmedTitle && trimmedTitle.length > 50) {
+      return 'El título no puede superar los 50 caracteres';
+    }
+
     return null;
   }
 
@@ -94,6 +103,32 @@ export class BaseValidationDto {
     const validStatuses = ['active', 'paused', 'completed'];
     if (!validStatuses.includes(this.status)) {
       return `El estado debe ser uno de: ${validStatuses.join(', ')}`;
+    }
+
+    return null;
+  }
+
+  /**
+   * Valida la descripción
+   * @param {boolean} required - Si el campo es requerido
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validateDescription(required = false) {
+    if (this.description === undefined) return null;
+
+    if (required && (!this.description || typeof this.description !== 'string' || this.description.trim() === '')) {
+      return 'La descripción es requerida y debe ser un string válido';
+    }
+
+    if (!required && this.description !== undefined) {
+      if (typeof this.description !== 'string') {
+        return 'La descripción debe ser un string válido';
+      }
+    }
+
+    const trimmedDescription = this.description?.trim();
+    if (trimmedDescription && trimmedDescription.length > 100) {
+      return 'La descripción no puede superar los 100 caracteres';
     }
 
     return null;
