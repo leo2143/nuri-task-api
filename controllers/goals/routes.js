@@ -91,12 +91,13 @@ export const setupGoalRoutes = app => {
     // #swagger.description = 'Crea una nueva meta con campos de tracking inicializados en 0'
     /* #swagger.parameters['body'] = {
          in: 'body',
-         description: 'Datos de la meta',
+         description: 'Datos de la meta (status se establece automáticamente en active)',
          required: true,
          schema: {
            title: 'Aprender Node.js',
            description: 'Dominar backend con Node.js',
-           status: 'active',
+           reason: 'Para mejorar mi carrera profesional',
+           priority: 'high',
            dueDate: '2025-12-31T23:59:59.000Z'
          }
     } */
@@ -109,7 +110,7 @@ export const setupGoalRoutes = app => {
   app.put('/api/goals/:id', validateToken, (req, res) => {
     // #swagger.tags = ['Goals']
     // #swagger.summary = 'Actualiza completamente una meta'
-    // #swagger.description = 'Actualiza una meta completa. DEBES enviar TODOS los campos requeridos (title, description, status, priority, dueDate, smart). Si cambia el status, actualiza automáticamente el progreso de metas padre.'
+    // #swagger.description = 'Actualiza una meta completa. DEBES enviar title (requerido), los demás campos son opcionales. Si cambia el status, actualiza automáticamente el progreso de metas padre.'
     /* #swagger.parameters['id'] = {
          in: 'path',
          description: 'ID de la meta',
@@ -123,16 +124,10 @@ export const setupGoalRoutes = app => {
          schema: {
            title: 'Aprender Node.js',
            description: 'Dominar backend con Node.js',
+           reason: 'Para mejorar mi carrera profesional',
            status: 'active',
            priority: 'high',
            dueDate: '2025-12-31T23:59:59.000Z',
-           smart: {
-             specific: 'Completar curso de Node.js',
-             measurable: '100% del curso',
-             achievable: 'Con dedicación diaria',
-             relevant: 'Para mi carrera',
-             timeBound: 'En 3 meses'
-           },
            parentGoalId: null
          }
     } */
@@ -164,30 +159,6 @@ export const setupGoalRoutes = app => {
          "bearerAuth": []
     }] */
     return GoalController.deleteGoal(req, res);
-  });
-
-  app.post('/api/goals/:id/comments', validateToken, (req, res) => {
-    // #swagger.tags = ['Goals']
-    // #swagger.summary = 'Agrega un comentario a una meta'
-    /* #swagger.parameters['id'] = {
-         in: 'path',
-         description: 'ID de la meta',
-         required: true,
-         type: 'string'
-    } */
-    /* #swagger.parameters['body'] = {
-         in: 'body',
-         description: 'Datos del comentario',
-         required: true,
-         schema: {
-           text: 'Avancé 50% esta semana',
-           author: 'Juan Pérez'
-         }
-    } */
-    /* #swagger.security = [{
-         "bearerAuth": []
-    }] */
-    return GoalController.addComment(req, res);
   });
 
   app.get('/api/goals/:id/parent', validateToken, (req, res) => {
@@ -227,5 +198,38 @@ export const setupGoalRoutes = app => {
          "bearerAuth": []
     }] */
     return GoalController.addSubgoal(req, res);
+  });
+
+  app.patch('/api/goals/:id/status', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Actualiza solo el estado de una meta'
+    // #swagger.description = 'Actualiza únicamente el campo status de la meta. Si la meta tiene parentGoalId, actualiza automáticamente los contadores del padre.'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la meta',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Nuevo estado de la meta',
+         required: true,
+         schema: {
+           status: 'active'
+         }
+    } */
+    /* #swagger.responses[200] = {
+         description: 'Estado de la meta actualizado correctamente',
+         schema: {
+           success: true,
+           status: 200,
+           message: 'Estado de la meta actualizado correctamente',
+           data: { $ref: '#/definitions/Goal' }
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.updateGoalStatus(req, res);
   });
 };

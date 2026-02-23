@@ -442,7 +442,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"title\": \"Aprender Node.js\",\r\n    \"description\": \"Dominar Node.js y Express para desarrollo backend\",\r\n    \"status\": \"active\",\r\n    \"priority\": \"high\",\r\n    \"dueDate\": \"2024-12-31T23:59:59.000Z\",\r\n    \"parentGoalId\":\"68d1e7f577ec3fe8073cef24\",\r\n\r\n    \"smart\": {\r\n        \"specific\": \"Crear una API REST completa con Node.js y Express\",\r\n        \"measurable\": \"Implementar 10 endpoints funcionales\",\r\n        \"achievable\": \"Dedicar 2 horas diarias durante 3 meses\",\r\n        \"relevant\": \"Necesario para mi carrera como desarrollador\",\r\n        \"timeBound\": \"Completar antes del 31 de diciembre de 2024\"\r\n    }\r\n}",
+              "raw": "{\r\n    \"title\": \"Aprender Node.js\",\r\n    \"description\": \"Dominar Node.js y Express para desarrollo backend\",\r\n    \"reason\": \"Para mejorar mi carrera profesional\",\r\n    \"priority\": \"high\",\r\n    \"dueDate\": \"2024-12-31T23:59:59.000Z\",\r\n    \"parentGoalId\":\"68d1e7f577ec3fe8073cef24\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -543,7 +543,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"title\": \"Aprender Node.js - Actualizado\",\r\n    \"status\": \"completed\",\r\n    \"priority\": \"medium\",\r\n    \"parentGoalId\":\"68d1e7f577ec3fe8073cef24\"\r\n}",
+              "raw": "{\r\n    \"title\": \"Aprender Node.js - Actualizado\",\r\n    \"description\": \"Dominar Node.js y Express\",\r\n    \"reason\": \"Para mejorar mi carrera profesional\",\r\n    \"status\": \"completed\",\r\n    \"priority\": \"medium\",\r\n    \"parentGoalId\":\"68d1e7f577ec3fe8073cef24\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -710,45 +710,6 @@
                 "api",
                 "goals",
                 "completed"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "add comment to goal",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token_auth}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"text\": \"¡Excelente progreso! Sigue así.\",\r\n    \"author\": \"Leonardo\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{localhost}}/api/goals/68f45523333bcc8e810632d1/comments",
-              "host": [
-                "{{localhost}}"
-              ],
-              "path": [
-                "api",
-                "goals",
-                "68f45523333bcc8e810632d1",
-                "comments"
               ]
             }
           },
