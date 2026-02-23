@@ -199,4 +199,37 @@ export const setupGoalRoutes = app => {
     }] */
     return GoalController.addSubgoal(req, res);
   });
+
+  app.patch('/api/goals/:id/status', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Actualiza solo el estado de una meta'
+    // #swagger.description = 'Actualiza únicamente el campo status de la meta. Si la meta tiene parentGoalId, actualiza automáticamente los contadores del padre.'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la meta',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Nuevo estado de la meta',
+         required: true,
+         schema: {
+           status: 'active'
+         }
+    } */
+    /* #swagger.responses[200] = {
+         description: 'Estado de la meta actualizado correctamente',
+         schema: {
+           success: true,
+           status: 200,
+           message: 'Estado de la meta actualizado correctamente',
+           data: { $ref: '#/definitions/Goal' }
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.updateGoalStatus(req, res);
+  });
 };

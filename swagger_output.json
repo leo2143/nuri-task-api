@@ -1556,6 +1556,77 @@
         ]
       }
     },
+    "/api/goals/{id}/status": {
+      "patch": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "Actualiza solo el estado de una meta",
+        "description": "Actualiza únicamente el campo status de la meta. Si la meta tiene parentGoalId, actualiza automáticamente los contadores del padre.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "ID de la meta"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Nuevo estado de la meta",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "example": "active"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado de la meta actualizado correctamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "status": {
+                  "type": "number",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Estado de la meta actualizado correctamente"
+                },
+                "data": {
+                  "$ref": "#/definitions/Goal"
+                }
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/metrics": {
       "get": {
         "tags": [

@@ -175,4 +175,22 @@ export class GoalController {
     const result = await GoalService.addSubgoal(parentGoalId, subgoalId, userId);
     res.status(result.status).json(result);
   }
+
+  /**
+   * Actualiza solo el estado de una meta
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.params.id - ID de la meta
+   * @param {Object} req.body - Datos
+   * @param {string} req.body.status - Nuevo estado (active/paused/completed)
+   * @param {string} req.userId - ID del usuario
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>}
+   */
+  static async updateGoalStatus(req, res) {
+    const { id } = req.params;
+    const { status } = req.body;
+    const userId = req.userId;
+    const result = await GoalService.updateGoalStatus(id, status, userId);
+    res.status(result.status).json(result);
+  }
 }

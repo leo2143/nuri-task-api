@@ -393,4 +393,38 @@ export class GoalService {
       return ErrorHandler.handleDatabaseError(error, 'obtener lista simple de metas');
     }
   }
+
+  /**
+   * Actualiza solo el estado de una meta
+   * @param {string} goalId - ID de la meta
+   * @param {string} status - Nuevo estado (active/paused/completed)
+   * @param {string} userId - ID del usuario
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la meta actualizada o error
+   */
+  static async updateGoalStatus(goalId, status, userId) {
+    try {
+      const validStatuses = ['active', 'paused', 'completed'];
+      if (!validStatuses.includes(status)) {
+        return new BadRequestResponseModel(`Estado inválido. Debe ser uno de: ${validStatuses.join(', ')}`);
+      }
+
+      const goal = await Goal.findOne({ _id: goalId, userId });
+      if (!goal) {
+        return new NotFoundResponseModel('Meta no encontrada');
+      }
+
+      const oldStatus = goal.status;
+      goal.status = status;
+      const updatedGoal = await goal.save();
+
+      if (oldStatus !== status && goal.parentGoalId) {
+        await this._updateParentGoalCounters(goal.parentGoalId);
+        console.log(chalk.green(`Estado cambiado: ${oldStatus} → ${status}`));
+      }
+
+      return new SuccessResponseModel(updatedGoal, 'Estado de la meta actualizado correctamente');
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'actualizar estado de meta');
+    }
+  }
 }
