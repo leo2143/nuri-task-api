@@ -1,5 +1,15 @@
 {
   "version": 2,
+  "crons": [
+    {
+      "path": "/api/cron/morning",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/evening",
+      "schedule": "0 23 * * *"
+    }
+  ],
   "builds": [
     {
       "src": "index.js",

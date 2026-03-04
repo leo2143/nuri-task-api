@@ -234,6 +234,7 @@ export class TodoService {
         } catch (metricsError) {
           console.error(chalk.yellow('Error al actualizar métricas del usuario:', metricsError));
         }
+
       }
 
       // Actualizar progreso del goal

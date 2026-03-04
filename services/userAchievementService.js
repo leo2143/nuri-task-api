@@ -130,6 +130,8 @@ export class UserAchievementService {
 
       userAchievement.currentCount += amount;
 
+      const wasCompleted = userAchievement.status === 'completed';
+
       if (userAchievement.currentCount >= achievementData.targetCount) {
         if (userAchievement.status === 'locked') {
           userAchievement.status = 'unlocked';

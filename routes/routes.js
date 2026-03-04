@@ -5,6 +5,9 @@ import { setupMetricRoutes } from '../controllers/metrics/routes.js';
 import { setupMoodboardRoutes } from '../controllers/moodboard/routes.js';
 import { setupAchievementRoutes } from '../controllers/achievements/routes.js';
 import { setupCloudinaryRoutes } from '../controllers/cloudinary/routes.js';
+import { setupPushRoutes } from '../controllers/push/routes.js';
+import { setupCronRoutes } from '../controllers/cron/routes.js';
+import { setupNotificationRoutes } from '../controllers/notifications/routes.js';
 import { notFoundHandler, errorHandler, healthCheck } from '../middlewares/errorMiddleware.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -40,6 +43,9 @@ export const setupRoutes = app => {
   setupMoodboardRoutes(app);
   setupAchievementRoutes(app);
   setupCloudinaryRoutes(app);
+  setupPushRoutes(app);
+  setupCronRoutes(app);
+  setupNotificationRoutes(app);
 
   // Servir archivos estáticos de Swagger UI
   app.use('/swagger-ui', express.static(join(__dirname, '..', 'public', 'swagger-ui')));
