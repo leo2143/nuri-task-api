@@ -27,7 +27,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.1",
-    "nodemailer": "^7.0.10"
+    "nodemailer": "^7.0.10",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "jsdoc": "^4.0.4",

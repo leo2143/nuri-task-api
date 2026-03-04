@@ -6,6 +6,8 @@ import UserAchievement from '../models/userAchievementModel.js';
 import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel } from '../models/responseModel.js';
 import { MetricsDashboardDto } from '../models/dtos/metrics/index.js';
+import { PushNotificationService } from './pushNotificationService.js';
+import { NotificationService } from './notificationService.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import chalk from 'chalk';
 
@@ -65,6 +67,7 @@ export class MetricsService {
     try {
       const metrics = await this._findOrCreateMetrics(userId);
 
+      const prevStreak = metrics.currentStreak;
       metrics.onTaskCompleted();
       await metrics.save();
 
@@ -73,6 +76,22 @@ export class MetricsService {
           `Métricas actualizadas: ${metrics.totalTasksCompleted} tareas | Racha: ${metrics.currentStreak} días`
         )
       );
+
+      if (metrics.currentStreak > prevStreak) {
+        const payload = {
+          title: `¡Día ${metrics.currentStreak} de racha!`,
+          body: '¡Seguiste sumando días, cada tarea cuenta. Seguí así!',
+          url: '/',
+          icon: '/notifications/nuri-fire-full.svg',
+        };
+
+        Promise.all([
+          NotificationService.createMany([{
+            userId, title: payload.title, body: payload.body, url: payload.url, type: 'streak_increase',
+          }]),
+          PushNotificationService.sendNotification(userId, payload),
+        ]).catch(err => console.error(chalk.yellow('Error enviando notificación de racha:', err)));
+      }
 
       return new SuccessResponseModel(metrics, 'Tarea registrada en métricas correctamente');
     } catch (error) {
