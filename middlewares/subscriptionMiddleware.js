@@ -1,39 +1,27 @@
+import User from '../models/userModel.js';
 import { ForbiddenResponseModel } from '../models/responseModel.js';
 
-/**
- * Verifica si el usuario tiene una suscripción activa
- * @param {Object} subscription - Objeto de suscripción del usuario
- * @returns {boolean}
- */
 const isSubscriptionActive = subscription => {
   return subscription && subscription.isActive === true;
 };
 
-/**
- * Verifica si la suscripción ha expirado
- * @param {Date} endDate - Fecha de expiración de la suscripción
- * @returns {boolean}
- */
 const isSubscriptionExpired = endDate => {
   if (!endDate) return false;
-
-  const now = new Date();
-  const expiration = new Date(endDate);
-
-  return now > expiration;
+  return new Date() > new Date(endDate);
 };
+
 /**
- * Middleware para validar que el usuario sea administrador O tenga suscripción activa
- * Permite acceso si cumple cualquiera de las dos condiciones
- * @param {Object} req - Objeto request de Express
- * @param {Object} req.user - Usuario decodificado del JWT
- * @param {Object} res - Objeto response de Express
- * @param {Function} next - Función para continuar al siguiente middleware
- * @returns {void}
+ * Middleware que verifica suscripcion activa consultando la DB.
+ * Permite acceso si el usuario es admin o tiene suscripcion vigente.
  */
-export const validateSubscription = (req, res, next) => {
+export const validateSubscription = async (req, res, next) => {
   try {
-    const { user } = req;
+    const user = await User.findById(req.userId).select('subscription isAdmin').lean();
+
+    if (!user) {
+      const response = new ForbiddenResponseModel('Usuario no encontrado');
+      return res.status(response.status).json(response);
+    }
 
     if (user.isAdmin) {
       return next();
@@ -41,14 +29,14 @@ export const validateSubscription = (req, res, next) => {
 
     if (!isSubscriptionActive(user.subscription)) {
       const response = new ForbiddenResponseModel(
-        'Acceso denegado. Se requiere suscripción o permisos de administrador'
+        'Acceso denegado. Se requiere suscripción activa para esta funcionalidad'
       );
       return res.status(response.status).json(response);
     }
 
     if (isSubscriptionExpired(user.subscription.endDate)) {
       const response = new ForbiddenResponseModel(
-        'Tu suscripción ha expirado. Renueva tu plan o contacta al administrador'
+        'Tu suscripción ha expirado. Renová tu plan para continuar'
       );
       return res.status(response.status).json(response);
     }

@@ -1,5 +1,6 @@
 import Goal from '../models/goalsModel.js';
-import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
+import User from '../models/userModel.js';
+import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel, ForbiddenResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import {
   CreateGoalDto,
@@ -9,6 +10,8 @@ import {
 } from '../models/dtos/goals/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import chalk from 'chalk';
+
+const FREE_GOALS_LIMIT = 2;
 
 const POPULATE_PARENT_TITLE = 'title';
 const POPULATE_PARENT_DESCRIPTION = 'description';
@@ -170,6 +173,16 @@ export class GoalService {
 
       if (!validation.isValid) {
         return new BadRequestResponseModel(validation.errors.join(', '));
+      }
+
+      const user = await User.findById(userId).select('subscription isAdmin').lean();
+      if (!user.isAdmin && !user.subscription?.isActive) {
+        const goalCount = await Goal.countDocuments({ userId });
+        if (goalCount >= FREE_GOALS_LIMIT) {
+          return new ForbiddenResponseModel(
+            `Alcanzaste el límite de ${FREE_GOALS_LIMIT} metas del plan gratuito. Suscribite para crear metas ilimitadas.`
+          );
+        }
       }
 
       const cleanData = createDto.toPlainObject();
