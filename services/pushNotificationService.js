@@ -9,7 +9,7 @@ const VAPID_EMAIL = process.env.VAPID_EMAIL || 'mailto:admin@nuritask.com';
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 } else {
-  console.warn(chalk.yellow('⚠️  VAPID keys no configuradas. Las notificaciones push no funcionarán.'));
+  console.warn(chalk.yellow('VAPID keys no configuradas. Las notificaciones push no funcionarán.'));
 }
 
 export class PushNotificationService {

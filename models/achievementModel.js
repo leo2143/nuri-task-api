@@ -43,6 +43,11 @@ const achievementSchema = new mongoose.Schema(
       required: true,
       enum: ['task', 'goal', 'metric', 'streak'],
     },
+    tier: {
+      type: String,
+      enum: ['basic', 'premium'],
+      default: 'basic',
+    },
     isActive: {
       type: Boolean,
       default: true,

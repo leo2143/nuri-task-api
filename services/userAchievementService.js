@@ -1,5 +1,6 @@
 import UserAchievement from '../models/userAchievementModel.js';
 import Achievement from '../models/achievementModel.js';
+import User from '../models/userModel.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel } from '../models/responseModel.js';
 import { IncrementProgressDto } from '../models/dtos/achievements/index.js';
@@ -27,7 +28,14 @@ export class UserAchievementService {
   static async getAllAchievementsWithProgress(userId, pagination = {}) {
     try {
       const paginationDto = new PaginationDto(pagination);
+
+      const user = await User.findById(userId).select('subscription isAdmin').lean();
+      const isPremium = user?.isAdmin || user?.subscription?.isActive;
+
       const query = { isActive: true };
+      if (!isPremium) {
+        query.tier = 'basic';
+      }
       paginationDto.applyCursorToQuery(query);
 
       // Obtener logros activos con paginación

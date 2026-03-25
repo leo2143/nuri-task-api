@@ -45,6 +45,10 @@ const userSchema = new mongoose.Schema({
       type: Date,
       default: null,
     },
+    mercadoPagoId: {
+      type: String,
+      default: null,
+    },
   },
   resetPasswordToken: {
     type: String,

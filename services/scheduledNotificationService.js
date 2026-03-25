@@ -5,10 +5,15 @@ import { PushNotificationService } from './pushNotificationService.js';
 import { NotificationService } from './notificationService.js';
 import chalk from 'chalk';
 
+
+
+
 /**
  * Servicio que contiene la lógica de las notificaciones programadas.
  * Estos métodos son invocados por los endpoints cron de Vercel.
- */
+ *  Estos  Cron solo son dos debido a que vercel no permite mas de dos
+ *  Debido esto los metodos se han agrupado en dos y tienen mas de una tarea cada uno.
+*/
 export class ScheduledNotificationService {
   /**
    * Persiste notificaciones in-app para todos los usuarios y envía push
@@ -41,6 +46,25 @@ export class ScheduledNotificationService {
 
     console.log(chalk.green(`[Cron] ${label}: ${entries.length} persistidas, ${notified} push enviados`));
     return { notified, persisted: entries.length };
+  }
+
+  /**
+   * Resetea a 0 las rachas de usuarios cuya última actividad fue hace 2+ días.
+   * Debe ejecutarse al inicio del morning job para mantener la consistencia.
+   */
+  static async resetExpiredStreaks() {
+    const yesterday = new Date();
+    yesterday.setHours(0, 0, 0, 0);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const result = await Metrics.updateMany(
+      { currentStreak: { $gt: 0 }, lastActivityDate: { $lt: yesterday } },
+      { $set: { currentStreak: 0 } }
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log(chalk.yellow(`[Cron] Rachas expiradas reseteadas: ${result.modifiedCount}`));
+    }
   }
 
   /**
@@ -91,16 +115,19 @@ export class ScheduledNotificationService {
   }
 
   /**
-   * Notifica a usuarios con racha activa (currentStreak > 0) que no completaron
-   * ninguna tarea hoy. Se ejecuta por la noche para darles tiempo.
+   * Notifica a usuarios con racha activa cuya última actividad fue ayer
+   * (aún no completaron tarea hoy). Se ejecuta por la noche.
    */
   static async checkStreaksAtRisk() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
     const metricsAtRisk = await Metrics.find({
       currentStreak: { $gt: 0 },
-      lastActivityDate: { $lt: today },
+      lastActivityDate: { $gte: yesterday, $lt: today },
     }).lean();
 
     if (metricsAtRisk.length === 0) {
@@ -111,8 +138,8 @@ export class ScheduledNotificationService {
     const entries = metricsAtRisk.map(metric => ({
       userId: metric.userId.toString(),
       payload: {
-        title: `¡Llevás ${metric.currentStreak} días seguidos!`,
-        body: 'No pares ahora, completá una tarea hoy y seguí sumando. ¡Vos podés!',
+        title: `¡Tu racha de ${metric.currentStreak} días está en riesgo!`,
+        body: 'Todavía no completaste tareas hoy. ¡Entrá y seguí sumando para no perderla!',
         url: '/tasks',
       },
     }));

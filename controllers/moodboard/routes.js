@@ -1,5 +1,6 @@
 import { MoodboardController } from './moodboardController.js';
 import { validateToken } from '../../middlewares/authMiddleware.js';
+import { validateSubscription } from '../../middlewares/subscriptionMiddleware.js';
 
 /**
  * Configura las rutas del moodboard único del usuario
@@ -8,7 +9,7 @@ import { validateToken } from '../../middlewares/authMiddleware.js';
  */
 export const setupMoodboardRoutes = app => {
   // Obtener el moodboard del usuario
-  app.get('/api/moodboard', validateToken, (req, res) => {
+  app.get('/api/moodboard', validateToken, validateSubscription, (req, res) => {
     // #swagger.tags = ['Moodboard']
     // #swagger.summary = 'Obtiene el moodboard del usuario autenticado'
     /* #swagger.security = [{
@@ -18,7 +19,7 @@ export const setupMoodboardRoutes = app => {
   });
 
   // Actualizar el moodboard (imágenes en batch)
-  app.put('/api/moodboard', validateToken, (req, res) => {
+  app.put('/api/moodboard', validateToken, validateSubscription, (req, res) => {
     // #swagger.tags = ['Moodboard']
     // #swagger.summary = 'Actualiza el moodboard del usuario (imágenes en batch)'
     /* #swagger.parameters['body'] = {
@@ -42,7 +43,7 @@ export const setupMoodboardRoutes = app => {
   });
 
   // Agrega una imagen al moodboard
-  app.post('/api/moodboard/images', validateToken, (req, res) => {
+  app.post('/api/moodboard/images', validateToken, validateSubscription, (req, res) => {
     // #swagger.tags = ['Moodboard']
     // #swagger.summary = 'Agrega una imagen al moodboard'
     /* #swagger.parameters['body'] = {
@@ -62,7 +63,7 @@ export const setupMoodboardRoutes = app => {
   });
 
   // Eliminar una imagen del moodboard
-  app.delete('/api/moodboard/images/:imageId', validateToken, (req, res) => {
+  app.delete('/api/moodboard/images/:imageId', validateToken, validateSubscription, (req, res) => {
     // #swagger.tags = ['Moodboard']
     // #swagger.summary = 'Elimina una imagen del moodboard'
     /* #swagger.parameters['imageId'] = {
@@ -78,7 +79,7 @@ export const setupMoodboardRoutes = app => {
   });
 
   // Actualizar una imagen del moodboard
-  app.put('/api/moodboard/images/:imageId', validateToken, (req, res) => {
+  app.put('/api/moodboard/images/:imageId', validateToken, validateSubscription, (req, res) => {
     // #swagger.tags = ['Moodboard']
     // #swagger.summary = 'Actualiza una imagen del moodboard'
     /* #swagger.parameters['imageId'] = {

@@ -8,12 +8,14 @@ import chalk from 'chalk';
  */
 export class CronController {
   /**
-   * Job de la mañana: tareas por vencer + usuarios inactivos
-   * Ejecutado por Vercel Cron a las 9 AM (Argentina)
+   * Job nocturno: reset de rachas + tareas por vencer + usuarios inactivos
+   * Ejecutado por Vercel Cron a las 00:00 (Argentina)
    */
   static async morningJob(_req, res) {
     try {
       console.log(chalk.cyan('[Cron] Ejecutando morning job...'));
+
+      await ScheduledNotificationService.resetExpiredStreaks();
 
       const [dueResult, inactiveResult] = await Promise.all([
         ScheduledNotificationService.checkDueTasks(),

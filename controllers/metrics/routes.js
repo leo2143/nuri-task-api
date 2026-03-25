@@ -1,5 +1,6 @@
 import { MetricsController } from './metricsController.js';
 import { validateToken, validateAdminToken } from '../../middlewares/authMiddleware.js';
+import { validateSubscription } from '../../middlewares/subscriptionMiddleware.js';
 
 /**
  * Función para configurar las rutas de Metrics
@@ -8,7 +9,7 @@ import { validateToken, validateAdminToken } from '../../middlewares/authMiddlew
    * Configura las rutas de Metrics protegidas con autenticación JWT
  */
 export const setupMetricRoutes = app => {
-  app.get('/api/metrics', validateToken, (req, res) => {
+  app.get('/api/metrics', validateToken, validateSubscription, (req, res) => {
     // #swagger.tags = ['Metrics']
     // #swagger.summary = 'Obtiene las métricas generales del usuario autenticado'
     // #swagger.description = 'Retorna rachas, totales de tareas/metas completadas y historial de actividad'
@@ -18,7 +19,7 @@ export const setupMetricRoutes = app => {
     return MetricsController.getAllMetrics(req, res);
   });
 
-  app.get('/api/metrics/dashboard', validateToken, (req, res) => {
+  app.get('/api/metrics/dashboard', validateToken, validateSubscription, (req, res) => {
     // #swagger.tags = ['Metrics']
     // #swagger.summary = 'Obtiene el dashboard motivacional del usuario'
     // #swagger.description = 'Incluye métricas, mensajes motivacionales y estadísticas'

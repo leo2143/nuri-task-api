@@ -8,6 +8,8 @@ import { setupCloudinaryRoutes } from '../controllers/cloudinary/routes.js';
 import { setupPushRoutes } from '../controllers/push/routes.js';
 import { setupCronRoutes } from '../controllers/cron/routes.js';
 import { setupNotificationRoutes } from '../controllers/notifications/routes.js';
+import { setupSubscriptionRoutes } from '../controllers/subscription/routes.js';
+import { setupWebhookRoutes } from '../controllers/webhooks/routes.js';
 import { notFoundHandler, errorHandler, healthCheck } from '../middlewares/errorMiddleware.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -46,6 +48,8 @@ export const setupRoutes = app => {
   setupPushRoutes(app);
   setupCronRoutes(app);
   setupNotificationRoutes(app);
+  setupSubscriptionRoutes(app);
+  setupWebhookRoutes(app);
 
   // Servir archivos estáticos de Swagger UI
   app.use('/swagger-ui', express.static(join(__dirname, '..', 'public', 'swagger-ui')));
