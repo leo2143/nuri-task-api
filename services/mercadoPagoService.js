@@ -7,7 +7,7 @@ const SUBSCRIPTION_CONFIG = {
   reason: 'Nuri Task Premium',
   frequency: 1,
   frequencyType: 'months',
-  transactionAmount: 1,
+  transactionAmount: Number(process.env.MP_SUBSCRIPTION_AMOUNT) || 15,
   currencyId: 'ARS',
 };
 
