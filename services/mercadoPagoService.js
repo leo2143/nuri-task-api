@@ -7,7 +7,7 @@ const SUBSCRIPTION_CONFIG = {
   reason: 'Nuri Task Premium',
   frequency: 1,
   frequencyType: 'months',
-  transactionAmount: 1,
+  transactionAmount: 15,
   currencyId: 'ARS',
 };
 
