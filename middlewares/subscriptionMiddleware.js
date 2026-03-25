@@ -1,18 +1,10 @@
 import User from '../models/userModel.js';
 import { ForbiddenResponseModel } from '../models/responseModel.js';
 
-const isSubscriptionActive = subscription => {
-  return subscription && subscription.isActive === true;
-};
-
-const isSubscriptionExpired = endDate => {
-  if (!endDate) return false;
-  return new Date() > new Date(endDate);
-};
-
 /**
  * Middleware que verifica suscripcion activa consultando la DB.
  * Permite acceso si el usuario es admin o tiene suscripcion vigente.
+ * Con MercadoPago, isActive se actualiza via webhook, no por endDate.
  */
 export const validateSubscription = async (req, res, next) => {
   try {
@@ -27,16 +19,9 @@ export const validateSubscription = async (req, res, next) => {
       return next();
     }
 
-    if (!isSubscriptionActive(user.subscription)) {
+    if (!user.subscription?.isActive) {
       const response = new ForbiddenResponseModel(
         'Acceso denegado. Se requiere suscripción activa para esta funcionalidad'
-      );
-      return res.status(response.status).json(response);
-    }
-
-    if (isSubscriptionExpired(user.subscription.endDate)) {
-      const response = new ForbiddenResponseModel(
-        'Tu suscripción ha expirado. Renová tu plan para continuar'
       );
       return res.status(response.status).json(response);
     }
