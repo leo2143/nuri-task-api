@@ -885,6 +885,32 @@
         ]
       }
     },
+    "/api/user/onboarding-complete": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Marca el onboarding como completado para el usuario autenticado",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/users/{id}": {
       "get": {
         "tags": [

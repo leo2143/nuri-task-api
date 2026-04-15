@@ -156,6 +156,15 @@ export const setupUserRoutes = app => {
     return UsersController.deleteProfileImage(req, res);
   });
 
+  app.put('/api/user/onboarding-complete', validateToken, (req, res) => {
+    // #swagger.tags = ['Users']
+    // #swagger.summary = 'Marca el onboarding como completado para el usuario autenticado'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return UsersController.completeOnboarding(req, res);
+  });
+
   app.get('/api/users', validateAdminToken, (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Obtiene todos los usuarios (solo admin)'
