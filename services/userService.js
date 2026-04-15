@@ -664,4 +664,21 @@ export class UserService {
       resetPasswordExpires: { $gt: Date.now() },
     });
   }
+
+  static async completeOnboarding(userId) {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return new NotFoundResponseModel('Usuario no encontrado');
+      }
+
+      user.onboardingCompleted = true;
+      await user.save();
+
+      return new SuccessResponseModel(null, 'Onboarding completado');
+    } catch (error) {
+      console.error(chalk.red('Error al completar onboarding:', error));
+      return new ErrorResponseModel('Error al completar onboarding');
+    }
+  }
 }

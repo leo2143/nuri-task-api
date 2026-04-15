@@ -300,6 +300,17 @@ export class UsersController {
    * // POST /api/users/reset-password
    * // Body: { "token": "abc123...", "newPassword": "nuevaContraseña123" }
    */
+  static async completeOnboarding(req, res) {
+    try {
+      const userId = req.userId;
+      const result = await UserService.completeOnboarding(userId);
+      res.status(result.status).json(result);
+    } catch (error) {
+      console.error('Error en completeOnboarding:', error);
+      res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
+    }
+  }
+
   static async resetPassword(req, res) {
     try {
       const { token, newPassword } = req.body;
