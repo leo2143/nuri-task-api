@@ -1,6 +1,7 @@
 import Todo from '../models/todoModel.js';
 import Goal from '../models/goalsModel.js';
 import { MetricsService } from './metricsService.js';
+import { UserAchievementService } from './userAchievementService.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import { CreateTodoDto, UpdateTodoDto, TodoFilterDto, AddCommentDto } from '../models/dtos/todo/index.js';
@@ -235,6 +236,7 @@ export class TodoService {
           console.error(chalk.yellow('Error al actualizar métricas del usuario:', metricsError));
         }
 
+        await UserAchievementService.processEvent('task:completed', userId);
       }
 
       // Actualizar progreso del goal

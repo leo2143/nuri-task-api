@@ -12,8 +12,9 @@ export class CreateAchievementDto {
    * @param {string} data.description - Descripción del logro (requerido)
    * @param {number} data.targetCount - Cantidad objetivo para completar (requerido)
    * @param {string} data.type - Tipo de logro: task/goal/metric/streak (requerido)
-   * @param {string} data.imageUrl - URL de la imagen del logro 
-   * @param {string} [data.reward] - Recompensa del logro
+   * @param {string} data.triggerEvent - Evento que dispara el progreso: task:completed/goal:completed/streak:updated (requerido)
+   * @param {string} data.imageUrl - URL de la imagen del logro
+   * @param {string} [data.tier] - Nivel de acceso: basic/premium (por defecto: basic)
    * @param {boolean} [data.isActive] - Si el logro está activo (por defecto: true)
    */
   constructor(data) {
@@ -21,8 +22,9 @@ export class CreateAchievementDto {
     this.description = data.description;
     this.targetCount = data.targetCount;
     this.type = data.type;
+    this.triggerEvent = data.triggerEvent;
+    this.tier = data.tier || 'basic';
     this.imageUrl = data.imageUrl;
-    this.reward = data.reward || '';
     this.isActive = data.isActive !== undefined ? data.isActive : true;
   }
 
@@ -84,6 +86,44 @@ export class CreateAchievementDto {
       if (typeof this.targetCount !== 'number' || this.targetCount < 1) {
         return 'El targetCount debe ser un número mayor a 0';
       }
+    }
+
+    return null;
+  }
+
+  /**
+   * Valida el triggerEvent
+   * @param {boolean} required - Si el campo es requerido
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validateTriggerEvent(required = true) {
+    if (this.triggerEvent === undefined) return null;
+
+    const validEvents = ['task:completed', 'goal:completed', 'streak:updated'];
+
+    if (required && (!this.triggerEvent || !validEvents.includes(this.triggerEvent))) {
+      return `El triggerEvent debe ser uno de: ${validEvents.join(', ')}`;
+    }
+
+    if (!required && this.triggerEvent !== undefined) {
+      if (!validEvents.includes(this.triggerEvent)) {
+        return `El triggerEvent debe ser uno de: ${validEvents.join(', ')}`;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Valida el tier
+   * @returns {string|null} Mensaje de error o null si es válido
+   */
+  _validateTier() {
+    if (this.tier === undefined) return null;
+
+    const validTiers = ['basic', 'premium'];
+    if (!validTiers.includes(this.tier)) {
+      return `El tier debe ser uno de: ${validTiers.join(', ')}`;
     }
 
     return null;
@@ -154,10 +194,16 @@ export class CreateAchievementDto {
     const typeError = this._validateType(true);
     if (typeError) errors.push(typeError);
 
+    const triggerEventError = this._validateTriggerEvent(true);
+    if (triggerEventError) errors.push(triggerEventError);
+
     const imageUrlError = this._validateImageUrl();
     if (imageUrlError) errors.push(imageUrlError);
 
     // Validar campos opcionales
+    const tierError = this._validateTier();
+    if (tierError) errors.push(tierError);
+
     const isActiveError = this._validateIsActive();
     if (isActiveError) errors.push(isActiveError);
 
@@ -177,7 +223,8 @@ export class CreateAchievementDto {
       description: this.description.trim(),
       targetCount: this.targetCount,
       type: this.type,
-      reward: this.reward.trim(),
+      triggerEvent: this.triggerEvent,
+      tier: this.tier,
       isActive: this.isActive,
       imageUrl: this.imageUrl,
     };

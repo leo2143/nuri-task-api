@@ -6,6 +6,9 @@ import { SuccessResponseModel } from '../models/responseModel.js';
 import { IncrementProgressDto } from '../models/dtos/achievements/index.js';
 import { PaginationDto } from '../models/dtos/paginationDto.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
+import { PushNotificationService } from './pushNotificationService.js';
+import { NotificationService } from './notificationService.js';
+import chalk from 'chalk';
 
 const POPULATE_USER_FIELDS = 'name email avatar';
 const DEFAULT_PROGRESS = {
@@ -33,12 +36,8 @@ export class UserAchievementService {
       const isPremium = user?.isAdmin || user?.subscription?.isActive;
 
       const query = { isActive: true };
-      if (!isPremium) {
-        query.tier = 'basic';
-      }
       paginationDto.applyCursorToQuery(query);
 
-      // Obtener logros activos con paginación
       const achievements = await Achievement.find(query)
         .sort({ createdAt: -1 })
         .limit(paginationDto.limit + 1)
@@ -46,22 +45,32 @@ export class UserAchievementService {
 
       const { results: paginatedAchievements, meta } = paginationDto.processPaginationResults(achievements);
 
-      // Obtener el progreso del usuario para los logros paginados
-      const achievementIds = paginatedAchievements.map(a => a._id);
-      const userProgress = await UserAchievement.find({
+      // Solo busco progreso para los logros que el usuario puede desbloquear
+      const accessibleAchievementIds = paginatedAchievements
+        .filter(achievement => isPremium || achievement.tier === 'basic')
+        .map(achievement => achievement._id);
+
+      const userProgressRecords = await UserAchievement.find({
         user: userId,
-        achievement: { $in: achievementIds },
+        achievement: { $in: accessibleAchievementIds },
       }).lean();
 
-      const progressMap = new Map(userProgress.map(progress => [progress.achievement.toString(), progress]));
+      const userProgressByAchievementId = new Map(
+        userProgressRecords.map(progressRecord => [progressRecord.achievement.toString(), progressRecord])
+      );
 
-      // Combinar logros con el progreso del usuario
-      const result = paginatedAchievements.map(achievement => ({
-        ...achievement,
-        userProgress: progressMap.get(achievement._id.toString()) || DEFAULT_PROGRESS,
-      }));
+      const achievementsWithProgress = paginatedAchievements.map(achievement => {
+        const isAccessible = isPremium || achievement.tier === 'basic';
+        return {
+          ...achievement,
+          isAccessible,
+          userProgress: isAccessible
+            ? userProgressByAchievementId.get(achievement._id.toString()) || DEFAULT_PROGRESS
+            : DEFAULT_PROGRESS,
+        };
+      });
 
-      return new SuccessResponseModel(result, 'Logros obtenidos correctamente', 200, meta);
+      return new SuccessResponseModel(achievementsWithProgress, 'Logros obtenidos correctamente', 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener logros con progreso');
     }
@@ -212,6 +221,119 @@ export class UserAchievementService {
       return new SuccessResponseModel(userAchievement, 'Progreso reseteado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'resetear progreso');
+    }
+  }
+
+  /**
+   * Procesa un evento de usuario y actualiza el progreso en todos los logros que lo escuchan.
+   * Se llama desde otros servicios (todoService, goalService, metricsService) sin interrumpir
+   * el flujo principal: los errores aquí nunca rompen la respuesta al usuario.
+   * @param {string} triggerEvent - Evento disparado ('task:completed', 'goal:completed', 'streak:updated')
+   * @param {string} userId - ID del usuario que disparó el evento
+   * @param {number|null} value - Solo para 'streak:updated': valor absoluto del streak actual
+   */
+  static async processEvent(triggerEvent, userId, value = null) {
+    try {
+      const shouldSetAbsoluteValue = triggerEvent === 'streak:updated';
+
+      const matchingAchievements = await Achievement.find({ triggerEvent, isActive: true }).lean();
+      if (!matchingAchievements.length) return;
+
+      const progressUpdateOps = matchingAchievements.map(achievement => ({
+        updateOne: {
+          filter: { user: userId, achievement: achievement._id },
+          update: shouldSetAbsoluteValue
+            ? { $set: { currentCount: value } }
+            : { $inc: { currentCount: 1 } },
+          upsert: true,
+        },
+      }));
+
+      await UserAchievement.bulkWrite(progressUpdateOps);
+
+      await this._checkAndCompleteAchievements(userId, matchingAchievements, shouldSetAbsoluteValue);
+    } catch (error) {
+      console.error(chalk.red('Error al procesar evento de logros:'), error);
+    }
+  }
+
+  /**
+   * Después del bulkWrite revisa qué logros cruzaron el targetCount y los marca como completados.
+   * En modo streak también revierte los que cayeron por debajo.
+   * @private
+   * @param {string} userId
+   * @param {Array} achievements - Logros consultados (con _id y targetCount)
+   * @param {boolean} shouldSetAbsoluteValue - true cuando el evento es streak:updated (asigna el valor en lugar de incrementar)
+   */
+  static async _checkAndCompleteAchievements(userId, achievements, shouldSetAbsoluteValue) {
+    const achievementIds = achievements.map(achievement => achievement._id);
+    const userProgressList = await UserAchievement.find({
+      user: userId,
+      achievement: { $in: achievementIds },
+    });
+
+    if (!userProgressList.length) return;
+
+    const achievementById = new Map(achievements.map(achievement => [achievement._id.toString(), achievement]));
+    const now = new Date();
+
+    const completionOps = [];
+    const revertOps = [];
+    const achievementsJustCompleted = [];
+
+    for (const userProgress of userProgressList) {
+      const achievement = achievementById.get(userProgress.achievement.toString());
+      if (!achievement) continue;
+
+      const reachedTarget = userProgress.currentCount >= achievement.targetCount;
+
+      if (reachedTarget && userProgress.status !== 'completed') {
+        completionOps.push({
+          updateOne: {
+            filter: { _id: userProgress._id },
+            update: {
+              $set: {
+                status: 'completed',
+                completedAt: now,
+                unlockedAt: userProgress.unlockedAt || now,
+              },
+            },
+          },
+        });
+        achievementsJustCompleted.push(achievement);
+      } else if (shouldSetAbsoluteValue && !reachedTarget && userProgress.status === 'completed') {
+        revertOps.push({
+          updateOne: {
+            filter: { _id: userProgress._id },
+            update: { $set: { status: 'locked', completedAt: null } },
+          },
+        });
+      }
+    }
+
+    const allOps = [...completionOps, ...revertOps];
+    if (allOps.length > 0) {
+      await UserAchievement.bulkWrite(allOps);
+    }
+
+    for (const achievement of achievementsJustCompleted) {
+      const payload = {
+        title: '¡Nuevo logro desbloqueado!',
+        body: achievement.title,
+        url: '/achievements',
+        icon: achievement.imageUrl,
+      };
+
+      Promise.all([
+        NotificationService.createMany([{
+          userId,
+          title: payload.title,
+          body: payload.body,
+          url: payload.url,
+          type: 'achievement_completed',
+        }]),
+        PushNotificationService.sendNotification(userId, payload),
+      ]).catch(err => console.error(chalk.yellow('Error enviando notificación de logro:', err)));
     }
   }
 }

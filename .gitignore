@@ -116,6 +116,11 @@ coverage
 .cursor-tutor/
 *.cursor-*
 .aidigestignore
+.cursorrules
+.cursorignore
+
+# Documentación interna (no va al repo)
+docs/
 
 # Vercel
 .vercel

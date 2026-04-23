@@ -9,6 +9,7 @@ import {
   CatalogGoalDto,
 } from '../models/dtos/goals/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
+import { UserAchievementService } from './userAchievementService.js';
 import chalk from 'chalk';
 
 const FREE_GOALS_LIMIT = 2;
@@ -242,6 +243,10 @@ export class GoalService {
         console.log(chalk.green(`Estado cambiado: ${statusChange.oldStatus} → ${statusChange.newStatus}`));
       }
 
+      if (statusChange.changed && statusChange.newStatus === 'completed') {
+        await UserAchievementService.processEvent('goal:completed', userId);
+      }
+
       return new SuccessResponseModel(goal, 'Meta actualizada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar meta');
@@ -433,6 +438,10 @@ export class GoalService {
       if (oldStatus !== status && goal.parentGoalId) {
         await this._updateParentGoalCounters(goal.parentGoalId);
         console.log(chalk.green(`Estado cambiado: ${oldStatus} → ${status}`));
+      }
+
+      if (oldStatus !== status && status === 'completed') {
+        await UserAchievementService.processEvent('goal:completed', userId);
       }
 
       return new SuccessResponseModel(updatedGoal, 'Estado de la meta actualizado correctamente');
