@@ -61,12 +61,18 @@ export class PushNotificationService {
    * @param {Object} payload - { title, body, icon?, url? }
    */
   static async sendNotification(userId, payload) {
-    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+      console.warn(chalk.yellow('[Push] VAPID keys no configuradas, notificación push omitida.'));
+      return;
+    }
 
     try {
       const subscriptions = await PushSubscription.find({ userId });
 
-      if (subscriptions.length === 0) return;
+      if (subscriptions.length === 0) {
+        console.warn(chalk.yellow(`[Push] No hay suscripciones registradas para el usuario ${userId}. El usuario debe habilitar notificaciones desde la app.`));
+        return;
+      }
 
       const notificationPayload = JSON.stringify({
         title: payload.title,
@@ -84,18 +90,23 @@ export class PushNotificationService {
         )
       );
 
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      console.log(chalk.green(`[Push] Notificación enviada a ${successful}/${subscriptions.length} suscripciones del usuario ${userId}`));
+
       // Limpiar suscripciones inválidas (410 Gone o 404)
       for (let i = 0; i < results.length; i++) {
         if (results[i].status === 'rejected') {
           const statusCode = results[i].reason?.statusCode;
           if (statusCode === 410 || statusCode === 404) {
             await PushSubscription.findByIdAndDelete(subscriptions[i]._id);
-            console.log(chalk.yellow(`Suscripción expirada eliminada para usuario ${userId}`));
+            console.log(chalk.yellow(`[Push] Suscripción expirada eliminada para usuario ${userId}`));
+          } else {
+            console.error(chalk.red(`[Push] Error enviando a suscripción ${i}:`), results[i].reason);
           }
         }
       }
     } catch (error) {
-      console.error(chalk.red('Error enviando notificación push:'), error);
+      console.error(chalk.red('[Push] Error enviando notificación push:'), error);
     }
   }
 
