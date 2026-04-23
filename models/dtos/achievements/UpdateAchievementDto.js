@@ -15,20 +15,20 @@ export class UpdateAchievementDto extends CreateAchievementDto {
    * @param {string} [data.description] - Descripción del logro
    * @param {number} [data.targetCount] - Cantidad objetivo para completar
    * @param {string} [data.type] - Tipo de logro: task/goal/metric/streak
-   * @param {string} [data.reward] - Recompensa del logro
+   * @param {string} [data.triggerEvent] - Evento que dispara el progreso
+   * @param {string} [data.tier] - Nivel de acceso: basic/premium
    * @param {boolean} [data.isActive] - Si el logro está activo
    * @param {string} [data.imageUrl] - URL de la imagen del logro
    */
   constructor(data) {
-    // Llamamos super con objeto vacío para inicializar la clase padre
     super({});
 
-    // Solo incluir campos que estén presentes en data
     if (data.title !== undefined) this.title = data.title;
     if (data.description !== undefined) this.description = data.description;
     if (data.targetCount !== undefined) this.targetCount = data.targetCount;
     if (data.type !== undefined) this.type = data.type;
-    if (data.reward !== undefined) this.reward = data.reward;
+    if (data.triggerEvent !== undefined) this.triggerEvent = data.triggerEvent;
+    if (data.tier !== undefined) this.tier = data.tier;
     if (data.isActive !== undefined) this.isActive = data.isActive;
     if (data.imageUrl !== undefined) this.imageUrl = data.imageUrl;
   }
@@ -63,6 +63,12 @@ export class UpdateAchievementDto extends CreateAchievementDto {
     const typeError = this._validateType(false);
     if (typeError) errors.push(typeError);
 
+    const triggerEventError = this._validateTriggerEvent(false);
+    if (triggerEventError) errors.push(triggerEventError);
+
+    const tierError = this._validateTier();
+    if (tierError) errors.push(tierError);
+
     const isActiveError = this._validateIsActive();
     if (isActiveError) errors.push(isActiveError);
 
@@ -86,7 +92,8 @@ export class UpdateAchievementDto extends CreateAchievementDto {
     if (this.description !== undefined) result.description = this.description.trim();
     if (this.targetCount !== undefined) result.targetCount = this.targetCount;
     if (this.type !== undefined) result.type = this.type;
-    if (this.reward !== undefined) result.reward = this.reward.trim();
+    if (this.triggerEvent !== undefined) result.triggerEvent = this.triggerEvent;
+    if (this.tier !== undefined) result.tier = this.tier;
     if (this.isActive !== undefined) result.isActive = this.isActive;
     if (this.imageUrl !== undefined) result.imageUrl = this.imageUrl;
 

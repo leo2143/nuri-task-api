@@ -25,7 +25,7 @@ const notificationSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ['due_task', 'streak_risk', 'inactivity', 'streak_increase'],
+      enum: ['due_task', 'streak_risk', 'inactivity', 'streak_increase', 'achievement_completed'],
     },
     read: {
       type: Boolean,

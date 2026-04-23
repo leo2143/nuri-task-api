@@ -6,8 +6,9 @@ import mongoose from 'mongoose';
  * @property {string} title - Título del logro (requerido)
  * @property {string} description - Descripción del logro (requerido)
  * @property {number} targetCount - Conteo objetivo para desbloquear/completar el logro (requerido)
- * @property {string} reward - Recompensa del logro
- * @property {string} type - Tipo de logro (requerido) - Valores: 'task', 'goal', 'metric', 'streak', 'comment'
+ * @property {string} type - Tipo de logro (requerido) - Valores: 'task', 'goal', 'metric', 'streak'
+ * @property {string} triggerEvent - Evento que dispara el progreso del logro (requerido)
+ * @property {string} tier - Nivel de acceso del logro: 'basic' (todos) o 'premium' (solo suscriptores)
  * @property {boolean} isActive - Si el logro está activo (default: true)
  * @property {Date} createdAt - Fecha de creación (automático)
  * @property {Date} updatedAt - Fecha de última actualización (automático)
@@ -43,6 +44,11 @@ const achievementSchema = new mongoose.Schema(
       required: true,
       enum: ['task', 'goal', 'metric', 'streak'],
     },
+    triggerEvent: {
+      type: String,
+      required: true,
+      enum: ['task:completed', 'goal:completed', 'streak:updated'],
+    },
     tier: {
       type: String,
       enum: ['basic', 'premium'],
@@ -61,6 +67,8 @@ const achievementSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+achievementSchema.index({ triggerEvent: 1, isActive: 1 });
 
 /**
  * Modelo de Achievement para MongoDB (Plantillas Globales)

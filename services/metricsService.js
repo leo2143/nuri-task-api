@@ -3,6 +3,7 @@ import User from '../models/userModel.js';
 import Goal from '../models/goalsModel.js';
 import Achievement from '../models/achievementModel.js';
 import UserAchievement from '../models/userAchievementModel.js';
+import { UserAchievementService } from './userAchievementService.js';
 import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel } from '../models/responseModel.js';
 import { MetricsDashboardDto } from '../models/dtos/metrics/index.js';
@@ -92,6 +93,8 @@ export class MetricsService {
           PushNotificationService.sendNotification(userId, payload),
         ]).catch(err => console.error(chalk.yellow('Error enviando notificación de racha:', err)));
       }
+
+      await UserAchievementService.processEvent('streak:updated', userId, metrics.currentStreak);
 
       return new SuccessResponseModel(metrics, 'Tarea registrada en métricas correctamente');
     } catch (error) {
