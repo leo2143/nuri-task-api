@@ -272,7 +272,7 @@ POST   /api/users/reset-password    # Resetear contraseña
 #### 📝 Tareas
 
 ```
-GET    /api/todos                   # Listar tareas
+GET    /api/todos                   # Listar tareas (con filtros)
 GET    /api/todos/:id               # Obtener tarea
 POST   /api/todos                   # Crear tarea
 PUT    /api/todos/:id               # Actualizar tarea
@@ -280,24 +280,62 @@ DELETE /api/todos/:id               # Eliminar tarea
 POST   /api/todos/:id/comments      # Agregar comentario
 ```
 
+**Filtros disponibles en `GET /api/todos`:**
+
+| Query Param | Tipo | Descripcion |
+|---|---|---|
+| `search` | string | Busqueda por titulo (regex case-insensitive) |
+| `completed` | boolean | Filtrar por estado completado/pendiente |
+| `priority` | `low` \| `medium` \| `high` | Filtrar por prioridad |
+| `dueDateFrom` | date (ISO) | Fecha de vencimiento minima |
+| `dueDateTo` | date (ISO) | Fecha de vencimiento maxima |
+| `sortOrder` | `asc` \| `desc` | Orden de resultados |
+| `limit` | number | Cantidad por pagina (max 100, default 10) |
+| `cursor` | string | ID del ultimo elemento para paginacion cursor-based |
+
 #### 🎯 Metas
 
 ```
-GET    /api/goals                   # Listar metas
+GET    /api/goals                   # Listar metas (con filtros)
 POST   /api/goals                   # Crear meta
 PUT    /api/goals/:id               # Actualizar meta
 DELETE /api/goals/:id               # Eliminar meta
 POST   /api/goals/:id/comments      # Agregar comentario
 ```
 
+**Filtros disponibles en `GET /api/goals`:**
+
+| Query Param | Tipo | Descripcion |
+|---|---|---|
+| `search` | string | Busqueda por titulo y descripcion (regex case-insensitive) |
+| `status` | `active` \| `paused` \| `completed` | Filtrar por estado |
+| `priority` | `low` \| `medium` \| `high` | Filtrar por prioridad |
+| `dueDateFrom` | date (ISO) | Fecha de vencimiento minima |
+| `dueDateTo` | date (ISO) | Fecha de vencimiento maxima |
+| `parentGoalId` | string | Filtrar submetas de una meta padre |
+| `sortOrder` | `asc` \| `desc` | Orden de resultados |
+| `limit` | number | Cantidad por pagina (max 100, default 10) |
+| `cursor` | string | ID del ultimo elemento para paginacion cursor-based |
+
 #### 🏆 Logros
 
 ```
-GET    /api/achievements            # Logros del sistema
+GET    /api/achievements            # Logros del sistema (con filtros)
 GET    /api/achievements/user       # Logros del usuario
 POST   /api/achievements/unlock     # Desbloquear logro
 POST   /api/achievements/increment  # Incrementar progreso
 ```
+
+**Filtros disponibles en `GET /api/achievements`:**
+
+| Query Param | Tipo | Descripcion |
+|---|---|---|
+| `search` | string | Busqueda por titulo y descripcion |
+| `type` | `task` \| `goal` \| `metric` \| `streak` | Filtrar por tipo de logro |
+| `isActive` | boolean | Filtrar por estado activo/inactivo |
+| `sortOrder` | `asc` \| `desc` | Orden de resultados |
+| `limit` | number | Cantidad por pagina |
+| `cursor` | string | Paginacion cursor-based |
 
 #### 📊 Métricas
 
@@ -429,9 +467,12 @@ mongoimport --db nuri-task-db --collection achievements \
 
 ## 🔮 Mejoras Futuras
 
-### Funcionalidades Pendientes
+### Funcionalidades Implementadas
 
-- **Paginado**: Implementación de paginado para las búsquedas en general (todos, goals, achievements, etc.)
+- ~~**Paginado**: Implementación de paginado para las búsquedas en general (todos, goals, achievements, etc.)~~ - Implementado con paginación cursor-based
+- ~~**Filtros avanzados**: Filtros por query params en endpoints de listado~~ - Implementado con DTOs de filtrado para todos, goals, achievements y users
+
+### Funcionalidades Pendientes
 
 ---
 
