@@ -1,4 +1,5 @@
 import Goal from '../models/goalsModel.js';
+import Todo from '../models/todoModel.js';
 import User from '../models/userModel.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel, ForbiddenResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
@@ -269,7 +270,11 @@ export class GoalService {
 
       const parentGoalId = goal.parentGoalId;
 
-      await Goal.findByIdAndDelete(goalId);
+      const now = new Date();
+      goal.deleted_at = now;
+      await goal.save();
+
+      await Todo.updateMany({ GoalId: goalId, deleted_at: null }, { deleted_at: now });
 
       if (parentGoalId) {
         await this._updateParentGoalCounters(parentGoalId);

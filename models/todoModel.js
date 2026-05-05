@@ -71,11 +71,39 @@ const todoSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    deleted_at: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+todoSchema.index({ userId: 1, deleted_at: 1 });
+
+/**
+ * Mongoose query middleware para borrado lógico.
+ * Filtra automáticamente los registros con deleted_at != null en todas las operaciones find.
+ * Para incluir registros borrados, pasar { include_deleted: true } en la query.
+ * @see https://mongoosejs.com/docs/middleware.html#types-of-middleware (Query Middleware)
+ */
+todoSchema.pre(/^find/, function () {
+  if (!this.getQuery().include_deleted) {
+    this.where({ deleted_at: null });
+  } else {
+    delete this.getQuery().include_deleted;
+  }
+});
+
+todoSchema.pre('countDocuments', function () {
+  if (!this.getQuery().include_deleted) {
+    this.where({ deleted_at: null });
+  } else {
+    delete this.getQuery().include_deleted;
+  }
+});
 
 /**
  * Modelo de Todo para MongoDB
