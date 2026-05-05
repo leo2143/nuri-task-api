@@ -266,9 +266,9 @@ export class TodoService {
 
       const goalId = todo.GoalId;
 
-      await Todo.findByIdAndDelete(id);
+      todo.deleted_at = new Date();
+      await todo.save();
 
-      // Actualizar contadores del goal si existía
       await this._updateGoalTaskCounters(goalId, 'Goal');
 
       return new SuccessResponseModel(todo, 'Tarea eliminada correctamente');

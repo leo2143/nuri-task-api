@@ -92,11 +92,39 @@ const goalSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    deleted_at: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+goalSchema.index({ userId: 1, deleted_at: 1 });
+
+/**
+ * Mongoose query middleware para borrado lógico.
+ * Filtra automáticamente los registros con deleted_at != null en todas las operaciones find.
+ * Para incluir registros borrados, pasar { include_deleted: true } en la query.
+ * @see https://mongoosejs.com/docs/middleware.html#types-of-middleware (Query Middleware)
+ */
+goalSchema.pre(/^find/, function () {
+  if (!this.getQuery().include_deleted) {
+    this.where({ deleted_at: null });
+  } else {
+    delete this.getQuery().include_deleted;
+  }
+});
+
+goalSchema.pre('countDocuments', function () {
+  if (!this.getQuery().include_deleted) {
+    this.where({ deleted_at: null });
+  } else {
+    delete this.getQuery().include_deleted;
+  }
+});
 
 // ========== MÉTODOS DEL ESQUEMA ==========
 

@@ -512,6 +512,7 @@ Este proyecto se desarrolló basándose en documentación oficial y recursos de 
 
 - [Express Best Practices](https://expressjs.com/en/advanced/best-practice-security.html) - Seguridad en Express
 - [MongoDB Schema Design](https://www.mongodb.com/docs/manual/core/data-modeling-introduction/) - Diseño de esquemas en MongoDB
+- [Mongoose Middleware (Query Middleware)](https://mongoosejs.com/docs/middleware.html#types-of-middleware) - Pre-hooks de query utilizados para implementar borrado lógico (soft delete) con filtrado automático de registros eliminados
 
 ---
 

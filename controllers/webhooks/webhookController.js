@@ -40,12 +40,10 @@ export class WebhookController {
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
-    res.status(200).json({ received: true });
-
     const { type, data } = req.body;
     if (!type || !data?.id) {
       console.warn(chalk.yellow('Webhook sin type o data.id:', JSON.stringify(req.body)));
-      return;
+      return res.status(200).json({ received: true });
     }
 
     console.log(chalk.blue(`Webhook MP recibido: type=${type}, data.id=${data.id}`));
@@ -55,5 +53,7 @@ export class WebhookController {
     } catch (error) {
       console.error(chalk.red('Error procesando webhook MP:', error.message));
     }
+
+    return res.status(200).json({ received: true });
   }
 }
