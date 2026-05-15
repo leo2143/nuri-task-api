@@ -5,7 +5,8 @@ import mongoose from 'mongoose';
  * @typedef {Object} UserSchema
  * @property {string} name - Nombre del usuario (requerido)
  * @property {string} email - Email del usuario (requerido, único)
- * @property {string} password - Contraseña hasheada del usuario (requerido)
+ * @property {string} password - Contraseña hasheada del usuario (opcional para usuarios de Google)
+ * @property {string} googleId - ID de Google del usuario (opcional)
  * @property {boolean} isAdmin - Indica si el usuario es administrador (default: false)
  */
 
@@ -26,7 +27,14 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: false,
+    default: null,
+  },
+  googleId: {
+    type: String,
+    default: null,
+    sparse: true,
+    unique: true,
   },
   isAdmin: {
     type: Boolean,
