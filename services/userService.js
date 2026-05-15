@@ -426,6 +426,10 @@ export class UserService {
         return new ErrorResponseModel('Credenciales inválidas');
       }
 
+      if (!user.password) {
+        return new ErrorResponseModel('Esta cuenta usa inicio de sesión con Google. Por favor, iniciá sesión con Google');
+      }
+
       const isPasswordValid = await UserServiceHelpers.verifyPassword(cleanData.password, user.password);
       if (!isPasswordValid) {
         return new ErrorResponseModel('Credenciales inválidas');
@@ -468,6 +472,10 @@ export class UserService {
       const user = await User.findById(userId);
       if (!user) {
         return new NotFoundResponseModel(`No se encontró el usuario con el id: ${userId} en la base de datos`);
+      }
+
+      if (!user.password) {
+        return new BadRequestResponseModel('No es posible cambiar la contraseña. Esta cuenta usa inicio de sesión con Google');
       }
 
       const isPasswordValid = await UserServiceHelpers.verifyPassword(oldPassword, user.password);

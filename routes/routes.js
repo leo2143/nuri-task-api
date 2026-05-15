@@ -10,6 +10,7 @@ import { setupCronRoutes } from '../controllers/cron/routes.js';
 import { setupNotificationRoutes } from '../controllers/notifications/routes.js';
 import { setupSubscriptionRoutes } from '../controllers/subscription/routes.js';
 import { setupWebhookRoutes } from '../controllers/webhooks/routes.js';
+import { setupAuthRoutes } from '../controllers/auth/routes.js';
 import { notFoundHandler, errorHandler, healthCheck } from '../middlewares/errorMiddleware.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -38,6 +39,7 @@ export const setupRoutes = app => {
     res.sendFile(indexPath);
   });
 
+  setupAuthRoutes(app);
   setupTodoRoutes(app);
   setupUserRoutes(app);
   setupGoalRoutes(app);
