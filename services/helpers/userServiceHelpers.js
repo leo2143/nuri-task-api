@@ -6,6 +6,7 @@ const BCRYPT_SALT_ROUNDS = 10;
 const TOKEN_EXPIRATION = '24h';
 const RESET_TOKEN_BYTES = 32;
 const RESET_TOKEN_EXPIRATION_MS = 3600000;
+const VERIFICATION_TOKEN_EXPIRATION_MS = 3600000;
 
 export class UserServiceHelpers {
   static async hashPassword(password) {
@@ -26,6 +27,10 @@ export class UserServiceHelpers {
 
   static getResetTokenExpiration() {
     return Date.now() + RESET_TOKEN_EXPIRATION_MS;
+  }
+
+  static getVerificationTokenExpiration() {
+    return Date.now() + VERIFICATION_TOKEN_EXPIRATION_MS;
   }
 
   static generateJWT(payload, secret) {

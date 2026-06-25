@@ -330,4 +330,38 @@ export class UsersController {
       res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
     }
   }
+
+  static async verifyEmail(req, res) {
+    try {
+      const { token } = req.params;
+      const result = await UserService.verifyEmail(token);
+      res.status(result.status).json(result);
+    } catch (error) {
+      console.error('Error en verifyEmail:', error);
+      res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
+    }
+  }
+
+  static async resendVerification(req, res) {
+    try {
+      const { email } = req.body;
+      const result = await UserService.resendVerificationEmail(email);
+      res.status(result.status).json(result);
+    } catch (error) {
+      console.error('Error en resendVerification:', error);
+      res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
+    }
+  }
+
+  static async setPassword(req, res) {
+    try {
+      const userId = req.userId;
+      const { newPassword } = req.body;
+      const result = await UserService.setPassword(userId, newPassword);
+      res.status(result.status).json(result);
+    } catch (error) {
+      console.error('Error en setPassword:', error);
+      res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
+    }
+  }
 }

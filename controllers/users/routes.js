@@ -165,6 +165,27 @@ export const setupUserRoutes = app => {
     return UsersController.completeOnboarding(req, res);
   });
 
+  app.get('/api/users/verify-email/:token', (req, res) => {
+    // #swagger.tags = ['Users']
+    // #swagger.summary = 'Verifica el email del usuario mediante token'
+    return UsersController.verifyEmail(req, res);
+  });
+
+  app.post('/api/users/resend-verification', (req, res) => {
+    // #swagger.tags = ['Users']
+    // #swagger.summary = 'Reenvía el email de verificación'
+    return UsersController.resendVerification(req, res);
+  });
+
+  app.put('/api/users/set-password', validateToken, (req, res) => {
+    // #swagger.tags = ['Users']
+    // #swagger.summary = 'Establece contraseña para cuentas de Google sin password'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return UsersController.setPassword(req, res);
+  });
+
   app.get('/api/users', validateAdminToken, (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Obtiene todos los usuarios (solo admin)'

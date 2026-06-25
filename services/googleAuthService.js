@@ -69,15 +69,20 @@ export class GoogleAuthService {
           email: googleUser.email,
           googleId: googleUser.googleId,
           profileImageUrl: googleUser.picture,
+          emailVerified: true,
         });
         await user.save();
         await MoodboardService.createMoodboardForUser(user._id);
         isNewUser = true;
       } else if (!user.googleId) {
         user.googleId = googleUser.googleId;
+        user.emailVerified = true;
         if (!user.profileImageUrl && googleUser.picture) {
           user.profileImageUrl = googleUser.picture;
         }
+        await user.save();
+      } else if (!user.emailVerified) {
+        user.emailVerified = true;
         await user.save();
       }
 
@@ -85,9 +90,12 @@ export class GoogleAuthService {
       const token = UserServiceHelpers.generateJWT(payload, JWT_SECRET);
 
       const userResponse = user.toObject();
+      userResponse.hasPassword = !!userResponse.password;
       delete userResponse.password;
       delete userResponse.resetPasswordToken;
       delete userResponse.resetPasswordExpires;
+      delete userResponse.emailVerificationToken;
+      delete userResponse.emailVerificationExpires;
       if (userResponse.subscription) {
         delete userResponse.subscription.endDate;
         delete userResponse.subscription.startDate;
