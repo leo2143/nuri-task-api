@@ -213,7 +213,6 @@ export class TodoService {
    */
   static async updateTodoState(id, completed, userId) {
     try {
-      // Validar que el parámetro completed sea un booleano
       if (typeof completed !== 'boolean') {
         return new BadRequestResponseModel('El campo completed debe ser un booleano (true/false)');
       }
@@ -224,12 +223,18 @@ export class TodoService {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
       }
 
+      if (existingTodo.isLocked) {
+        return new BadRequestResponseModel('Esta tarea ya fue confirmada y no se puede modificar');
+      }
+
       const wasCompleted = existingTodo.completed;
 
       existingTodo.completed = completed;
-      await existingTodo.save();
 
       if (!wasCompleted && completed === true) {
+        existingTodo.isLocked = true;
+        await existingTodo.save();
+
         try {
           await MetricsService.recordTaskCompleted(userId);
         } catch (metricsError) {
@@ -237,9 +242,10 @@ export class TodoService {
         }
 
         await UserAchievementService.processEvent('task:completed', userId);
+      } else {
+        await existingTodo.save();
       }
 
-      // Actualizar progreso del goal
       await this._updateGoalTaskCounters(existingTodo.GoalId, 'Goal');
 
       return new SuccessResponseModel(
