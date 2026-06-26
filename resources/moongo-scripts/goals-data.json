@@ -1,226 +1,240 @@
 [
-  {
-    "title": "Dominar Node.js",
-    "description": "Convertirse en un desarrollador experto en Node.js",
-    "priority": "high",
-    "dueDate": "2024-06-30T23:59:59.000Z",
-    "status": "active",
-    "smart": {
-      "specific": "Aprender Node.js, Express, MongoDB y JWT",
-      "measurable": "Completar 5 proyectos y obtener certificación",
-      "achievable": "3 horas diarias de estudio y práctica",
-      "relevant": "Necesario para avanzar en mi carrera como desarrollador",
-      "timeBound": "6 meses"
+    {
+        "title":  "Dominar Node.js",
+        "description":  "Convertirse en un desarrollador experto en Node.js",
+        "priority":  "high",
+        "dueDate":  "2024-06-30T23:59:59.000Z",
+        "status":  "active",
+        "smart":  {
+                      "specific":  "Aprender Node.js, Express, MongoDB y JWT",
+                      "measurable":  "Completar 5 proyectos y obtener certificaciÃ³n",
+                      "achievable":  "3 horas diarias de estudio y prÃ¡ctica",
+                      "relevant":  "Necesario para avanzar en mi carrera como desarrollador",
+                      "timeBound":  "6 meses"
+                  },
+        "comments":  [
+                         {
+                             "text":  "Excelente progreso en las primeras semanas",
+                             "author":  "Mentor",
+                             "date":  "2024-01-15T10:00:00.000Z"
+                         }
+                     ],
+        "userId":  {
+                       "$oid":  "68d2cf072897f6a7a500a4b5"
+                   },
+        "totalSubGoals":  0,
+        "completedSubGoals":  0,
+        "totalTasks":  5,
+        "completedTasks":  1,
+        "progress":  20,
+        "createdAt":  "2024-01-01T00:00:00.000Z",
+        "updatedAt":  "2024-01-20T14:30:00.000Z",
+        "__v":  0,
+        "reason":  "",
+        "parentGoalId":  null
     },
-    "comments": [
-      {
-        "text": "Excelente progreso en las primeras semanas",
-        "author": "Mentor",
-        "date": "2024-01-15T10:00:00.000Z"
-      }
-    ],
-    "userId": {
-      "$oid": "68d2cf072897f6a7a500a4b5"
+    {
+        "title":  "Crear Portfolio Web",
+        "description":  "Desarrollar un portfolio personal profesional",
+        "priority":  "medium",
+        "dueDate":  "2024-04-15T23:59:59.000Z",
+        "status":  "active",
+        "smart":  {
+                      "specific":  "Crear un sitio web con React, Node.js y MongoDB",
+                      "measurable":  "3 proyectos completos y 10 clientes potenciales",
+                      "achievable":  "2 horas diarias de desarrollo",
+                      "relevant":  "Necesario para conseguir trabajo como freelancer",
+                      "timeBound":  "3 meses"
+                  },
+        "comments":  [
+                         {
+                             "text":  "El diseÃ±o inicial se ve muy profesional",
+                             "author":  "DiseÃ±ador",
+                             "date":  "2024-01-10T14:30:00.000Z"
+                         }
+                     ],
+        "userId":  {
+                       "$oid":  "68d2cf072897f6a7a500a4b5"
+                   },
+        "totalSubGoals":  0,
+        "completedSubGoals":  0,
+        "totalTasks":  5,
+        "completedTasks":  2,
+        "progress":  40,
+        "createdAt":  "2024-01-01T00:00:00.000Z",
+        "updatedAt":  "2024-01-10T14:30:00.000Z",
+        "__v":  0,
+        "reason":  "",
+        "parentGoalId":  null
     },
-    "totalSubGoals": 0,
-    "completedSubGoals": 0,
-    "totalTasks": 5,
-    "completedTasks": 1,
-    "progress": 20,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-20T14:30:00.000Z",
-    "__v": 0
-  },
-  {
-    "title": "Crear Portfolio Web",
-    "description": "Desarrollar un portfolio personal profesional",
-    "priority": "medium",
-    "dueDate": "2024-04-15T23:59:59.000Z",
-    "status": "active",
-    "smart": {
-      "specific": "Crear un sitio web con React, Node.js y MongoDB",
-      "measurable": "3 proyectos completos y 10 clientes potenciales",
-      "achievable": "2 horas diarias de desarrollo",
-      "relevant": "Necesario para conseguir trabajo como freelancer",
-      "timeBound": "3 meses"
+    {
+        "title":  "Aprender React",
+        "description":  "Dominar React y su ecosistema",
+        "priority":  "high",
+        "dueDate":  "2024-03-31T23:59:59.000Z",
+        "status":  "paused",
+        "smart":  {
+                      "specific":  "Aprender React, Redux, Next.js y testing",
+                      "measurable":  "Completar 3 proyectos y 50 ejercicios",
+                      "achievable":  "2 horas diarias de estudio",
+                      "relevant":  "React es fundamental para desarrollo frontend",
+                      "timeBound":  "3 meses"
+                  },
+        "comments":  [
+                         {
+                             "text":  "Pausado temporalmente para enfocarse en Node.js",
+                             "author":  "Usuario",
+                             "date":  "2024-01-20T09:00:00.000Z"
+                         }
+                     ],
+        "userId":  {
+                       "$oid":  "68d2cf072897f6a7a500a4b5"
+                   },
+        "totalSubGoals":  0,
+        "completedSubGoals":  0,
+        "totalTasks":  0,
+        "completedTasks":  0,
+        "progress":  0,
+        "createdAt":  "2024-01-01T00:00:00.000Z",
+        "updatedAt":  "2024-01-20T09:00:00.000Z",
+        "__v":  0,
+        "reason":  "",
+        "parentGoalId":  null
     },
-    "comments": [
-      {
-        "text": "El diseño inicial se ve muy profesional",
-        "author": "Diseñador",
-        "date": "2024-01-10T14:30:00.000Z"
-      }
-    ],
-    "userId": {
-      "$oid": "68d2cf072897f6a7a500a4b5"
+    {
+        "title":  "Obtener CertificaciÃ³n AWS",
+        "description":  "Certificarse en AWS Solutions Architect",
+        "priority":  "medium",
+        "dueDate":  "2024-08-31T23:59:59.000Z",
+        "status":  "active",
+        "smart":  {
+                      "specific":  "Estudiar para AWS Solutions Architect Associate",
+                      "measurable":  "Completar curso oficial y aprobar examen",
+                      "achievable":  "1 hora diaria de estudio",
+                      "relevant":  "AWS es muy demandado en el mercado laboral",
+                      "timeBound":  "8 meses"
+                  },
+        "comments":  [
+                         {
+                             "text":  "Meta a largo plazo pero muy importante",
+                             "author":  "Usuario",
+                             "date":  "2024-01-05T16:00:00.000Z"
+                         }
+                     ],
+        "userId":  {
+                       "$oid":  "68d2cf072897f6a7a500a4b5"
+                   },
+        "totalSubGoals":  0,
+        "completedSubGoals":  0,
+        "totalTasks":  0,
+        "completedTasks":  0,
+        "progress":  0,
+        "createdAt":  "2024-01-01T00:00:00.000Z",
+        "updatedAt":  "2024-01-08T00:00:00.000Z",
+        "__v":  0,
+        "reason":  "",
+        "parentGoalId":  null
     },
-    "totalSubGoals": 0,
-    "completedSubGoals": 0,
-    "totalTasks": 5,
-    "completedTasks": 2,
-    "progress": 40,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-10T14:30:00.000Z",
-    "__v": 0
-  },
-  {
-    "title": "Aprender React",
-    "description": "Dominar React y su ecosistema",
-    "priority": "high",
-    "dueDate": "2024-03-31T23:59:59.000Z",
-    "status": "paused",
-    "smart": {
-      "specific": "Aprender React, Redux, Next.js y testing",
-      "measurable": "Completar 3 proyectos y 50 ejercicios",
-      "achievable": "2 horas diarias de estudio",
-      "relevant": "React es fundamental para desarrollo frontend",
-      "timeBound": "3 meses"
+    {
+        "title":  "Mejorar InglÃ©s TÃ©cnico",
+        "description":  "Alcanzar nivel avanzado en inglÃ©s tÃ©cnico",
+        "priority":  "low",
+        "dueDate":  "2024-12-31T23:59:59.000Z",
+        "status":  "completed",
+        "smart":  {
+                      "specific":  "Leer documentaciÃ³n tÃ©cnica y participar en foros en inglÃ©s",
+                      "measurable":  "Leer 20 artÃ­culos tÃ©cnicos y participar en 10 discusiones",
+                      "achievable":  "30 minutos diarios de prÃ¡ctica",
+                      "relevant":  "El inglÃ©s es esencial para desarrolladores",
+                      "timeBound":  "12 meses"
+                  },
+        "comments":  [
+                         {
+                             "text":  "Â¡Felicitaciones! Lograste un gran progreso",
+                             "author":  "Profesor",
+                             "date":  "2024-01-01T12:00:00.000Z"
+                         }
+                     ],
+        "userId":  {
+                       "$oid":  "68d2cf072897f6a7a500a4b5"
+                   },
+        "totalSubGoals":  0,
+        "completedSubGoals":  0,
+        "totalTasks":  0,
+        "completedTasks":  0,
+        "progress":  0,
+        "createdAt":  "2024-01-01T00:00:00.000Z",
+        "updatedAt":  "2024-01-01T12:00:00.000Z",
+        "__v":  0,
+        "reason":  "",
+        "parentGoalId":  null
     },
-    "comments": [
-      {
-        "text": "Pausado temporalmente para enfocarse en Node.js",
-        "author": "Usuario",
-        "date": "2024-01-20T09:00:00.000Z"
-      }
-    ],
-    "userId": {
-      "$oid": "68d2cf072897f6a7a500a4b5"
+    {
+        "title":  "Desarrollar App MÃ³vil",
+        "description":  "Crear una aplicaciÃ³n mÃ³vil con React Native",
+        "priority":  "high",
+        "dueDate":  "2024-05-31T23:59:59.000Z",
+        "status":  "active",
+        "smart":  {
+                      "specific":  "Desarrollar app mÃ³vil con React Native y Firebase",
+                      "measurable":  "1 app completa publicada en las tiendas",
+                      "achievable":  "4 horas semanales de desarrollo",
+                      "relevant":  "Expandir habilidades a desarrollo mÃ³vil",
+                      "timeBound":  "5 meses"
+                  },
+        "comments":  [
+                         {
+                             "text":  "Excelente elecciÃ³n de tecnologÃ­as",
+                             "author":  "Mentor",
+                             "date":  "2024-01-03T10:00:00.000Z"
+                         }
+                     ],
+        "userId":  {
+                       "$oid":  "68d2cf072897f6a7a500a4b5"
+                   },
+        "totalSubGoals":  0,
+        "completedSubGoals":  0,
+        "totalTasks":  0,
+        "completedTasks":  0,
+        "progress":  0,
+        "createdAt":  "2024-01-01T00:00:00.000Z",
+        "updatedAt":  "2024-01-03T10:00:00.000Z",
+        "__v":  0,
+        "reason":  "",
+        "parentGoalId":  null
     },
-    "totalSubGoals": 0,
-    "completedSubGoals": 0,
-    "totalTasks": 0,
-    "completedTasks": 0,
-    "progress": 0,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-20T09:00:00.000Z",
-    "__v": 0
-  },
-  {
-    "title": "Obtener Certificación AWS",
-    "description": "Certificarse en AWS Solutions Architect",
-    "priority": "medium",
-    "dueDate": "2024-08-31T23:59:59.000Z",
-    "status": "active",
-    "smart": {
-      "specific": "Estudiar para AWS Solutions Architect Associate",
-      "measurable": "Completar curso oficial y aprobar examen",
-      "achievable": "1 hora diaria de estudio",
-      "relevant": "AWS es muy demandado en el mercado laboral",
-      "timeBound": "8 meses"
-    },
-    "comments": [
-      {
-        "text": "Meta a largo plazo pero muy importante",
-        "author": "Usuario",
-        "date": "2024-01-05T16:00:00.000Z"
-      }
-    ],
-    "userId": {
-      "$oid": "68d2cf072897f6a7a500a4b5"
-    },
-    "totalSubGoals": 0,
-    "completedSubGoals": 0,
-    "totalTasks": 0,
-    "completedTasks": 0,
-    "progress": 0,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-08T00:00:00.000Z",
-    "__v": 0
-  },
-  {
-    "title": "Mejorar Inglés Técnico",
-    "description": "Alcanzar nivel avanzado en inglés técnico",
-    "priority": "low",
-    "dueDate": "2024-12-31T23:59:59.000Z",
-    "status": "completed",
-    "smart": {
-      "specific": "Leer documentación técnica y participar en foros en inglés",
-      "measurable": "Leer 20 artículos técnicos y participar en 10 discusiones",
-      "achievable": "30 minutos diarios de práctica",
-      "relevant": "El inglés es esencial para desarrolladores",
-      "timeBound": "12 meses"
-    },
-    "comments": [
-      {
-        "text": "¡Felicitaciones! Lograste un gran progreso",
-        "author": "Profesor",
-        "date": "2024-01-01T12:00:00.000Z"
-      }
-    ],
-    "userId": {
-      "$oid": "68d2cf072897f6a7a500a4b5"
-    },
-    "totalSubGoals": 0,
-    "completedSubGoals": 0,
-    "totalTasks": 0,
-    "completedTasks": 0,
-    "progress": 0,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T12:00:00.000Z",
-    "__v": 0
-  },
-  {
-    "title": "Desarrollar App Móvil",
-    "description": "Crear una aplicación móvil con React Native",
-    "priority": "high",
-    "dueDate": "2024-05-31T23:59:59.000Z",
-    "status": "active",
-    "smart": {
-      "specific": "Desarrollar app móvil con React Native y Firebase",
-      "measurable": "1 app completa publicada en las tiendas",
-      "achievable": "4 horas semanales de desarrollo",
-      "relevant": "Expandir habilidades a desarrollo móvil",
-      "timeBound": "5 meses"
-    },
-    "comments": [
-      {
-        "text": "Excelente elección de tecnologías",
-        "author": "Mentor",
-        "date": "2024-01-03T10:00:00.000Z"
-      }
-    ],
-    "userId": {
-      "$oid": "68d2cf072897f6a7a500a4b5"
-    },
-    "totalSubGoals": 0,
-    "completedSubGoals": 0,
-    "totalTasks": 0,
-    "completedTasks": 0,
-    "progress": 0,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-03T10:00:00.000Z",
-    "__v": 0
-  },
-  {
-    "title": "Contribuir a Open Source",
-    "description": "Hacer contribuciones significativas a proyectos open source",
-    "priority": "medium",
-    "dueDate": "2024-07-31T23:59:59.000Z",
-    "status": "active",
-    "smart": {
-      "specific": "Contribuir a 3 proyectos open source populares",
-      "measurable": "5 pull requests aceptados y 10 issues resueltos",
-      "achievable": "2 horas semanales de contribución",
-      "relevant": "Mejorar reputación en la comunidad de desarrolladores",
-      "timeBound": "7 meses"
-    },
-    "comments": [
-      {
-        "text": "Buena manera de aprender y dar back a la comunidad",
-        "author": "Senior Developer",
-        "date": "2024-01-02T15:00:00.000Z"
-      }
-    ],
-    "userId": {
-      "$oid": "68d2cf072897f6a7a500a4b5"
-    },
-    "totalSubGoals": 0,
-    "completedSubGoals": 0,
-    "totalTasks": 0,
-    "completedTasks": 0,
-    "progress": 0,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-02T15:00:00.000Z",
-    "__v": 0
-  }
+    {
+        "title":  "Contribuir a Open Source",
+        "description":  "Hacer contribuciones significativas a proyectos open source",
+        "priority":  "medium",
+        "dueDate":  "2024-07-31T23:59:59.000Z",
+        "status":  "active",
+        "smart":  {
+                      "specific":  "Contribuir a 3 proyectos open source populares",
+                      "measurable":  "5 pull requests aceptados y 10 issues resueltos",
+                      "achievable":  "2 horas semanales de contribuciÃ³n",
+                      "relevant":  "Mejorar reputaciÃ³n en la comunidad de desarrolladores",
+                      "timeBound":  "7 meses"
+                  },
+        "comments":  [
+                         {
+                             "text":  "Buena manera de aprender y dar back a la comunidad",
+                             "author":  "Senior Developer",
+                             "date":  "2024-01-02T15:00:00.000Z"
+                         }
+                     ],
+        "userId":  {
+                       "$oid":  "68d2cf072897f6a7a500a4b5"
+                   },
+        "totalSubGoals":  0,
+        "completedSubGoals":  0,
+        "totalTasks":  0,
+        "completedTasks":  0,
+        "progress":  0,
+        "createdAt":  "2024-01-01T00:00:00.000Z",
+        "updatedAt":  "2024-01-02T15:00:00.000Z",
+        "__v":  0,
+        "reason":  "",
+        "parentGoalId":  null
+    }
 ]

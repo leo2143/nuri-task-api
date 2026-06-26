@@ -320,7 +320,7 @@ export class GoalService {
   static async getGoalsByParentGoalId(parentGoalId, userId, pagination = {}) {
     try {
       const paginationDto = new GoalFilterDto(pagination);
-      const query = { parentGoalId, userId };
+      const query = { parentGoalId, userId, ...paginationDto.toMongoQuery() };
       paginationDto.applyCursorToQuery(query);
 
       const goals = await Goal.find(query)

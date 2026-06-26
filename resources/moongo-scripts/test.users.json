@@ -40,7 +40,7 @@
   "_id": {
     "$oid": "6981410957c57f40bd6c49b5"
   },
-  "name": "Juan Pérez",
+  "name": "Juan PÃ©rez",
   "email": "juan@ejemplo.com",
   "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
   "isAdmin": false,
@@ -52,7 +52,7 @@
   "_id": {
     "$oid": "6981410957c57f40bd6c49b6"
   },
-  "name": "María García",
+  "name": "MarÃ­a GarcÃ­a",
   "email": "maria@ejemplo.com",
   "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
   "isAdmin": false,
@@ -64,7 +64,7 @@
   "_id": {
     "$oid": "6981410957c57f40bd6c49b7"
   },
-  "name": "Carlos López",
+  "name": "Carlos LÃ³pez",
   "email": "carlos@ejemplo.com",
   "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
   "isAdmin": false,
@@ -76,7 +76,7 @@
   "_id": {
     "$oid": "6981410957c57f40bd6c49b8"
   },
-  "name": "Ana Martínez",
+  "name": "Ana MartÃ­nez",
   "email": "ana@ejemplo.com",
   "password": "$2b$10$rQZ8K9mN2pL3sT4uV5wX6yA7bC8dE9fG0hI1jK2lM3nO4pQ5rS6tU7vW8xY9zA",
   "isAdmin": false,

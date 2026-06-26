@@ -321,7 +321,7 @@ export class TodoService {
   static async getTodosByGoalId(goalId, userId, pagination = {}) {
     try {
       const paginationDto = new TodoFilterDto(pagination);
-      const query = { GoalId: goalId, userId };
+      const query = { GoalId: goalId, userId, ...paginationDto.toMongoQuery() };
       paginationDto.applyCursorToQuery(query);
 
       const todos = await Todo.find(query)
