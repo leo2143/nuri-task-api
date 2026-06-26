@@ -730,8 +730,19 @@ export class UserService {
       user.emailVerificationExpires = null;
       await user.save();
 
+      const payload = UserServiceHelpers.createJWTPayload(user);
+      const authToken = UserServiceHelpers.generateJWT(payload, JWT_SECRET);
+
+      const userResponse = user.toObject();
+      userResponse.hasPassword = !!userResponse.password;
+      delete userResponse.password;
+      delete userResponse.resetPasswordToken;
+      delete userResponse.resetPasswordExpires;
+      delete userResponse.emailVerificationToken;
+      delete userResponse.emailVerificationExpires;
+
       console.log(chalk.green('✓ Email verificado para:', user.email));
-      return new SuccessResponseModel(null, 'Email verificado correctamente');
+      return new SuccessResponseModel({ token: authToken, user: userResponse }, 'Email verificado correctamente');
     } catch (error) {
       console.error(chalk.red('Error al verificar email:', error));
       return new ErrorResponseModel('Error al verificar el email');
@@ -741,7 +752,7 @@ export class UserService {
   /**
    * Reenvía el email de verificación
    */
-  static async resendVerificationEmail(email) {
+  static async resendVerificationEmail(email, { force = false } = {}) {
     try {
       if (!email) {
         return new BadRequestResponseModel('Email requerido');
@@ -755,6 +766,13 @@ export class UserService {
 
       if (user.emailVerified) {
         return new BadRequestResponseModel('Este email ya está verificado');
+      }
+
+      const tokenStillFresh = user.emailVerificationExpires
+        && (user.emailVerificationExpires.getTime() - Date.now()) > 3300000;
+
+      if (!force && tokenStillFresh) {
+        return new SuccessResponseModel(null, 'Ya se envió un email de verificación recientemente');
       }
 
       const verificationToken = UserServiceHelpers.generateResetToken();

@@ -344,8 +344,8 @@ export class UsersController {
 
   static async resendVerification(req, res) {
     try {
-      const { email } = req.body;
-      const result = await UserService.resendVerificationEmail(email);
+      const { email, force } = req.body;
+      const result = await UserService.resendVerificationEmail(email, { force: !!force });
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en resendVerification:', error);

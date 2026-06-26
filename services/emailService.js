@@ -237,7 +237,8 @@ export class EmailService {
     try {
       const transporter = this.createTransport();
 
-      const verifyUrl = `${process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL}/verify-email?token=${verificationToken}`;
+      const frontendBase = (process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL).replace(/\/+$/, '');
+      const verifyUrl = `${frontendBase}/verify-email?token=${verificationToken}`;
 
       const mailOptions = {
         from: `"${process.env.EMAIL_FROM_NAME || DEFAULT_EMAIL_FROM_NAME}" <${process.env.EMAIL_USER}>`,
