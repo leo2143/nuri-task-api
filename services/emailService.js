@@ -227,6 +227,92 @@ export class EmailService {
   }
 
   /**
+   * Envía un correo de verificación de email al usuario
+   * @param {string} email - Email del destinatario
+   * @param {string} verificationToken - Token de verificación
+   * @param {string} userName - Nombre del usuario
+   * @returns {Promise<{success: boolean, message: string}>} Resultado del envío
+   */
+  static async sendVerificationEmail(email, verificationToken, userName) {
+    try {
+      const transporter = this.createTransport();
+
+      const frontendBase = (process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL).replace(/\/+$/, '');
+      const verifyUrl = `${frontendBase}/verify-email?token=${verificationToken}`;
+
+      const mailOptions = {
+        from: `"${process.env.EMAIL_FROM_NAME || DEFAULT_EMAIL_FROM_NAME}" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Verificá tu email - Nuri Task',
+        html: `
+          <!DOCTYPE html>
+          <html lang="es">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Verificación de Email</title>
+              <style>
+                @import url("https://fonts.googleapis.com/css2?family=Montserrat+Alternates:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap");
+                body { line-height: 1.6; color: #37241c; max-width: 600px; margin: 0 auto; padding: 20px; }
+                h1, h2 { font-family: "Montserrat Alternates", sans-serif; font-weight: bold; font-size: 2rem; }
+                p { font-family: "Nunito Sans", sans-serif; font-size: 1.5rem; }
+                .container { background-color: #f7f6f2; border-radius: 10px; padding: 30px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); }
+                .title-container { background: linear-gradient(135deg, #2f9685 0%, #2f9685 100%); color: white; padding: 20px; border-radius: 10px 10px 0 0; text-align: center; }
+                .content { background-color: #F7F6F2; padding: 30px; border-radius: 0 0 10px 10px; color: #3A251D; }
+                .button { display: inline-block; font-family: "Nunito Sans", sans-serif; font-weight: bold; padding: 12px 30px; background: linear-gradient(135deg, #2f9685 0%, #2f9685 100%); color: white !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                .button:hover { background: linear-gradient(135deg, #2a8878 0%, #2a8878 100%); }
+                .footer { font-family: "Nunito Sans", sans-serif; text-align: center; margin-top: 20px; font-size: 12px; color: #37241cb5; }
+                .warning { font-family: "Nunito Sans", sans-serif; background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin: 15px 0; }
+                .button-link { text-align: center; }
+                .link { color: #2f9685 !important; font-family: "Nunito Sans", sans-serif; font-weight: bold; font-size: 1.5rem; }
+              </style>
+            </head>
+            <body>
+              <header>
+                <div class="title-container">
+                  <h1>✉️ Verificá tu email en <strong>Nuri Task</strong></h1>
+                </div>
+              </header>
+              <main class="container">
+                <div class="content">
+                  <h2>¡Hola, <strong>${userName}</strong>!</h2>
+                  <p>Gracias por registrarte en <strong>Nuri Task</strong>. Para activar tu cuenta, verificá tu email haciendo clic en el botón:</p>
+                  <div class="button-link">
+                    <a href="${verifyUrl}" class="button">Verificar mi email</a>
+                  </div>
+                  <p>O copiá y pegá este enlace en tu navegador:</p>
+                  <p><a class="link" href="${verifyUrl}">${verifyUrl}</a></p>
+                  <div class="warning">
+                    <strong>⚠️ Importante:</strong>
+                    <ul>
+                      <li>Este enlace expira en <strong>1 hora</strong></li>
+                      <li>Si no creaste esta cuenta, ignorá este correo</li>
+                    </ul>
+                  </div>
+                  <p>¡Te esperamos!</p>
+                  <p>Saludos,<br /><strong>Equipo de Nuri Task</strong></p>
+                </div>
+              </main>
+              <footer class="footer">
+                <p>Este es un correo automático, por favor no respondas directamente.</p>
+                <p>&copy; ${new Date().getFullYear()} Nuri Task. Todos los derechos reservados.</p>
+              </footer>
+            </body>
+          </html>
+        `,
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+
+      console.log(chalk.green('✓ Email de verificación enviado:'), info.messageId);
+      return { success: true, message: 'Email de verificación enviado correctamente', messageId: info.messageId };
+    } catch (error) {
+      console.error(chalk.red('✗ Error al enviar email de verificación:'), error);
+      return { success: false, message: 'Error al enviar el email de verificación', error: error.message };
+    }
+  }
+
+  /**
    * Envía un correo de confirmación después de resetear la contraseña
    * @param {string} email - Email del destinatario
    * @param {string} userName - Nombre del usuario

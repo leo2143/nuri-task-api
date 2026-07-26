@@ -97,13 +97,17 @@ export class UserService {
    */
   static async getProfile(userId) {
     try {
-      const user = await User.findById(userId).select('name email subscription profileImageUrl');
-
+      const user = await User.findById(userId).select('name email subscription profileImageUrl googleId emailVerified');
+      
       if (!user) {
         return new NotFoundResponseModel('Usuario no encontrado');
       }
 
-      return new SuccessResponseModel(user, 'Perfil obtenido correctamente');
+      const userObj = user.toObject();
+      const fullUser = await User.findById(userId).select('password');
+      userObj.hasPassword = !!fullUser?.password;
+
+      return new SuccessResponseModel(userObj, 'Perfil obtenido correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener perfil');
     }
@@ -218,23 +222,32 @@ export class UserService {
       const cleanData = createDto.toPlainObject();
       const hashedPassword = await UserServiceHelpers.hashPassword(cleanData.password);
 
+      const verificationToken = UserServiceHelpers.generateResetToken();
+      const hashedVerificationToken = UserServiceHelpers.hashToken(verificationToken);
+
       const user = new User({
         ...cleanData,
         password: hashedPassword,
+        emailVerified: false,
+        emailVerificationToken: hashedVerificationToken,
+        emailVerificationExpires: UserServiceHelpers.getVerificationTokenExpiration(),
       });
 
       const savedUser = await user.save();
 
-      // Crear moodboard único para el nuevo usuario
       await MoodboardService.createMoodboardForUser(savedUser._id);
+
+      await EmailService.sendVerificationEmail(cleanData.email, verificationToken, cleanData.name);
 
       const userResponse = savedUser.toObject();
       delete userResponse.password;
       delete userResponse.resetPasswordToken;
       delete userResponse.resetPasswordExpires;
+      delete userResponse.emailVerificationToken;
+      delete userResponse.emailVerificationExpires;
       delete userResponse.subscription;
 
-      return new CreatedResponseModel(userResponse, 'Usuario creado correctamente');
+      return new CreatedResponseModel(userResponse, 'Usuario creado. Revisá tu email para verificar tu cuenta');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'crear usuario');
     }
@@ -427,7 +440,7 @@ export class UserService {
       }
 
       if (!user.password) {
-        return new ErrorResponseModel('Esta cuenta usa inicio de sesión con Google. Por favor, iniciá sesión con Google');
+        return new ErrorResponseModel('Esta cuenta usa Google para iniciar sesión. Iniciá con Google y después podés agregar una contraseña desde tu perfil');
       }
 
       const isPasswordValid = await UserServiceHelpers.verifyPassword(cleanData.password, user.password);
@@ -438,9 +451,12 @@ export class UserService {
       const payload = UserServiceHelpers.createJWTPayload(user);
       const token = UserServiceHelpers.generateJWT(payload, JWT_SECRET);
       const userResponse = user.toObject();
+      userResponse.hasPassword = !!userResponse.password;
       delete userResponse.password;
       delete userResponse.resetPasswordToken;
       delete userResponse.resetPasswordExpires;
+      delete userResponse.emailVerificationToken;
+      delete userResponse.emailVerificationExpires;
       delete userResponse.subscription.endDate;
       delete userResponse.subscription.startDate;
 
@@ -687,6 +703,124 @@ export class UserService {
     } catch (error) {
       console.error(chalk.red('Error al completar onboarding:', error));
       return new ErrorResponseModel('Error al completar onboarding');
+    }
+  }
+
+  /**
+   * Verifica el email del usuario mediante token
+   */
+  static async verifyEmail(token) {
+    try {
+      if (!token) {
+        return new BadRequestResponseModel('Token de verificación requerido');
+      }
+
+      const hashedToken = UserServiceHelpers.hashToken(token);
+      const user = await User.findOne({
+        emailVerificationToken: hashedToken,
+        emailVerificationExpires: { $gt: Date.now() },
+      });
+
+      if (!user) {
+        return new BadRequestResponseModel('Token de verificación inválido o expirado');
+      }
+
+      user.emailVerified = true;
+      user.emailVerificationToken = null;
+      user.emailVerificationExpires = null;
+      await user.save();
+
+      const payload = UserServiceHelpers.createJWTPayload(user);
+      const authToken = UserServiceHelpers.generateJWT(payload, JWT_SECRET);
+
+      const userResponse = user.toObject();
+      userResponse.hasPassword = !!userResponse.password;
+      delete userResponse.password;
+      delete userResponse.resetPasswordToken;
+      delete userResponse.resetPasswordExpires;
+      delete userResponse.emailVerificationToken;
+      delete userResponse.emailVerificationExpires;
+
+      console.log(chalk.green('✓ Email verificado para:', user.email));
+      return new SuccessResponseModel({ token: authToken, user: userResponse }, 'Email verificado correctamente');
+    } catch (error) {
+      console.error(chalk.red('Error al verificar email:', error));
+      return new ErrorResponseModel('Error al verificar el email');
+    }
+  }
+
+  /**
+   * Reenvía el email de verificación
+   */
+  static async resendVerificationEmail(email, { force = false } = {}) {
+    try {
+      if (!email) {
+        return new BadRequestResponseModel('Email requerido');
+      }
+
+      const user = await User.findOne({ email });
+
+      if (!user) {
+        return new SuccessResponseModel(null, 'Si el email existe, se envió un nuevo enlace de verificación');
+      }
+
+      if (user.emailVerified) {
+        return new BadRequestResponseModel('Este email ya está verificado');
+      }
+
+      const tokenStillFresh = user.emailVerificationExpires
+        && (user.emailVerificationExpires.getTime() - Date.now()) > 3300000;
+
+      if (!force && tokenStillFresh) {
+        return new SuccessResponseModel(null, 'Ya se envió un email de verificación recientemente');
+      }
+
+      const verificationToken = UserServiceHelpers.generateResetToken();
+      const hashedToken = UserServiceHelpers.hashToken(verificationToken);
+
+      user.emailVerificationToken = hashedToken;
+      user.emailVerificationExpires = UserServiceHelpers.getVerificationTokenExpiration();
+      await user.save();
+
+      await EmailService.sendVerificationEmail(email, verificationToken, user.name);
+
+      return new SuccessResponseModel(null, 'Email de verificación reenviado');
+    } catch (error) {
+      console.error(chalk.red('Error al reenviar verificación:', error));
+      return new ErrorResponseModel('Error al reenviar el email de verificación');
+    }
+  }
+
+  /**
+   * Establece contraseña para usuarios registrados con Google (sin password previo)
+   */
+  static async setPassword(userId, newPassword) {
+    try {
+      if (!newPassword || newPassword.length < 5) {
+        return new BadRequestResponseModel('La contraseña debe tener al menos 5 caracteres');
+      }
+
+      const user = await User.findById(userId);
+      if (!user) {
+        return new NotFoundResponseModel('Usuario no encontrado');
+      }
+
+      if (user.password) {
+        return new BadRequestResponseModel('Esta cuenta ya tiene contraseña. Usá "Cambiar contraseña" en su lugar');
+      }
+
+      if (!user.googleId) {
+        return new BadRequestResponseModel('Esta funcionalidad es solo para cuentas vinculadas con Google');
+      }
+
+      const hashedPassword = await UserServiceHelpers.hashPassword(newPassword);
+      user.password = hashedPassword;
+      await user.save();
+
+      return new SuccessResponseModel(null, 'Contraseña establecida correctamente. Ahora podés iniciar sesión con email y contraseña');
+    } catch (error) {
+      console.error(chalk.red('Error al establecer contraseña:', error));
+      return new ErrorResponseModel('Error al establecer la contraseña');
     }
   }
 }

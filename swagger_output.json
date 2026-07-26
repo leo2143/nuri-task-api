@@ -911,6 +911,94 @@
         ]
       }
     },
+    "/api/users/verify-email/{token}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Verifica el email del usuario mediante token",
+        "description": "",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/users/resend-verification": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Reenvía el email de verificación",
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/users/set-password": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Establece contraseña para cuentas de Google sin password",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "newPassword": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/users/{id}": {
       "get": {
         "tags": [
