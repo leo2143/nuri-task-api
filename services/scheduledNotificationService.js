@@ -5,6 +5,15 @@ import { PushNotificationService } from './pushNotificationService.js';
 import { NotificationService } from './notificationService.js';
 import chalk from 'chalk';
 
+/** Íconos PWA alineados a Figma (archivos en nuri-task-app/public/notifications). */
+const PUSH_ICONS = {
+  due_task: '/notifications/due-task.svg',
+  streak_risk: '/notifications/nuri-fire.svg',
+  inactivity: '/notifications/nuri-happy.svg',
+  streak_increase: '/notifications/nuri-fire.svg',
+  achievement_completed: '/notifications/crown.svg',
+};
+
 
 
 
@@ -40,7 +49,10 @@ export class ScheduledNotificationService {
       const hasSub = await PushSubscription.exists({ userId });
       if (!hasSub) continue;
 
-      await PushNotificationService.sendNotification(userId, payload);
+      await PushNotificationService.sendNotification(userId, {
+        ...payload,
+        icon: payload.icon || PUSH_ICONS[type],
+      });
       notified++;
     }
 
