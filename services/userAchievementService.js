@@ -321,7 +321,7 @@ export class UserAchievementService {
         title: '¡Nuevo logro desbloqueado!',
         body: achievement.title,
         url: '/achievements',
-        icon: achievement.imageUrl,
+        icon: '/notifications/crown.svg',
       };
 
       Promise.all([

@@ -949,6 +949,9 @@
               "properties": {
                 "email": {
                   "example": "any"
+                },
+                "force": {
+                  "example": "any"
                 }
               }
             }

@@ -1,8 +1,9 @@
 import Todo from '../models/todoModel.js';
 import Goal from '../models/goalsModel.js';
+import User from '../models/userModel.js';
 import { MetricsService } from './metricsService.js';
 import { UserAchievementService } from './userAchievementService.js';
-import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
+import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel, ForbiddenResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import { CreateTodoDto, UpdateTodoDto, TodoFilterDto, AddCommentDto } from '../models/dtos/todo/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
@@ -182,6 +183,10 @@ export class TodoService {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
       }
 
+      if (currentTodo.completed || currentTodo.isLocked) {
+        return new BadRequestResponseModel('Esta tarea ya fue confirmada y no se puede modificar');
+      }
+
       const oldGoalId = currentTodo.GoalId?.toString();
       const newGoalId = todoData.GoalId?.toString();
 
@@ -268,6 +273,13 @@ export class TodoService {
       const todo = await Todo.findOne({ _id: id, userId });
       if (!todo) {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
+      }
+
+      if (todo.completed || todo.isLocked) {
+        const user = await User.findById(userId).select('isAdmin').lean();
+        if (!user?.isAdmin) {
+          return new ForbiddenResponseModel('Solo un administrador puede eliminar una tarea confirmada');
+        }
       }
 
       const goalId = todo.GoalId;

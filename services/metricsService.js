@@ -83,7 +83,7 @@ export class MetricsService {
           title: `¡Día ${metrics.currentStreak} de racha!`,
           body: '¡Seguiste sumando días, cada tarea cuenta. Seguí así!',
           url: '/',
-          icon: '/notifications/nuri-fire-full.svg',
+          icon: '/notifications/nuri-fire.svg',
         };
 
         Promise.all([
