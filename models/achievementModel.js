@@ -58,6 +58,11 @@ const achievementSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    reward: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     imageUrl: {
       type: String,
       required: true,

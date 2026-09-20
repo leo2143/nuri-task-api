@@ -30,7 +30,10 @@ export class UserAchievementService {
    */
   static async getAllAchievementsWithProgress(userId, pagination = {}) {
     try {
-      const paginationDto = new PaginationDto(pagination);
+      const paginationDto = new PaginationDto({
+        ...pagination,
+        limit: pagination.limit || 100,
+      });
 
       const user = await User.findById(userId).select('subscription isAdmin').lean();
       const isPremium = user?.isAdmin || user?.subscription?.isActive;
