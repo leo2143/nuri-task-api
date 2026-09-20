@@ -42,7 +42,7 @@ export class UserAchievementService {
       paginationDto.applyCursorToQuery(query);
 
       const achievements = await Achievement.find(query)
-        .sort({ createdAt: -1 })
+        .sort({ tier: 1, createdAt: 1 })
         .limit(paginationDto.limit + 1)
         .lean();
 
