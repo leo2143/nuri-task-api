@@ -1,21 +1,20 @@
+import { z } from 'zod';
 import { BaseValidationDto } from '../BaseValidationDto.js';
+import { dueDateNotPastField, optionalDescriptionField, priorityField, titleField, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para crear una nueva tarea
- * @class CreateTodoDto
- * @extends BaseValidationDto
- * @description Define la estructura y validaciones para crear una tarea
  */
 export class CreateTodoDto extends BaseValidationDto {
-  /**
-   * @param {Object} data - Datos de la tarea
-   * @param {string} data.title - Título de la tarea (requerido)
-   * @param {string} [data.description] - Descripción de la tarea
-   * @param {string} [data.priority] - Prioridad (low/medium/high)
-   * @param {Date|string} [data.dueDate] - Fecha límite
-   * @param {boolean} [data.completed=false] - Estado de completado
-   * @param {string} [data.GoalId] - ID de la meta asociada
-   */
+  static schema = z.object({
+    title: titleField,
+    description: optionalDescriptionField,
+    priority: priorityField.optional(),
+    dueDate: dueDateNotPastField(),
+    completed: z.boolean({ invalid_type_error: 'El estado completado debe ser un booleano' }).optional(),
+    GoalId: z.string().nullable().optional(),
+  });
+
   constructor(data) {
     super(data);
     this.description = data.description || '';
@@ -24,45 +23,17 @@ export class CreateTodoDto extends BaseValidationDto {
     this.GoalId = data.GoalId || null;
   }
 
-  /**
-   * Valida el estado completado
-   * @returns {string|null} Mensaje de error o null si es válido
-   */
-  _validateCompleted() {
-    if (this.completed === undefined) return null;
-
-    if (typeof this.completed !== 'boolean') {
-      return 'El estado completado debe ser un booleano';
-    }
-
-    return null;
-  }
-
-  /**
-   * Valida que los datos del DTO sean correctos
-   * @returns {Object} Objeto con isValid y errores
-   */
   validate() {
-    const parentValidation = super.validate();
-    const errors = [...parentValidation.errors];
-
-    // Validar título (requerido en este DTO)
-    const titleError = this._validateTitle(true);
-    if (titleError) errors.push(titleError);
-
-    const completedError = this._validateCompleted();
-    if (completedError) errors.push(completedError);
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return validateZod(this.constructor.schema, {
+      title: this.title,
+      description: this.description,
+      priority: this.priority,
+      dueDate: this.dueDate,
+      completed: this.completed,
+      GoalId: this.GoalId,
+    });
   }
 
-  /**
-   * Convierte el DTO a un objeto plano
-   * @returns {Object} Objeto plano con los datos
-   */
   toPlainObject() {
     const baseData = super.toPlainObject();
     const result = {

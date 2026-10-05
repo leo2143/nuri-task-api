@@ -1,62 +1,34 @@
-import { ValidationHelpers } from '../../../services/helpers/validationHelpers.js';
+import { z } from 'zod';
+import { imageUrlField, queryNumberField, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para actualizar una imagen de un moodboard
- * @class UpdateImageDto
- * @description Define la estructura y validaciones para actualizar una imagen
  */
 export class UpdateImageDto {
-  /**
-   * @param {Object} data - Datos de la imagen a actualizar
-   * @param {string} [data.imageUrl] - Nueva URL de la imagen
-   * @param {string} [data.imageAlt] - Nuevo texto alternativo
-   * @param {number} [data.imagePositionNumber] - Nueva posición
-   */
+  static schema = z
+    .object({
+      imageUrl: imageUrlField(false, 'La URL').optional(),
+      imageAlt: z.string().trim().min(1, 'El texto alternativo debe ser un string válido').optional(),
+      imagePositionNumber: queryNumberField.refine(value => value >= 0, 'La posición debe ser mayor o igual a 0').optional(),
+    })
+    .refine(data => data.imageUrl !== undefined || data.imageAlt !== undefined || data.imagePositionNumber !== undefined, {
+      message: 'Debe enviar al menos un campo para actualizar',
+    });
+
   constructor(data) {
     if (data.imageUrl !== undefined) this.imageUrl = data.imageUrl;
     if (data.imageAlt !== undefined) this.imageAlt = data.imageAlt;
     if (data.imagePositionNumber !== undefined) this.imagePositionNumber = data.imagePositionNumber;
   }
 
-  /**
-   * Valida que los datos del DTO sean correctos
-   * @returns {Object} Objeto con isValid y errores
-   */
   validate() {
-    const errors = [];
-
-    // Validar imageUrl si existe
-    if (this.imageUrl !== undefined) {
-      const imageUrlError = ValidationHelpers.validateImageUrl(this.imageUrl, false, 'La URL');
-      if (imageUrlError) errors.push(imageUrlError);
-    }
-
-    // Validar imageAlt si existe
-    if (this.imageAlt !== undefined) {
-      if (typeof this.imageAlt !== 'string' || this.imageAlt.trim() === '') {
-        errors.push('El texto alternativo debe ser un string válido');
-      }
-    }
-
-    // Validar imagePositionNumber si existe
-    if (this.imagePositionNumber !== undefined) {
-      if (typeof this.imagePositionNumber !== 'number') {
-        errors.push('La posición debe ser un número');
-      } else if (this.imagePositionNumber < 0) {
-        errors.push('La posición debe ser mayor o igual a 0');
-      }
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return validateZod(this.constructor.schema, {
+      imageUrl: this.imageUrl,
+      imageAlt: this.imageAlt,
+      imagePositionNumber: this.imagePositionNumber,
+    });
   }
 
-  /**
-   * Convierte el DTO a un objeto plano
-   * @returns {Object} Objeto plano con los datos a actualizar
-   */
   toPlainObject() {
     const result = {};
 

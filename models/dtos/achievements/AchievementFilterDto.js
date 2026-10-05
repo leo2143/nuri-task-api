@@ -1,4 +1,7 @@
+import { z } from 'zod';
 import { PaginationDto } from '../paginationDto.js';
+import { ValidationHelpers } from '../../../services/helpers/validationHelpers.js';
+import { mergeValidations, queryBooleanField, sortOrderField, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para filtrar plantillas de logros
@@ -19,7 +22,7 @@ export class AchievementFilterDto extends PaginationDto {
   constructor(filters = {}) {
     super(filters);
     this.type = filters.type;
-    this.isActive = filters.isActive;
+    this.isActive = ValidationHelpers.parseBoolean(filters.isActive);
     this.search = filters.search;
     this.sortOrder = filters.sortOrder || 'desc';
   }
@@ -28,33 +31,23 @@ export class AchievementFilterDto extends PaginationDto {
    * Valida que los datos del filtro sean correctos
    * @returns {Object} Objeto con isValid y errores
    */
+  static schema = z.object({
+    type: z.enum(['task', 'goal', 'metric', 'streak'], { errorMap: () => ({ message: 'El tipo debe ser uno de: task, goal, metric, streak' }) }).optional(),
+    isActive: queryBooleanField.optional(),
+    search: z.string().optional(),
+    sortOrder: sortOrderField.optional(),
+  });
+
   validate() {
-    const parentValidation = super.validate();
-    const errors = [...parentValidation.errors];
-
-    // Validar type si existe
-    if (this.type) {
-      const validTypes = ['task', 'goal', 'metric', 'streak'];
-      if (!validTypes.includes(this.type)) {
-        errors.push(`El tipo debe ser uno de: ${validTypes.join(', ')}`);
-      }
-    }
-
-    // Validar isActive si existe
-    if (this.isActive !== undefined && typeof this.isActive !== 'boolean') {
-      errors.push('isActive debe ser un valor booleano');
-    }
-
-    // Validar sortOrder
-    const validSortOrders = ['asc', 'desc'];
-    if (this.sortOrder && !validSortOrders.includes(this.sortOrder)) {
-      errors.push(`sortOrder debe ser uno de: ${validSortOrders.join(', ')}`);
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return mergeValidations(
+      super.validate(),
+      validateZod(AchievementFilterDto.schema, {
+        type: this.type || undefined,
+        isActive: this.isActive === null ? 'invalid' : this.isActive,
+        search: this.search,
+        sortOrder: this.sortOrder,
+      })
+    );
   }
 
   /**
@@ -70,7 +63,7 @@ export class AchievementFilterDto extends PaginationDto {
     }
 
     // Filtrar por estado activo
-    if (this.isActive !== undefined) {
+    if (this.isActive !== undefined && this.isActive !== null) {
       query.isActive = this.isActive;
     }
 
@@ -88,12 +81,10 @@ export class AchievementFilterDto extends PaginationDto {
   }
 
   /**
-   * Convierte el DTO a un objeto de ordenamiento de MongoDB
-   * Siempre ordena por createdAt con el sortOrder especificado
-   * @returns {Object} Objeto de ordenamiento de MongoDB
+   * Ordena por `_id` (alineado al cursor). Default desc = más recientes primero.
+   * @returns {{ _id: 1 | -1 }}
    */
   toMongoSort() {
-    const sortOrder = this.sortOrder === 'asc' ? 1 : -1;
-    return { createdAt: sortOrder };
+    return super.toMongoSort(this.sortOrder);
   }
 }

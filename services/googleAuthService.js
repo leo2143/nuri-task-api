@@ -8,13 +8,13 @@ import {
 import { UserServiceHelpers } from './helpers/userServiceHelpers.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { MoodboardService } from './moodboardService.js';
+import { GoogleLoginDto } from '../models/dtos/auth/index.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const JWT_SECRET = process.env.JWT_SECRET || 'tu_clave_secreta_super_segura';
 
 const oAuth2Client = new OAuth2Client(
   GOOGLE_CLIENT_ID,
@@ -26,7 +26,7 @@ export class GoogleAuthService {
   /**
    * Intercambia el authorization code de Google por información del usuario
    * @param {string} code - Authorization code del frontend
-   * @returns {Promise<{googleId: string, email: string, name: string, picture: string}>}
+   * @returns {Promise<{googleId: string, email: string, name: string, picture: string, emailVerified: boolean}>}
    */
   static async exchangeCodeForUserInfo(code) {
     const { tokens } = await oAuth2Client.getToken(code);
@@ -42,21 +42,32 @@ export class GoogleAuthService {
       email: payload.email,
       name: payload.name,
       picture: payload.picture,
+      emailVerified: payload.email_verified === true,
     };
   }
 
   /**
    * Autentica o registra un usuario con Google OAuth
-   * @param {string} code - Authorization code del frontend
+   * @param {Object} body - Body con authorization code
    * @returns {Promise<SuccessResponseModel|ErrorResponseModel|BadRequestResponseModel>}
    */
-  static async loginWithGoogle(code) {
+  static async loginWithGoogle(body) {
     try {
-      if (!code) {
-        return new BadRequestResponseModel('El código de autorización es requerido');
+      const loginDto = new GoogleLoginDto(body || {});
+      const validation = loginDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
+      const { code } = loginDto.toPlainObject();
       const googleUser = await this.exchangeCodeForUserInfo(code);
+
+      if (!googleUser.emailVerified) {
+        return new BadRequestResponseModel(
+          'Google no verificó este email. Iniciá con otra cuenta o verificá el correo en Google.'
+        );
+      }
+
       let user = await User.findOne({
         $or: [{ googleId: googleUser.googleId }, { email: googleUser.email }],
       });
@@ -72,9 +83,18 @@ export class GoogleAuthService {
           emailVerified: true,
         });
         await user.save();
-        await MoodboardService.createMoodboardForUser(user._id);
+        const moodboardResult = await MoodboardService.createMoodboardForUser(user._id);
+        if (!moodboardResult.success) {
+          await User.deleteOne({ _id: user._id });
+          return new ErrorResponseModel('No se pudo completar el registro con Google. Intentá de nuevo');
+        }
         isNewUser = true;
       } else if (!user.googleId) {
+        if (user.password && !user.emailVerified) {
+          return new BadRequestResponseModel(
+            'Este email ya tiene una cuenta. Verificalo o iniciá con tu contraseña.'
+          );
+        }
         user.googleId = googleUser.googleId;
         user.emailVerified = true;
         if (!user.profileImageUrl && googleUser.picture) {
@@ -87,7 +107,7 @@ export class GoogleAuthService {
       }
 
       const payload = UserServiceHelpers.createJWTPayload(user);
-      const token = UserServiceHelpers.generateJWT(payload, JWT_SECRET);
+      const token = UserServiceHelpers.generateJWT(payload);
 
       const userResponse = user.toObject();
       userResponse.hasPassword = !!userResponse.password;

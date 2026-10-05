@@ -1,9 +1,9 @@
 import { GoogleAuthService } from '../../services/googleAuthService.js';
+import { attachAuthCookie } from '../../middlewares/authCookie.js';
 
 export class GoogleAuthController {
   static async googleLogin(req, res) {
-    const { code } = req.body;
-    const result = await GoogleAuthService.loginWithGoogle(code);
+    const result = attachAuthCookie(res, await GoogleAuthService.loginWithGoogle(req.body));
     res.status(result.status).json(result);
   }
 }

@@ -1,17 +1,16 @@
 import 'dotenv/config';
-import { createServer, startServer } from './server-config.js';
+import { connectMongo, createServer, startServer } from './server-config.js';
 import { setupRoutes } from './routes/routes.js';
 
-// Crear el servidor
+export const config = { maxDuration: 60 };
+
 const { app, PORT } = createServer();
 
-// Configurar todas las rutas
 setupRoutes(app);
 
-// Iniciar el servidor (solo si no es Vercel)
 if (process.env.VERCEL !== '1') {
+  await connectMongo();
   startServer(app, PORT);
 }
 
-// Exportar app para Vercel
 export default app;

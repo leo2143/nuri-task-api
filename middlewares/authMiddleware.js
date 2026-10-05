@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { UnauthorizedResponseModel, ForbiddenResponseModel } from '../models/responseModel.js';
+import { UserServiceHelpers } from '../services/helpers/userServiceHelpers.js';
+import { getRequestUser } from './requestUser.js';
+import { readAuthToken } from './authCookie.js';
 
 dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
 
 /**
  * Middleware para validar tokens JWT en rutas protegidas
@@ -17,7 +18,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
  * Valida el token JWT del header Authorization y agrega la información del usuario al request
  */
 export const validateToken = (req, res, next) => {
-  const token = req.headers.authorization;
+  const token = readAuthToken(req);
   try {
     const decoded = verifyJwt(req, token);
     if (!decoded) {
@@ -41,21 +42,28 @@ export const validateToken = (req, res, next) => {
  * @returns {void} No retorna valor, continúa o envía respuesta de error
  * Valida el token JWT y verifica que el usuario tenga permisos de administrador
  */
-export const validateAdminToken = (req, res, next) => {
-  const token = req.headers.authorization;
+export const validateAdminToken = async (req, res, next) => {
+  const token = readAuthToken(req);
   try {
     const decoded = verifyJwt(req, token);
     if (!decoded) {
       const response = new UnauthorizedResponseModel('No se proporcionó token de autenticación');
       return res.status(response.status).json(response);
     }
-    if (!decoded.isAdmin) {
+
+    const user = await getRequestUser(req);
+    if (!user?.isAdmin) {
       const response = new ForbiddenResponseModel('Acceso denegado. Se requieren permisos de administrador');
       return res.status(response.status).json(response);
     }
+
     next();
   } catch (error) {
-    const response = new UnauthorizedResponseModel('Token inválido o expirado');
+    if (error instanceof jwt.JsonWebTokenError) {
+      const response = new UnauthorizedResponseModel('Token inválido o expirado');
+      return res.status(response.status).json(response);
+    }
+    const response = new ForbiddenResponseModel('Error al verificar permisos');
     return res.status(response.status).json(response);
   }
 };
@@ -64,8 +72,7 @@ const verifyJwt = (req, token) => {
   if (!token) {
     return null;
   }
-  const tokenLimpio = token.split(' ')[1];
-  const decoded = jwt.verify(tokenLimpio, JWT_SECRET);
+  const decoded = jwt.verify(token, UserServiceHelpers.getJwtSecret());
   req.userId = decoded.userId;
   req.user = decoded;
   return decoded;

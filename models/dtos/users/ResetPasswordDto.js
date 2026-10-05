@@ -1,49 +1,29 @@
+import { passwordField, validateZod } from '../zodHelpers.js';
+import { TokenDto } from './TokenDto.js';
+
 /**
  * DTO para resetear contraseña con token
  */
-export class ResetPasswordDto {
+export class ResetPasswordDto extends TokenDto {
+  static schema = TokenDto.schema.extend({
+    newPassword: passwordField,
+  });
+
   constructor(data) {
-    this.token = data.token;
+    super(data);
     this.newPassword = data.newPassword;
   }
 
-  _validateToken() {
-    if (!this.token || typeof this.token !== 'string' || this.token.trim() === '') {
-      return 'Token de recuperación requerido';
-    }
-    return null;
-  }
-
-  _validateNewPassword() {
-    if (!this.newPassword) {
-      return 'La nueva contraseña es requerida';
-    }
-
-    if (this.newPassword.length < 6) {
-      return 'La contraseña debe tener al menos 6 caracteres';
-    }
-
-    return null;
-  }
-
   validate() {
-    const errors = [];
-
-    const tokenError = this._validateToken();
-    if (tokenError) errors.push(tokenError);
-
-    const passwordError = this._validateNewPassword();
-    if (passwordError) errors.push(passwordError);
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return validateZod(this.constructor.schema, {
+      token: this.token,
+      newPassword: this.newPassword,
+    });
   }
 
   toPlainObject() {
     return {
-      token: this.token.trim(),
+      ...super.toPlainObject(),
       newPassword: this.newPassword,
     };
   }

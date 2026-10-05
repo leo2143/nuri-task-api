@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
+import { paginationSchema, validateZod } from './zodHelpers.js';
 
+/**
+ * Cursor + limit. No tiene toPlainObject: los hijos usan toMongoQuery / applyCursorToQuery.
+ */
 export class PaginationDto {
+  static schema = paginationSchema;
+
   constructor(data) {
     this.cursor = data.cursor || null;
     this.limit = Number(data.limit) || 10;
@@ -11,20 +17,7 @@ export class PaginationDto {
    * @returns {{ isValid: boolean, errors: string[] }}
    */
   validate() {
-    const errors = [];
-
-    if (this.limit < 1 || this.limit > 100) {
-      errors.push('El límite debe estar entre 1 y 100');
-    }
-
-    // Validar que el cursor sea un ObjectId válido si existe
-    if (this.cursor) {
-      if (!mongoose.Types.ObjectId.isValid(this.cursor)) {
-        errors.push('El cursor debe ser un ID válido');
-      }
-    }
-
-    return { isValid: errors.length === 0, errors };
+    return validateZod(PaginationDto.schema, { cursor: this.cursor, limit: this.limit });
   }
 
   /**
@@ -50,7 +43,17 @@ export class PaginationDto {
   }
 
   /**
-   * Aplica condición del cursor al query de MongoDB
+   * Sort alineado al cursor. ObjectId es cronológico (≈ createdAt) y usa el índice nativo.
+   * @param {string} sortOrder - 'asc' | 'desc'
+   * @returns {{ _id: 1 | -1 }}
+   */
+  toMongoSort(sortOrder = 'desc') {
+    return { _id: sortOrder === 'asc' ? 1 : -1 };
+  }
+
+  /**
+   * Aplica condición del cursor al query de MongoDB.
+   * El sort del find tiene que ser `{ _id }` con el mismo sortOrder.
    * @param {Object} query - Query object existente
    * @param {string} sortOrder - Orden de clasificación ('asc' o 'desc')
    * @returns {Object} Query con cursor agregado

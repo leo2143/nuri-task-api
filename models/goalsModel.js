@@ -102,7 +102,8 @@ const goalSchema = new mongoose.Schema(
   }
 );
 
-goalSchema.index({ userId: 1, deleted_at: 1 });
+goalSchema.index({ userId: 1, deleted_at: 1, _id: -1 });
+goalSchema.index({ parentGoalId: 1 });
 
 /**
  * Mongoose query middleware para borrado lógico.

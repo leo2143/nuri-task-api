@@ -1,48 +1,35 @@
+import { z } from 'zod';
 import { CreateUserDto } from './CreateUserDto.js';
+import { emailField, validateZod } from '../zodHelpers.js';
 
 /**
- * DTO para actualizar un usuario existente
+ * DTO para actualizar un usuario existente.
+ * No acepta password: el cambio de clave va por changePassword / reset / UpdateAdminUserDto.
  */
 export class UpdateUserDto extends CreateUserDto {
+  static schema = z.object({
+    name: z
+      .string({ invalid_type_error: 'El nombre es requerido y debe ser un valor válido' })
+      .trim()
+      .min(1, 'El nombre es requerido y debe ser un valor válido')
+      .optional(),
+    email: emailField.optional(),
+    profileImageUrl: z.string().optional(),
+  });
+
   constructor(data) {
     super(data);
     this.name = data.name;
     this.email = data.email;
     this.profileImageUrl = data.profileImageUrl;
-    this.password = data.password;
-  }
-
-  _validateName() {
-    if (this.name === undefined) return null;
-    return super._validateName();
-  }
-
-  _validateEmail() {
-    if (this.email === undefined) return null;
-    return super._validateEmail();
-  }
-
-  _validatePassword() {
-    if (this.password === undefined) return null;
-    return super._validatePassword();
   }
 
   validate() {
-    const errors = [];
-
-    const nameError = this._validateName();
-    if (nameError) errors.push(nameError);
-
-    const emailError = this._validateEmail();
-    if (emailError) errors.push(emailError);
-
-    const passwordError = this._validatePassword();
-    if (passwordError) errors.push(passwordError);
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return validateZod(this.constructor.schema, {
+      name: this.name,
+      email: this.email,
+      profileImageUrl: this.profileImageUrl,
+    });
   }
 
   toPlainObject() {
@@ -58,10 +45,6 @@ export class UpdateUserDto extends CreateUserDto {
 
     if (this.profileImageUrl !== undefined) {
       result.profileImageUrl = this.profileImageUrl;
-    }
-
-    if (this.password !== undefined) {
-      result.password = this.password;
     }
 
     return result;

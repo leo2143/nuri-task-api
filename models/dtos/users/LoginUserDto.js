@@ -1,50 +1,29 @@
+import { EmailDto } from './EmailDto.js';
+import { loginPasswordField, validateZod } from '../zodHelpers.js';
+
 /**
  * DTO para login de usuario
  */
-export class LoginUserDto {
+export class LoginUserDto extends EmailDto {
+  static schema = EmailDto.schema.extend({
+    password: loginPasswordField,
+  });
+
   constructor(data) {
-    this.email = data.email;
+    super(data);
     this.password = data.password;
   }
 
-  _validateEmail() {
-    if (!this.email || typeof this.email !== 'string') {
-      return 'El email es requerido';
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(this.email)) {
-      return 'Email inválido';
-    }
-
-    return null;
-  }
-
-  _validatePassword() {
-    if (!this.password) {
-      return 'La contraseña es requerida';
-    }
-    return null;
-  }
-
   validate() {
-    const errors = [];
-
-    const emailError = this._validateEmail();
-    if (emailError) errors.push(emailError);
-
-    const passwordError = this._validatePassword();
-    if (passwordError) errors.push(passwordError);
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return validateZod(this.constructor.schema, {
+      email: this.email,
+      password: this.password,
+    });
   }
 
   toPlainObject() {
     return {
-      email: this.email.trim().toLowerCase(),
+      ...super.toPlainObject(),
       password: this.password,
     };
   }

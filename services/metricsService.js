@@ -6,9 +6,8 @@ import UserAchievement from '../models/userAchievementModel.js';
 import { UserAchievementService } from './userAchievementService.js';
 import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel } from '../models/responseModel.js';
-import { MetricsDashboardDto } from '../models/dtos/metrics/index.js';
-import { PushNotificationService } from './pushNotificationService.js';
-import { NotificationService } from './notificationService.js';
+import { MetricsDashboardDto, CreateMetricDto } from '../models/dtos/metrics/index.js';
+import { persistAndNotify } from './helpers/persistAndNotify.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import chalk from 'chalk';
 
@@ -86,12 +85,14 @@ export class MetricsService {
           icon: '/notifications/nuri-fire.svg',
         };
 
-        Promise.all([
-          NotificationService.createMany([{
-            userId, title: payload.title, body: payload.body, url: payload.url, type: 'streak_increase',
-          }]),
-          PushNotificationService.sendNotification(userId, payload),
-        ]).catch(err => console.error(chalk.yellow('Error enviando notificación de racha:', err)));
+        await persistAndNotify({
+          userId,
+          title: payload.title,
+          body: payload.body,
+          url: payload.url,
+          type: 'streak_increase',
+          icon: payload.icon,
+        });
       }
 
       await UserAchievementService.processEvent('streak:updated', userId, metrics.currentStreak);
@@ -246,7 +247,12 @@ export class MetricsService {
     let metrics = await Metrics.findOne({ userId });
 
     if (!metrics) {
-      metrics = new Metrics({ userId });
+      const createDto = new CreateMetricDto({ userId: String(userId) });
+      const validation = createDto.validate();
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(', '));
+      }
+      metrics = new Metrics(createDto.toPlainObject());
       await metrics.save();
     }
 

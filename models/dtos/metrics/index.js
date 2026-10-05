@@ -5,5 +5,4 @@
  */
 
 export { CreateMetricDto } from './CreateMetricDto.js';
-export { UpdateMetricDto } from './UpdateMetricDto.js';
 export { MetricsDashboardDto } from './MetricsDashboardDto.js';

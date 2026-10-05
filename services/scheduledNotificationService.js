@@ -1,5 +1,6 @@
 import Todo from '../models/todoModel.js';
 import Metrics from '../models/metricsModel.js';
+import Notification from '../models/notificationModel.js';
 import PushSubscription from '../models/pushSubscriptionModel.js';
 import { PushNotificationService } from './pushNotificationService.js';
 import { NotificationService } from './notificationService.js';
@@ -33,8 +34,14 @@ export class ScheduledNotificationService {
    * @returns {Promise<{notified: number, persisted: number}>}
    */
   static async _sendToSubscribedUsers(entries, label, type) {
+    const pendingEntries = await this._excludeNotifiedToday(entries, type);
+    if (pendingEntries.length === 0) {
+      console.log(chalk.blue(`[Cron] ${label}: ya notificados hoy`));
+      return { notified: 0, persisted: 0 };
+    }
+
     await NotificationService.createMany(
-      entries.map(({ userId, payload }) => ({
+      pendingEntries.map(({ userId, payload }) => ({
         userId,
         title: payload.title,
         body: payload.body,
@@ -45,7 +52,7 @@ export class ScheduledNotificationService {
 
     let notified = 0;
 
-    for (const { userId, payload } of entries) {
+    for (const { userId, payload } of pendingEntries) {
       const hasSub = await PushSubscription.exists({ userId });
       if (!hasSub) continue;
 
@@ -56,8 +63,31 @@ export class ScheduledNotificationService {
       notified++;
     }
 
-    console.log(chalk.green(`[Cron] ${label}: ${entries.length} persistidas, ${notified} push enviados`));
-    return { notified, persisted: entries.length };
+    console.log(chalk.green(`[Cron] ${label}: ${pendingEntries.length} persistidas, ${notified} push enviados`));
+    return { notified, persisted: pendingEntries.length };
+  }
+
+  /**
+   * Omite usuarios que ya tienen una notificación del mismo tipo hoy (UTC).
+   * @param {Array<{userId: string}>} entries
+   * @param {string} type
+   * @returns {Promise<Array>}
+   */
+  static async _excludeNotifiedToday(entries, type) {
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+
+    const userIds = entries.map((entry) => entry.userId);
+    const existing = await Notification.find({
+      userId: { $in: userIds },
+      type,
+      createdAt: { $gte: startOfDay },
+    })
+      .select('userId')
+      .lean();
+
+    const alreadyNotified = new Set(existing.map((doc) => doc.userId.toString()));
+    return entries.filter((entry) => !alreadyNotified.has(String(entry.userId)));
   }
 
   /**

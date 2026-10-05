@@ -2,10 +2,42 @@ import crypto from 'crypto';
 import { SubscriptionService } from '../../services/subscriptionService.js';
 import chalk from 'chalk';
 
-const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET;
+/**
+ * Arma el manifest según docs de MP.
+ * https://www.mercadopago.com.ar/developers/en/docs/your-integrations/notifications/webhooks
+ */
+function buildManifest(dataId, requestId, ts) {
+  const parts = [];
+
+  if (dataId) {
+    parts.push(`id:${dataId.toLowerCase()}`);
+  }
+  if (requestId) {
+    parts.push(`request-id:${requestId}`);
+  }
+  parts.push(`ts:${ts}`);
+
+  return `${parts.join(';')};`;
+}
+
+function safeEqualHex(expectedHex, actualHex) {
+  try {
+    const expected = Buffer.from(expectedHex, 'hex');
+    const actual = Buffer.from(actualHex, 'hex');
+    if (expected.length === 0 || expected.length !== actual.length) {
+      return false;
+    }
+    return crypto.timingSafeEqual(expected, actual);
+  } catch {
+    return false;
+  }
+}
 
 function validateHmacSignature(req) {
-  if (!MP_WEBHOOK_SECRET) return true;
+  const secret = process.env.MP_WEBHOOK_SECRET?.trim();
+  if (!secret) {
+    return false;
+  }
 
   const xSignature = req.headers['x-signature'];
   const xRequestId = req.headers['x-request-id'];
@@ -27,16 +59,16 @@ function validateHmacSignature(req) {
   if (!ts || !hash) return false;
 
   const dataId = req.query['data.id'] || '';
-  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
-  const expected = crypto.createHmac('sha256', MP_WEBHOOK_SECRET).update(manifest).digest('hex');
+  const manifest = buildManifest(dataId, xRequestId, ts);
+  const expected = crypto.createHmac('sha256', secret).update(manifest).digest('hex');
 
-  return expected === hash;
+  return safeEqualHex(expected, hash);
 }
 
 export class WebhookController {
   static async mercadoPago(req, res) {
     if (!validateHmacSignature(req)) {
-      console.warn(chalk.yellow('Webhook rechazado: firma HMAC inválida'));
+      console.warn(chalk.yellow('Webhook rechazado: firma HMAC inválida o secret ausente'));
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
@@ -52,6 +84,7 @@ export class WebhookController {
       await SubscriptionService.processWebhook(type, data.id);
     } catch (error) {
       console.error(chalk.red('Error procesando webhook MP:', error.message));
+      return res.status(500).json({ error: 'Processing failed' });
     }
 
     return res.status(200).json({ received: true });
