@@ -33,7 +33,14 @@ export function validateZod(schema, data) {
 export const emailField = z
   .string({ required_error: 'El email es requerido', invalid_type_error: 'El email es requerido' })
   .min(1, 'El email es requerido')
-  .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Email inválido');
+  .email('Email inválido');
+
+/**
+ * Query string o boolean → boolean. No usar Boolean() ("false" sería true).
+ */
+export function toQueryBoolean(value) {
+  return value === true || value === 'true';
+}
 
 export const passwordField = z
   .string({ required_error: 'La contraseña es requerida', invalid_type_error: 'La contraseña es requerida' })

@@ -48,7 +48,7 @@ export class UserService {
 
     await User.deleteOne({ _id: userId });
     console.error(chalk.red('Moodboard falló; se revirtió el usuario:'), userId);
-    return moodboardResult;
+    return new ErrorResponseModel(moodboardResult.message, moodboardResult.status);
   }
 
   /**

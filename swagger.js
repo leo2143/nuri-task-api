@@ -69,6 +69,6 @@ swaggerAutogen(outputFile, endpointsFiles, doc).then(() => {
 
   // Importar y ejecutar el servidor después de generar swagger (solo en dev local)
   if (!process.env.VERCEL) {
-    import('./index.js');
+    void import('./index.js');
   }
 });
