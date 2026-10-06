@@ -158,7 +158,7 @@ export class AchievementService {
       paginationDto.applyCursorToQuery(query);
 
       const achievements = await Achievement.find(query)
-        .sort({ createdAt: -1 })
+        .sort(paginationDto.toMongoSort())
         .limit(paginationDto.limit + 1)
         .lean();
 

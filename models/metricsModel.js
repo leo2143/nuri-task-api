@@ -62,6 +62,8 @@ const metricsSchema = new mongoose.Schema(
   }
 );
 
+metricsSchema.index({ lastActivityDate: 1, currentStreak: 1 });
+
 /**
  * Calcula la diferencia en días entre hoy y la última actividad
  * @private

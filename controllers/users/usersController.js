@@ -1,4 +1,6 @@
 import { UserService } from '../../services/userService.js';
+import { attachAuthCookie, clearAuthCookie } from '../../middlewares/authCookie.js';
+import { SuccessResponseModel } from '../../models/responseModel.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con usuarios
@@ -184,7 +186,13 @@ export class UsersController {
    */
   static async loginUser(req, res) {
     const { email, password } = req.body;
-    const result = await UserService.loginUser(email, password);
+    const result = attachAuthCookie(res, await UserService.loginUser(email, password));
+    res.status(result.status).json(result);
+  }
+
+  static async logout(_req, res) {
+    clearAuthCookie(res);
+    const result = new SuccessResponseModel(null, 'Logout exitoso');
     res.status(result.status).json(result);
   }
   static async changePassword(req, res) {
@@ -239,17 +247,7 @@ export class UsersController {
    */
   static async forgotPassword(req, res) {
     try {
-      const { email } = req.body;
-
-      if (!email) {
-        return res.status(400).json({
-          message: 'El email es requerido',
-          status: 400,
-          success: false,
-        });
-      }
-
-      const result = await UserService.requestPasswordReset(email);
+      const result = await UserService.requestPasswordReset(req.body);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en forgotPassword:', error);
@@ -269,17 +267,7 @@ export class UsersController {
    */
   static async verifyResetToken(req, res) {
     try {
-      const { token } = req.params;
-
-      if (!token) {
-        return res.status(400).json({
-          message: 'El token es requerido',
-          status: 400,
-          success: false,
-        });
-      }
-
-      const result = await UserService.verifyResetToken(token);
+      const result = await UserService.verifyResetToken(req.params.token);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en verifyResetToken:', error);
@@ -313,17 +301,7 @@ export class UsersController {
 
   static async resetPassword(req, res) {
     try {
-      const { token, newPassword } = req.body;
-
-      if (!token || !newPassword) {
-        return res.status(400).json({
-          message: 'El token y la nueva contraseña son requeridos',
-          status: 400,
-          success: false,
-        });
-      }
-
-      const result = await UserService.resetPasswordWithToken(token, newPassword);
+      const result = await UserService.resetPasswordWithToken(req.body);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en resetPassword:', error);
@@ -334,7 +312,7 @@ export class UsersController {
   static async verifyEmail(req, res) {
     try {
       const { token } = req.params;
-      const result = await UserService.verifyEmail(token);
+      const result = attachAuthCookie(res, await UserService.verifyEmail(token));
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en verifyEmail:', error);
@@ -344,8 +322,7 @@ export class UsersController {
 
   static async resendVerification(req, res) {
     try {
-      const { email, force } = req.body;
-      const result = await UserService.resendVerificationEmail(email, { force: !!force });
+      const result = await UserService.resendVerificationEmail(req.body);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en resendVerification:', error);
@@ -355,9 +332,7 @@ export class UsersController {
 
   static async setPassword(req, res) {
     try {
-      const userId = req.userId;
-      const { newPassword } = req.body;
-      const result = await UserService.setPassword(userId, newPassword);
+      const result = await UserService.setPassword(req.userId, req.body);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en setPassword:', error);

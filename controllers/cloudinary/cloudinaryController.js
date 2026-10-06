@@ -5,18 +5,24 @@ import { CloudinaryService } from '../../services/cloudinaryService.js';
  */
 export class CloudinaryController {
   /**
-   * Elimina una imagen de Cloudinary directamente (sin actualizar MongoDB)
-   * Útil para limpiar imágenes huérfanas
-   * @param {Object} req - Objeto request de Express
-   * @param {Object} req.body - Datos de la imagen a eliminar
-   * @param {string} req.body.imageUrl - URL de la imagen en Cloudinary
-   * @param {Object} res - Objeto response de Express
-   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   * Registra una imagen recién subida para poder borrarla como huérfana.
+   */
+  static async registerPendingImage(req, res) {
+    try {
+      const result = await CloudinaryService.registerPendingImage(req.body, req.userId);
+      res.status(result.status).json(result);
+    } catch (error) {
+      console.error('Error en registerPendingImage:', error);
+      res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
+    }
+  }
+
+  /**
+   * Elimina una imagen de Cloudinary si pertenece al usuario autenticado.
    */
   static async deleteImage(req, res) {
     try {
-      const imageData = req.body;
-      const result = await CloudinaryService.deleteImage(imageData);
+      const result = await CloudinaryService.deleteImage(req.body, req.userId);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en deleteImage:', error);
@@ -24,4 +30,3 @@ export class CloudinaryController {
     }
   }
 }
-

@@ -1,8 +1,12 @@
+export { EmailDto } from './EmailDto.js';
 export { CreateUserDto } from './CreateUserDto.js';
 export { CreateAdminUserDto } from './CreateAdminUserDto.js';
 export { UpdateUserDto } from './UpdateUserDto.js';
 export { UpdateAdminUserDto } from './UpdateAdminUserDto.js';
 export { ChangePasswordDto } from './ChangePasswordDto.js';
 export { ResetPasswordDto } from './ResetPasswordDto.js';
+export { ForgotPasswordDto } from './ForgotPasswordDto.js';
+export { SetPasswordDto } from './SetPasswordDto.js';
+export { TokenDto } from './TokenDto.js';
 export { LoginUserDto } from './LoginUserDto.js';
 export { UserFilterDto } from './UserFilterDto.js';

@@ -12,6 +12,31 @@ export class CloudinaryHelper {
    * // URL: https://res.cloudinary.com/dpyqoux1t/image/upload/v1234567890/folder/imagen.jpg
    * // Retorna: folder/imagen
    */
+  /**
+   * Comprueba que la URL sea de entrega de este cloud (http/https + res.cloudinary.com + CLOUDINARY_CLOUD_NAME).
+   * @param {string} imageUrl - URL a validar
+   * @returns {boolean}
+   */
+  static isCloudinaryDeliveryUrl(imageUrl) {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+    if (!cloudName || !imageUrl || typeof imageUrl !== 'string') {
+      return false;
+    }
+
+    try {
+      const parsed = new URL(imageUrl.trim());
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+        return false;
+      }
+      if (parsed.hostname !== 'res.cloudinary.com') {
+        return false;
+      }
+      return parsed.pathname.startsWith(`/${cloudName}/`);
+    } catch {
+      return false;
+    }
+  }
+
   static extractPublicId(cloudinaryUrl) {
     if (!cloudinaryUrl || typeof cloudinaryUrl !== 'string') {
       return null;

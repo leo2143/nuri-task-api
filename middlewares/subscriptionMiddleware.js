@@ -1,14 +1,15 @@
-import User from '../models/userModel.js';
 import { ForbiddenResponseModel } from '../models/responseModel.js';
+import { getRequestUser } from './requestUser.js';
 
 /**
  * Middleware que verifica suscripcion activa consultando la DB.
  * Permite acceso si el usuario es admin o tiene suscripcion vigente.
  * Con MercadoPago, isActive se actualiza via webhook, no por endDate.
+ * Reutiliza req.userDoc si validateAdminToken (u otro) ya cargó al usuario.
  */
 export const validateSubscription = async (req, res, next) => {
   try {
-    const user = await User.findById(req.userId).select('subscription isAdmin').lean();
+    const user = await getRequestUser(req);
 
     if (!user) {
       const response = new ForbiddenResponseModel('Usuario no encontrado');

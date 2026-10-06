@@ -6,11 +6,16 @@ import { SuccessResponseModel, CreatedResponseModel } from '../models/responseMo
 import {
   CreateGoalDto,
   UpdateGoalDto,
+  UpdateGoalStatusDto,
+  AddSubgoalDto,
   GoalFilterDto,
   CatalogGoalDto,
 } from '../models/dtos/goals/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
+import { findOwnedGoal } from './helpers/goalOwnership.js';
 import { UserAchievementService } from './userAchievementService.js';
+import { MetricsService } from './metricsService.js';
+import { runWithOneRetry, ensureSuccessWithRetry } from './helpers/runWithOneRetry.js';
 import chalk from 'chalk';
 
 const FREE_GOALS_LIMIT = 2;
@@ -27,13 +32,7 @@ export class GoalService {
    * @private
    */
   static async _findGoalByIdAndUser(goalId, userId) {
-    const goal = await Goal.findOne({ _id: goalId, userId });
-
-    if (!goal) {
-      return { goal: null, error: new NotFoundResponseModel('Meta no encontrada') };
-    }
-
-    return { goal, error: null };
+    return findOwnedGoal(goalId, userId);
   }
 
   /**
@@ -67,15 +66,15 @@ export class GoalService {
    * Maneja la actualización de contadores cuando cambia el parent
    * @private
    */
-  static async _handleParentGoalUpdates(parentChange) {
+  static async _handleParentGoalUpdates(parentChange, userId) {
     if (!parentChange.changed) return;
 
     if (parentChange.oldParentId) {
-      await this._updateParentGoalCounters(parentChange.oldParentId, 'Meta padre anterior');
+      await this._updateParentGoalCounters(parentChange.oldParentId, userId, 'Meta padre anterior');
     }
 
     if (parentChange.newParentId) {
-      await this._updateParentGoalCounters(parentChange.newParentId, 'Nueva meta padre');
+      await this._updateParentGoalCounters(parentChange.newParentId, userId, 'Nueva meta padre');
     }
   }
 
@@ -84,19 +83,19 @@ export class GoalService {
    * @param {string} parentGoalId - ID de la meta padre
    * @param {string} [label='Meta padre'] - Etiqueta para el log
    */
-  static async _updateParentGoalCounters(parentGoalId, label = 'Meta padre') {
-    try {
-      const parentGoal = await Goal.findById(parentGoalId);
-      if (parentGoal) {
-        await parentGoal.updateSubGoalCount();
-        await parentGoal.save();
-        console.log(
-          chalk.blue(`${label} actualizada: ${parentGoal.completedSubGoals}/${parentGoal.totalSubGoals} sub-metas`)
-        );
-      }
-    } catch (error) {
-      console.error(chalk.yellow(`Error al actualizar contadores de ${label.toLowerCase()}:`, error));
-    }
+  static async _updateParentGoalCounters(parentGoalId, userId, label = 'Meta padre') {
+    if (!parentGoalId) return;
+
+    await runWithOneRetry(async () => {
+      const parentGoal = await Goal.findOne({ _id: parentGoalId, userId });
+      if (!parentGoal) return;
+
+      await parentGoal.updateSubGoalCount();
+      await parentGoal.save();
+      console.log(
+        chalk.blue(`${label} actualizada: ${parentGoal.completedSubGoals}/${parentGoal.totalSubGoals} sub-metas`)
+      );
+    }, `actualizar contadores de ${label.toLowerCase()}`);
   }
 
   /**
@@ -188,6 +187,14 @@ export class GoalService {
       }
 
       const cleanData = createDto.toPlainObject();
+
+      if (cleanData.parentGoalId) {
+        const { error: parentError } = await this._findGoalByIdAndUser(cleanData.parentGoalId, userId);
+        if (parentError) {
+          return parentError;
+        }
+      }
+
       const goal = new Goal({
         ...cleanData,
         userId,
@@ -195,7 +202,7 @@ export class GoalService {
       const savedGoal = await goal.save();
 
       if (savedGoal.parentGoalId) {
-        await this._updateParentGoalCounters(savedGoal.parentGoalId);
+        await this._updateParentGoalCounters(savedGoal.parentGoalId, userId);
       }
 
       return new CreatedResponseModel(savedGoal, 'Meta creada correctamente');
@@ -229,6 +236,16 @@ export class GoalService {
 
       const cleanData = updateDto.toPlainObject();
 
+      if (cleanData.parentGoalId) {
+        if (cleanData.parentGoalId.toString() === goalId.toString()) {
+          return new BadRequestResponseModel('Una meta no puede ser submeta de sí misma');
+        }
+        const { error: parentError } = await this._findGoalByIdAndUser(cleanData.parentGoalId, userId);
+        if (parentError) {
+          return parentError;
+        }
+      }
+
       const parentChange = this._detectParentGoalChange(currentGoal, cleanData);
       const statusChange = this._detectStatusChange(currentGoal, cleanData);
 
@@ -238,13 +255,22 @@ export class GoalService {
       });
 
       if (parentChange.changed) {
-        await this._handleParentGoalUpdates(parentChange);
+        await this._handleParentGoalUpdates(parentChange, userId);
       } else if (statusChange.changed && goal.parentGoalId) {
-        await this._updateParentGoalCounters(goal.parentGoalId);
+        await this._updateParentGoalCounters(goal.parentGoalId, userId);
         console.log(chalk.green(`Estado cambiado: ${statusChange.oldStatus} → ${statusChange.newStatus}`));
       }
 
       if (statusChange.changed && statusChange.newStatus === 'completed') {
+        const metricsResult = await ensureSuccessWithRetry(
+          await MetricsService.recordGoalCompleted(userId),
+          () => MetricsService.recordGoalCompleted(userId),
+          'registrar métricas de meta'
+        );
+        if (!metricsResult.success) {
+          return metricsResult;
+        }
+
         await UserAchievementService.processEvent('goal:completed', userId);
       }
 
@@ -271,13 +297,18 @@ export class GoalService {
       const parentGoalId = goal.parentGoalId;
 
       const now = new Date();
-      goal.deleted_at = now;
-      await goal.save();
+      await Todo.updateMany({ GoalId: goalId, userId, deleted_at: null }, { deleted_at: now });
 
-      await Todo.updateMany({ GoalId: goalId, deleted_at: null }, { deleted_at: now });
+      goal.deleted_at = now;
+      try {
+        await goal.save();
+      } catch (saveError) {
+        await Todo.updateMany({ GoalId: goalId, userId, deleted_at: now }, { $set: { deleted_at: null } });
+        throw saveError;
+      }
 
       if (parentGoalId) {
-        await this._updateParentGoalCounters(parentGoalId);
+        await this._updateParentGoalCounters(parentGoalId, userId);
       }
 
       return new SuccessResponseModel({ id: goalId }, 'Meta eliminada correctamente');
@@ -300,7 +331,7 @@ export class GoalService {
       paginationDto.applyCursorToQuery(query);
 
       const goals = await Goal.find(query)
-        .sort({ createdAt: -1 })
+        .sort(paginationDto.toMongoSort())
         .limit(paginationDto.limit + 1)
         .lean();
 
@@ -329,7 +360,7 @@ export class GoalService {
       paginationDto.applyCursorToQuery(query);
 
       const goals = await Goal.find(query)
-        .sort({ createdAt: -1 })
+        .sort(paginationDto.toMongoSort())
         .limit(paginationDto.limit + 1)
         .lean();
 
@@ -352,13 +383,20 @@ export class GoalService {
   /**
    * Agrega una submeta a una meta padre
    * @param {string} parentGoalId - ID de la meta padre (del parámetro URL)
-   * @param {string} subgoalId - ID de la meta que será submeta (del body)
+   * @param {Object} body - Body con subgoalId
    * @param {string} userId - ID del usuario
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
    */
-  static async addSubgoal(parentGoalId, subgoalId, userId) {
+  static async addSubgoal(parentGoalId, body, userId) {
     try {
-      // Early return: Validar autoasignación
+      const addDto = new AddSubgoalDto(body || {});
+      const validation = addDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
+      }
+
+      const { subgoalId } = addDto.toPlainObject();
+
       if (subgoalId === parentGoalId) {
         return new BadRequestResponseModel('Una meta no puede ser submeta de sí misma');
       }
@@ -381,10 +419,10 @@ export class GoalService {
       await subgoal.save();
 
       if (oldParentGoalId && oldParentGoalId.toString() !== parentGoalId) {
-        await this._updateParentGoalCounters(oldParentGoalId, 'Meta padre anterior');
+        await this._updateParentGoalCounters(oldParentGoalId, userId, 'Meta padre anterior');
       }
 
-      await this._updateParentGoalCounters(parentGoalId, 'Meta padre');
+      await this._updateParentGoalCounters(parentGoalId, userId, 'Meta padre');
 
       return new SuccessResponseModel(subgoal, 'Submeta agregada correctamente');
     } catch (error) {
@@ -420,16 +458,19 @@ export class GoalService {
   /**
    * Actualiza solo el estado de una meta
    * @param {string} goalId - ID de la meta
-   * @param {string} status - Nuevo estado (active/paused/completed)
+   * @param {Object} body - Body con status
    * @param {string} userId - ID del usuario
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la meta actualizada o error
    */
-  static async updateGoalStatus(goalId, status, userId) {
+  static async updateGoalStatus(goalId, body, userId) {
     try {
-      const validStatuses = ['active', 'paused', 'completed'];
-      if (!validStatuses.includes(status)) {
-        return new BadRequestResponseModel(`Estado inválido. Debe ser uno de: ${validStatuses.join(', ')}`);
+      const statusDto = new UpdateGoalStatusDto(body || {});
+      const validation = statusDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
+
+      const { status } = statusDto.toPlainObject();
 
       const goal = await Goal.findOne({ _id: goalId, userId });
       if (!goal) {
@@ -441,7 +482,7 @@ export class GoalService {
       const updatedGoal = await goal.save();
 
       if (oldStatus !== status && goal.parentGoalId) {
-        await this._updateParentGoalCounters(goal.parentGoalId);
+        await this._updateParentGoalCounters(goal.parentGoalId, userId);
         console.log(chalk.green(`Estado cambiado: ${oldStatus} → ${status}`));
       }
 

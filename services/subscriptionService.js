@@ -42,7 +42,26 @@ export class SubscriptionService {
         ...user.subscription,
         mercadoPagoId: mpSubscription.id,
       };
-      await user.save();
+
+      try {
+        await user.save();
+      } catch (saveError) {
+        console.error(chalk.red('Error al guardar suscripción tras crear preapproval MP, reintento:'), saveError);
+        try {
+          await user.save();
+        } catch (retryError) {
+          console.error(
+            chalk.red(`No se persistió mercadoPagoId=${mpSubscription.id} para user=${userId}. Compensando cancelación MP.`),
+            retryError
+          );
+          try {
+            await MercadoPagoService.cancelSubscription(mpSubscription.id);
+          } catch (cancelError) {
+            console.error(chalk.red('No se pudo cancelar el preapproval huérfano de MP:'), cancelError);
+          }
+          return new ErrorResponseModel('No se pudo activar la suscripción. Intentá de nuevo');
+        }
+      }
 
       return new SuccessResponseModel(
         { init_point: mpSubscription.init_point },
@@ -75,7 +94,21 @@ export class SubscriptionService {
         endDate: null,
         mercadoPagoId: null,
       };
-      await user.save();
+
+      try {
+        await user.save();
+      } catch (saveError) {
+        console.error(chalk.red('MP ya canceló; error al persistir, reintento:'), saveError);
+        try {
+          await user.save();
+        } catch (retryError) {
+          console.error(
+            chalk.red(`Suscripción MP cancelada pero user=${userId} sigue isActive en Mongo.`),
+            retryError
+          );
+          return new ErrorResponseModel('La cancelación en MercadoPago se hizo, pero no pudimos actualizar tu cuenta. Reintentá.');
+        }
+      }
 
       return new SuccessResponseModel(
         { subscription: user.subscription },
@@ -104,21 +137,29 @@ export class SubscriptionService {
   }
 
   static async processWebhook(type, dataId) {
-    try {
-      if (type === 'subscription_preapproval') {
-        return this.#handleSubscriptionUpdate(dataId);
-      }
+    if (type === 'subscription_preapproval') {
+      return this.#handleSubscriptionUpdate(dataId);
+    }
 
-      if (type === 'subscription_authorized_payment') {
-        console.log(chalk.blue(`Pago de suscripción recibido: ${dataId}`));
-        return true;
-      }
-
-      console.log(chalk.yellow(`Webhook tipo no manejado: ${type}`));
+    if (type === 'subscription_authorized_payment') {
+      console.log(chalk.blue(`Pago de suscripción recibido: ${dataId}`));
       return true;
-    } catch (error) {
-      console.error(chalk.red('Error procesando webhook:', error.message));
-      return false;
+    }
+
+    console.log(chalk.yellow(`Webhook tipo no manejado: ${type}`));
+    return true;
+  }
+
+  static #subscriptionAlreadyApplied(user, isActive, mercadoPagoId) {
+    return user.subscription?.isActive === isActive && user.subscription?.mercadoPagoId === mercadoPagoId;
+  }
+
+  static async #saveUserWithRetry(user) {
+    try {
+      await user.save();
+    } catch (firstError) {
+      console.error(chalk.red('Error al persistir usuario tras MP, reintento:'), firstError);
+      await user.save();
     }
   }
 
@@ -131,13 +172,16 @@ export class SubscriptionService {
     if (!user && mpData.external_reference) {
       const userByRef = await User.findById(mpData.external_reference);
       if (userByRef) {
+        if (this.#subscriptionAlreadyApplied(userByRef, isActive, subscriptionId)) {
+          return true;
+        }
         userByRef.subscription = {
           isActive,
           startDate: isActive ? new Date(mpData.date_created) : userByRef.subscription?.startDate,
           endDate: null,
           mercadoPagoId: subscriptionId,
         };
-        await userByRef.save();
+        await this.#saveUserWithRetry(userByRef);
         console.log(chalk.green(`Suscripción actualizada via external_reference para usuario ${mpData.external_reference}: ${mpData.status}`));
         return true;
       }
@@ -148,13 +192,17 @@ export class SubscriptionService {
       return false;
     }
 
+    if (this.#subscriptionAlreadyApplied(user, isActive, subscriptionId)) {
+      return true;
+    }
+
     user.subscription = {
       isActive,
       startDate: isActive ? new Date(mpData.date_created) : user.subscription?.startDate,
       endDate: null,
       mercadoPagoId: subscriptionId,
     };
-    await user.save();
+    await this.#saveUserWithRetry(user);
 
     console.log(chalk.green(`Suscripción actualizada para usuario ${user._id}: ${mpData.status} → isActive: ${isActive}`));
     return true;

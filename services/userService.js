@@ -20,19 +20,37 @@ import {
   UpdateAdminUserDto,
   ChangePasswordDto,
   ResetPasswordDto,
+  ForgotPasswordDto,
+  SetPasswordDto,
+  TokenDto,
   LoginUserDto,
   UserFilterDto,
 } from '../models/dtos/users/index.js';
 import { UpdateProfileImageDto } from '../models/dtos/users/UpdateProfileImageDto.js';
 import { CloudinaryHelper } from './helpers/cloudinaryHelper.js';
+import { deleteUserOwnedDocuments } from './helpers/userOwnedDocuments.js';
 
 dotenv.config();
-const JWT_SECRET = process.env.JWT_SECRET || 'tu_clave_secreta_super_segura';
 
 /**
  * Servicio para manejar la lógica de negocio de usuarios
  */
 export class UserService {
+  /**
+   * Crea el moodboard del user nuevo. Si falla, borra el user (compensación).
+   * @returns {Promise<CreatedResponseModel|ErrorResponseModel>}
+   */
+  static async _createMoodboardOrRollback(userId) {
+    const moodboardResult = await MoodboardService.createMoodboardForUser(userId);
+    if (moodboardResult.success) {
+      return moodboardResult;
+    }
+
+    await User.deleteOne({ _id: userId });
+    console.error(chalk.red('Moodboard falló; se revirtió el usuario:'), userId);
+    return moodboardResult;
+  }
+
   /**
    * Obtiene todos los usuarios con filtros opcionales
    * @param {Object} [filters={}] - Filtros de búsqueda (search, isAdmin, isSubscribed, createdFrom, createdTo, sortBy, sortOrder)
@@ -84,7 +102,7 @@ export class UserService {
         return new NotFoundResponseModel(`No se encontró el usuario con el id: ${id} en la base de datos`);
       }
 
-      return new SuccessResponseModel(user, 'Usuario obtenido correctamente');
+      return new SuccessResponseModel(UserServiceHelpers.sanitizeUser(user), 'Usuario obtenido correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener usuario');
     }
@@ -97,7 +115,9 @@ export class UserService {
    */
   static async getProfile(userId) {
     try {
-      const user = await User.findById(userId).select('name email subscription profileImageUrl googleId emailVerified');
+      const user = await User.findById(userId).select(
+        'name email subscription profileImageUrl googleId emailVerified isAdmin onboardingCompleted'
+      );
       
       if (!user) {
         return new NotFoundResponseModel('Usuario no encontrado');
@@ -214,8 +234,7 @@ export class UserService {
       if (existingUser) {
         return new ConflictResponseModel(
           'El email ya está registrado. Por favor, utiliza otro email',
-          'email',
-          createDto.email
+          'email'
         );
       }
 
@@ -228,6 +247,7 @@ export class UserService {
       const user = new User({
         ...cleanData,
         password: hashedPassword,
+        isAdmin: false,
         emailVerified: false,
         emailVerificationToken: hashedVerificationToken,
         emailVerificationExpires: UserServiceHelpers.getVerificationTokenExpiration(),
@@ -235,19 +255,26 @@ export class UserService {
 
       const savedUser = await user.save();
 
-      await MoodboardService.createMoodboardForUser(savedUser._id);
+      const moodboardResult = await this._createMoodboardOrRollback(savedUser._id);
+      if (!moodboardResult.success) {
+        return new ErrorResponseModel('No se pudo completar el registro. Intentá de nuevo');
+      }
 
-      await EmailService.sendVerificationEmail(cleanData.email, verificationToken, cleanData.name);
+      const emailResult = await EmailService.sendVerificationEmail(
+        cleanData.email,
+        verificationToken,
+        cleanData.name
+      );
+      const emailSent = emailResult?.success === true;
 
-      const userResponse = savedUser.toObject();
-      delete userResponse.password;
-      delete userResponse.resetPasswordToken;
-      delete userResponse.resetPasswordExpires;
-      delete userResponse.emailVerificationToken;
-      delete userResponse.emailVerificationExpires;
+      const userResponse = UserServiceHelpers.sanitizeUser(savedUser);
       delete userResponse.subscription;
 
-      return new CreatedResponseModel(userResponse, 'Usuario creado. Revisá tu email para verificar tu cuenta');
+      const message = emailSent
+        ? 'Usuario creado. Revisá tu email para verificar tu cuenta'
+        : 'Usuario creado. Si no te llega el mail, reenviá la verificación';
+
+      return new CreatedResponseModel(userResponse, message, { emailSent });
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'crear usuario');
     }
@@ -270,8 +297,7 @@ export class UserService {
       if (existingUser) {
         return new ConflictResponseModel(
           'El email ya está registrado. Por favor, utiliza otro email',
-          'email',
-          createDto.email
+          'email'
         );
       }
 
@@ -295,13 +321,12 @@ export class UserService {
 
       const savedUser = await user.save();
 
-      // Crear moodboard único para el nuevo usuario
-      await MoodboardService.createMoodboardForUser(savedUser._id);
+      const moodboardResult = await this._createMoodboardOrRollback(savedUser._id);
+      if (!moodboardResult.success) {
+        return new ErrorResponseModel('No se pudo completar el alta del usuario. Intentá de nuevo');
+      }
 
-      const userResponse = savedUser.toObject();
-      delete userResponse.password;
-      delete userResponse.resetPasswordToken;
-      delete userResponse.resetPasswordExpires;
+      const userResponse = UserServiceHelpers.sanitizeUser(savedUser);
 
       return new CreatedResponseModel(userResponse, 'Usuario creado correctamente');
     } catch (error) {
@@ -326,8 +351,7 @@ export class UserService {
         if (emailExists) {
           return new ConflictResponseModel(
             'El email ya está en uso por otro usuario. Por favor, utiliza otro email.',
-            'email',
-            updateDto.email
+            'email'
           );
         }
       }
@@ -339,7 +363,7 @@ export class UserService {
         return new NotFoundResponseModel(`No se encontró el usuario con el id: ${id} en la base de datos`);
       }
 
-      return new SuccessResponseModel(user, 'Usuario actualizado correctamente');
+      return new SuccessResponseModel(UserServiceHelpers.sanitizeUser(user), 'Usuario actualizado correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar usuario');
     }
@@ -362,8 +386,7 @@ export class UserService {
         if (emailExists) {
           return new ConflictResponseModel(
             'El email ya está en uso por otro usuario. Por favor, utiliza otro email.',
-            'email',
-            updateDto.email
+            'email'
           );
         }
       }
@@ -392,12 +415,10 @@ export class UserService {
       Object.assign(user, cleanData);
       await user.save();
 
-      const userResponse = user.toObject();
-      delete userResponse.password;
-      delete userResponse.resetPasswordToken;
-      delete userResponse.resetPasswordExpires;
-
-      return new SuccessResponseModel(userResponse, 'Usuario actualizado correctamente');
+      return new SuccessResponseModel(
+        UserServiceHelpers.sanitizeUser(user),
+        'Usuario actualizado correctamente'
+      );
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar usuario admin');
     }
@@ -408,13 +429,19 @@ export class UserService {
    */
   static async deleteUser(id) {
     try {
-      const user = await User.findByIdAndDelete(id);
+      const user = await User.findById(id);
 
       if (!user) {
         return new NotFoundResponseModel(`No se encontró el usuario con el id: ${id} en la base de datos`);
       }
 
-      return new SuccessResponseModel(user, 'Usuario eliminado correctamente');
+      await deleteUserOwnedDocuments(user._id);
+      await User.findByIdAndDelete(user._id);
+
+      return new SuccessResponseModel(
+        { _id: user._id, email: user.email, name: user.name },
+        'Usuario eliminado correctamente'
+      );
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'eliminar usuario');
     }
@@ -436,6 +463,7 @@ export class UserService {
       const user = await User.findOne({ email: cleanData.email });
 
       if (!user) {
+        await UserServiceHelpers.verifyDummyPassword(cleanData.password);
         return new ErrorResponseModel('Credenciales inválidas');
       }
 
@@ -449,7 +477,7 @@ export class UserService {
       }
 
       const payload = UserServiceHelpers.createJWTPayload(user);
-      const token = UserServiceHelpers.generateJWT(payload, JWT_SECRET);
+      const token = UserServiceHelpers.generateJWT(payload);
       const userResponse = user.toObject();
       userResponse.hasPassword = !!userResponse.password;
       delete userResponse.password;
@@ -513,8 +541,15 @@ export class UserService {
   /**
    * Solicita la recuperación de contraseña
    */
-  static async requestPasswordReset(email) {
+  static async requestPasswordReset(body) {
     try {
+      const forgotDto = new ForgotPasswordDto(body || {});
+      const validation = forgotDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
+      }
+
+      const { email } = forgotDto.toPlainObject();
       const user = await User.findOne({ email });
 
       if (!user) {
@@ -549,7 +584,13 @@ export class UserService {
    */
   static async verifyResetToken(token) {
     try {
-      const hashedToken = UserServiceHelpers.hashToken(token);
+      const tokenDto = new TokenDto({ token });
+      const validation = tokenDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
+      }
+
+      const hashedToken = UserServiceHelpers.hashToken(tokenDto.toPlainObject().token);
       const user = await this._findUserByValidToken(hashedToken);
 
       if (!user) {
@@ -573,9 +614,9 @@ export class UserService {
   /**
    * Resetea la contraseña usando el token de recuperación
    */
-  static async resetPasswordWithToken(token, newPassword) {
+  static async resetPasswordWithToken(body) {
     try {
-      const resetDto = new ResetPasswordDto({ token, newPassword });
+      const resetDto = new ResetPasswordDto(body || {});
 
       const validation = resetDto.validate();
       if (!validation.isValid) {
@@ -635,8 +676,6 @@ export class UserService {
         {
           userId: user._id,
           email: user.email,
-          temporaryPassword: newPassword,
-          message: 'Contraseña reseteada. El usuario debe cambiarla en su próximo login.',
         },
         'Contraseña reseteada correctamente'
       );
@@ -711,11 +750,13 @@ export class UserService {
    */
   static async verifyEmail(token) {
     try {
-      if (!token) {
-        return new BadRequestResponseModel('Token de verificación requerido');
+      const tokenDto = new TokenDto({ token });
+      const validation = tokenDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
-      const hashedToken = UserServiceHelpers.hashToken(token);
+      const hashedToken = UserServiceHelpers.hashToken(tokenDto.toPlainObject().token);
       const user = await User.findOne({
         emailVerificationToken: hashedToken,
         emailVerificationExpires: { $gt: Date.now() },
@@ -731,7 +772,7 @@ export class UserService {
       await user.save();
 
       const payload = UserServiceHelpers.createJWTPayload(user);
-      const authToken = UserServiceHelpers.generateJWT(payload, JWT_SECRET);
+      const authToken = UserServiceHelpers.generateJWT(payload);
 
       const userResponse = user.toObject();
       userResponse.hasPassword = !!userResponse.password;
@@ -750,29 +791,31 @@ export class UserService {
   }
 
   /**
-   * Reenvía el email de verificación
+   * Reenvía el email de verificación. Misma 200 genérica exista o no, esté o no verificado.
    */
-  static async resendVerificationEmail(email, { force = false } = {}) {
+  static async resendVerificationEmail(body) {
     try {
-      if (!email) {
-        return new BadRequestResponseModel('Email requerido');
+      const forgotDto = new ForgotPasswordDto(body || {});
+      const validation = forgotDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
+
+      const { email } = forgotDto.toPlainObject();
+
+      const genericResponse = new SuccessResponseModel(
+        null,
+        'Si el email existe, te enviamos un enlace de verificación'
+      );
 
       const user = await User.findOne({ email });
 
-      if (!user) {
-        return new SuccessResponseModel(null, 'Si el email existe, se envió un nuevo enlace de verificación');
+      if (!user || user.emailVerified) {
+        return genericResponse;
       }
 
-      if (user.emailVerified) {
-        return new BadRequestResponseModel('Este email ya está verificado');
-      }
-
-      const tokenStillFresh = user.emailVerificationExpires
-        && (user.emailVerificationExpires.getTime() - Date.now()) > 3300000;
-
-      if (!force && tokenStillFresh) {
-        return new SuccessResponseModel(null, 'Ya se envió un email de verificación recientemente');
+      if (UserServiceHelpers.isVerificationResendOnCooldown(user.emailVerificationExpires)) {
+        return genericResponse;
       }
 
       const verificationToken = UserServiceHelpers.generateResetToken();
@@ -784,7 +827,7 @@ export class UserService {
 
       await EmailService.sendVerificationEmail(email, verificationToken, user.name);
 
-      return new SuccessResponseModel(null, 'Email de verificación reenviado');
+      return genericResponse;
     } catch (error) {
       console.error(chalk.red('Error al reenviar verificación:', error));
       return new ErrorResponseModel('Error al reenviar el email de verificación');
@@ -794,11 +837,15 @@ export class UserService {
   /**
    * Establece contraseña para usuarios registrados con Google (sin password previo)
    */
-  static async setPassword(userId, newPassword) {
+  static async setPassword(userId, body) {
     try {
-      if (!newPassword || newPassword.length < 5) {
-        return new BadRequestResponseModel('La contraseña debe tener al menos 5 caracteres');
+      const setPasswordDto = new SetPasswordDto(body || {});
+      const validation = setPasswordDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
+
+      const { newPassword } = setPasswordDto.toPlainObject();
 
       const user = await User.findById(userId);
       if (!user) {

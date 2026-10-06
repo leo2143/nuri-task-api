@@ -170,9 +170,8 @@ export class GoalController {
    */
   static async addSubgoal(req, res) {
     const parentGoalId = req.params.id;
-    const { subgoalId } = req.body;
     const userId = req.userId;
-    const result = await GoalService.addSubgoal(parentGoalId, subgoalId, userId);
+    const result = await GoalService.addSubgoal(parentGoalId, req.body, userId);
     res.status(result.status).json(result);
   }
 
@@ -188,9 +187,8 @@ export class GoalController {
    */
   static async updateGoalStatus(req, res) {
     const { id } = req.params;
-    const { status } = req.body;
     const userId = req.userId;
-    const result = await GoalService.updateGoalStatus(id, status, userId);
+    const result = await GoalService.updateGoalStatus(id, req.body, userId);
     res.status(result.status).json(result);
   }
 }

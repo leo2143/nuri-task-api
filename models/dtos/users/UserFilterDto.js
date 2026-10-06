@@ -1,4 +1,6 @@
+import { z } from 'zod';
 import { PaginationDto } from '../paginationDto.js';
+import { mergeValidations, optionalDateField, queryBooleanField, sortOrderField, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para filtrar usuarios
@@ -32,53 +34,27 @@ export class UserFilterDto extends PaginationDto {
    * Valida que los filtros sean correctos
    * @returns {Object} Objeto con isValid y errores
    */
+  static schema = z.object({
+    search: z.string().optional(),
+    isAdmin: queryBooleanField.optional(),
+    isSubscribed: queryBooleanField.optional(),
+    createdFrom: optionalDateField,
+    createdTo: optionalDateField,
+    sortOrder: sortOrderField.optional(),
+  });
+
   validate() {
-    const parentValidation = super.validate();
-    const errors = [...parentValidation.errors];
-
-    if (this.isAdmin !== undefined) {
-      if (typeof this.isAdmin === 'string') {
-        if (this.isAdmin !== 'true' && this.isAdmin !== 'false') {
-          errors.push('El filtro isAdmin debe ser "true" o "false"');
-        }
-      } else if (typeof this.isAdmin !== 'boolean') {
-        errors.push('El filtro isAdmin debe ser un booleano o string "true"/"false"');
-      }
-    }
-
-    if (this.isSubscribed !== undefined) {
-      if (typeof this.isSubscribed === 'string') {
-        if (this.isSubscribed !== 'true' && this.isSubscribed !== 'false') {
-          errors.push('El filtro isSubscribed debe ser "true" o "false"');
-        }
-      } else if (typeof this.isSubscribed !== 'boolean') {
-        errors.push('El filtro isSubscribed debe ser un booleano o string "true"/"false"');
-      }
-    }
-
-    if (this.createdFrom !== undefined) {
-      const date = new Date(this.createdFrom);
-      if (isNaN(date.getTime())) {
-        errors.push('La fecha desde debe ser una fecha válida');
-      }
-    }
-
-    if (this.createdTo !== undefined) {
-      const date = new Date(this.createdTo);
-      if (isNaN(date.getTime())) {
-        errors.push('La fecha hasta debe ser una fecha válida');
-      }
-    }
-
-    const validSortOrder = ['asc', 'desc'];
-    if (this.sortOrder && !validSortOrder.includes(this.sortOrder)) {
-      errors.push(`El orden debe ser uno de: ${validSortOrder.join(', ')}`);
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return mergeValidations(
+      super.validate(),
+      validateZod(UserFilterDto.schema, {
+        search: this.search,
+        isAdmin: this.isAdmin,
+        isSubscribed: this.isSubscribed,
+        createdFrom: this.createdFrom,
+        createdTo: this.createdTo,
+        sortOrder: this.sortOrder,
+      })
+    );
   }
 
   /**
@@ -120,12 +96,10 @@ export class UserFilterDto extends PaginationDto {
   }
 
   /**
-   * Obtiene el objeto de ordenamiento para MongoDB
-   * Siempre ordena por createdAt con el sortOrder especificado
-   * @returns {Object} Sort object para MongoDB
+   * Ordena por `_id` (alineado al cursor). Default desc = más recientes primero.
+   * @returns {{ _id: 1 | -1 }}
    */
   toMongoSort() {
-    const sortOrder = this.sortOrder === 'asc' ? 1 : -1;
-    return { createdAt: sortOrder };
+    return super.toMongoSort(this.sortOrder);
   }
 }

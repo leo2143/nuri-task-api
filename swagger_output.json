@@ -13,6 +13,10 @@
       "description": "Gestión de usuarios y autenticación"
     },
     {
+      "name": "Auth",
+      "description": "Inicio de sesión con Google"
+    },
+    {
       "name": "Todos",
       "description": "Gestión de tareas"
     },
@@ -109,13 +113,6 @@
         ],
         "summary": "Obtiene todas las tareas del usuario",
         "description": "Retorna una lista de todas las tareas del usuario autenticado con filtros opcionales",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "500": {
             "description": "Internal Server Error"
@@ -134,11 +131,6 @@
         "summary": "Crea una nueva tarea",
         "description": "Crea una nueva tarea para el usuario autenticado",
         "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
           {
             "name": "body",
             "in": "body",
@@ -186,13 +178,6 @@
         ],
         "summary": "Obtiene todas las tareas completadas",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "default": {
             "description": ""
@@ -212,13 +197,6 @@
         ],
         "summary": "Obtiene todas las tareas pendientes",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "default": {
             "description": ""
@@ -245,11 +223,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la tarea"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -276,11 +249,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la tarea"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -307,44 +275,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la tarea"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/todos/title/{title}": {
-      "get": {
-        "tags": [
-          "Todos"
-        ],
-        "summary": "Busca una tarea por título",
-        "description": "",
-        "parameters": [
-          {
-            "name": "title",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "Título de la tarea"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -373,11 +303,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la meta"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -406,11 +331,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la tarea"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           },
           {
             "name": "body",
@@ -454,11 +374,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la tarea"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           },
           {
             "name": "body",
@@ -527,13 +442,27 @@
         }
       }
     },
+    "/api/users/logout": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Cierra sesión y limpia la cookie HttpOnly",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/api/users": {
       "post": {
         "tags": [
           "Users"
         ],
         "summary": "Registra un nuevo usuario",
-        "description": "",
+        "description": "201 con meta.emailSent. Si el mail falla, el user igual existe.",
         "parameters": [
           {
             "name": "body",
@@ -543,9 +472,9 @@
             "schema": {
               "type": "object",
               "properties": {
-                "username": {
+                "name": {
                   "type": "string",
-                  "example": "juanperez"
+                  "example": "Juan Pérez"
                 },
                 "email": {
                   "type": "string",
@@ -571,13 +500,6 @@
         ],
         "summary": "Obtiene todos los usuarios (solo admin)",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "500": {
             "description": "Internal Server Error"
@@ -598,11 +520,6 @@
         "summary": "Crea un usuario con control completo (solo admin)",
         "description": "",
         "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
           {
             "name": "body",
             "in": "body",
@@ -676,9 +593,6 @@
           }
         ],
         "responses": {
-          "400": {
-            "description": "Bad Request"
-          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -702,9 +616,6 @@
           }
         ],
         "responses": {
-          "400": {
-            "description": "Bad Request"
-          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -740,9 +651,6 @@
           }
         ],
         "responses": {
-          "400": {
-            "description": "Bad Request"
-          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -757,11 +665,6 @@
         "summary": "Cambia la contraseña del usuario autenticado",
         "description": "",
         "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
           {
             "name": "body",
             "in": "body",
@@ -801,13 +704,6 @@
         ],
         "summary": "Obtiene el perfil del usuario autenticado",
         "description": "Retorna: name, email, subscription (isActive, startDate, endDate), profileImageUrl",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "default": {
             "description": ""
@@ -828,11 +724,6 @@
         "summary": "Actualiza solo la foto de perfil del usuario autenticado",
         "description": "",
         "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
           {
             "name": "body",
             "in": "body",
@@ -866,13 +757,6 @@
         ],
         "summary": "Elimina la foto de perfil del usuario autenticado",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "500": {
             "description": "Internal Server Error"
@@ -892,13 +776,6 @@
         ],
         "summary": "Marca el onboarding como completado para el usuario autenticado",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "500": {
             "description": "Internal Server Error"
@@ -944,14 +821,14 @@
           {
             "name": "body",
             "in": "body",
+            "description": "Email a reenviar. Siempre responde 200 genérico.",
+            "required": true,
             "schema": {
               "type": "object",
               "properties": {
                 "email": {
-                  "example": "any"
-                },
-                "force": {
-                  "example": "any"
+                  "type": "string",
+                  "example": "juan@example.com"
                 }
               }
             }
@@ -971,25 +848,6 @@
         ],
         "summary": "Establece contraseña para cuentas de Google sin password",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "newPassword": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
         "responses": {
           "500": {
             "description": "Internal Server Error"
@@ -1016,11 +874,6 @@
             "required": true,
             "type": "string",
             "description": "ID del usuario"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -1049,9 +902,27 @@
             "description": "ID del usuario"
           },
           {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
+            "name": "body",
+            "in": "body",
+            "description": "Datos a actualizar. No acepta password (usar change-password, reset o PUT /api/admin/users/:id)",
+            "required": false,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "example": "Juan Pérez Updated"
+                },
+                "email": {
+                  "type": "string",
+                  "example": "juan.updated@example.com"
+                },
+                "profileImageUrl": {
+                  "type": "string",
+                  "example": "https://example.com/new-avatar.jpg"
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -1078,11 +949,6 @@
             "required": true,
             "type": "string",
             "description": "ID del usuario"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -1111,11 +977,6 @@
             "required": true,
             "type": "string",
             "description": "ID del usuario"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           },
           {
             "name": "body",
@@ -1181,11 +1042,6 @@
             "description": "ID del usuario"
           },
           {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
             "name": "body",
             "in": "body",
             "description": "Nueva contraseña",
@@ -1220,13 +1076,6 @@
         ],
         "summary": "Obtiene todas las metas del usuario",
         "description": "Retorna todas las metas con campos de tracking (totalTasks, completedTasks, progress)",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "default": {
             "description": ""
@@ -1245,11 +1094,6 @@
         "summary": "Crea una nueva meta",
         "description": "Crea una nueva meta con campos de tracking inicializados en 0",
         "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
           {
             "name": "body",
             "in": "body",
@@ -1301,13 +1145,6 @@
         ],
         "summary": "Obtiene lista catalog de metas (solo id y título)",
         "description": "Retorna solo id y título de las metas, ideal para dropdowns y selects",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "200": {
             "description": "Lista catalog de metas obtenida correctamente",
@@ -1367,13 +1204,6 @@
         ],
         "summary": "Obtiene todas las metas activas",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "default": {
             "description": ""
@@ -1393,13 +1223,6 @@
         ],
         "summary": "Obtiene todas las metas pausadas",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "default": {
             "description": ""
@@ -1419,13 +1242,6 @@
         ],
         "summary": "Obtiene todas las metas completadas",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "default": {
             "description": ""
@@ -1452,11 +1268,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la meta"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -1483,11 +1294,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la meta"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           },
           {
             "name": "body",
@@ -1573,11 +1379,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la meta"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -1606,11 +1407,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la meta padre"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -1639,11 +1435,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la meta padre (la meta que estás viendo)"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           },
           {
             "name": "body",
@@ -1687,11 +1478,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la meta"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           },
           {
             "name": "body",
@@ -1751,13 +1537,6 @@
         ],
         "summary": "Obtiene las métricas generales del usuario autenticado",
         "description": "Retorna rachas, totales de tareas/metas completadas y historial de actividad",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "500": {
             "description": "Internal Server Error"
@@ -1777,13 +1556,6 @@
         ],
         "summary": "Obtiene el dashboard motivacional del usuario",
         "description": "Incluye métricas, mensajes motivacionales y estadísticas",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "500": {
             "description": "Internal Server Error"
@@ -1803,13 +1575,6 @@
         ],
         "summary": "Obtiene solo la racha actual del usuario",
         "description": "Retorna únicamente el valor de currentStreak para mostrar en el home",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "200": {
             "description": "Racha actual obtenida correctamente",
@@ -1887,13 +1652,6 @@
         ],
         "summary": "Verifica y actualiza las rachas del usuario",
         "description": "Comprueba si las rachas han expirado y las actualiza",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "500": {
             "description": "Internal Server Error"
@@ -1913,13 +1671,6 @@
         ],
         "summary": "Obtiene estadísticas generales del sistema (solo admin)",
         "description": "Retorna contadores de usuarios, metas y logros del sistema completo",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "200": {
             "description": "Estadísticas obtenidas correctamente",
@@ -1993,13 +1744,6 @@
         ],
         "summary": "Obtiene el moodboard del usuario autenticado",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "500": {
             "description": "Internal Server Error"
@@ -2018,11 +1762,6 @@
         "summary": "Actualiza el moodboard del usuario (imágenes en batch)",
         "description": "",
         "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
           {
             "name": "body",
             "in": "body",
@@ -2076,11 +1815,6 @@
         "description": "",
         "parameters": [
           {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
             "name": "body",
             "in": "body",
             "description": "Datos de la imagen",
@@ -2130,11 +1864,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la imagen"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -2161,11 +1890,6 @@
             "required": true,
             "type": "string",
             "description": "ID de la imagen"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           },
           {
             "name": "body",
@@ -2210,13 +1934,6 @@
         ],
         "summary": "Obtiene todos los logros (solo admin)",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "default": {
             "description": ""
@@ -2235,11 +1952,6 @@
         "summary": "Crea un nuevo logro (solo admin)",
         "description": "",
         "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
           {
             "name": "body",
             "in": "body",
@@ -2295,13 +2007,6 @@
         ],
         "summary": "Obtiene estadísticas globales de logros (solo admin)",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "default": {
             "description": ""
@@ -2334,11 +2039,6 @@
               "streak",
               "progress"
             ]
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -2367,11 +2067,6 @@
             "required": true,
             "type": "string",
             "description": "ID del logro"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -2398,11 +2093,6 @@
             "required": true,
             "type": "string",
             "description": "ID del logro"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -2429,11 +2119,6 @@
             "required": true,
             "type": "string",
             "description": "ID del logro"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -2469,11 +2154,6 @@
             "required": true,
             "type": "string",
             "description": "ID del logro"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
           }
         ],
         "responses": {
@@ -2495,13 +2175,6 @@
         ],
         "summary": "Obtiene todos los logros con progreso personal",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "default": {
             "description": ""
@@ -2521,13 +2194,6 @@
         ],
         "summary": "Obtiene estadísticas personales de logros",
         "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
         "responses": {
           "default": {
             "description": ""
@@ -2554,56 +2220,6 @@
             "required": true,
             "type": "string",
             "description": "ID del logro"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "User Achievements"
-        ],
-        "summary": "Incrementa el progreso en un logro",
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "description": "ID del logro"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "description": "Cantidad a incrementar",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "amount": {
-                  "type": "number",
-                  "example": 1
-                }
-              }
-            }
           }
         ],
         "responses": {
@@ -2618,19 +2234,50 @@
         ]
       }
     },
+    "/api/cloudinary/pending": {
+      "post": {
+        "tags": [
+          "Cloudinary"
+        ],
+        "summary": "Registra una imagen recién subida para poder eliminarla como huérfana",
+        "description": "La URL debe ser de este cloud. Expira en 1 hora. Necesario antes de DELETE si la imagen aún no está en perfil o moodboard.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "description": "URL de la imagen en Cloudinary",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "imageUrl": {
+                  "type": "string",
+                  "example": "https://res.cloudinary.com/example/image/upload/v1234567890/folder/image.jpg"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/cloudinary/image": {
       "delete": {
         "tags": [
           "Cloudinary"
         ],
-        "summary": "Elimina una imagen de Cloudinary directamente (sin actualizar MongoDB)",
-        "description": "Útil para limpiar imágenes huérfanas. Solo elimina de Cloudinary, no actualiza ningún documento.",
+        "summary": "Elimina una imagen de Cloudinary del usuario autenticado",
+        "description": "Solo borra si la URL es de este cloud y pertenece al usuario: foto de perfil, imagen de moodboard, o pending registrado.",
         "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
           {
             "name": "body",
             "in": "body",
@@ -2657,6 +2304,37 @@
             "bearerAuth": []
           }
         ]
+      }
+    },
+    "/api/auth/google": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Inicia sesión o registra con Google OAuth",
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Código de autorización de Google",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "example": "4/0AX4XfWj..."
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
       }
     }
   }

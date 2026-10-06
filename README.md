@@ -186,31 +186,27 @@ El servidor estará disponible en `http://localhost:3000`
 
 ### Variables de Entorno
 
-Crea un archivo `.env` en la raíz:
+`cp .env.example .env` y reemplazá los `change-me`. El example **no** sirve para firmar JWT ni validar webhooks.
 
-```env
-# MongoDB
-MONGO_URI=mongodb://localhost:27017/nuri-task-db
+| Variable | Prod | Para qué |
+|----------|------|----------|
+| `MONGO_URI` | **obligatoria** (boot) | MongoDB |
+| `JWT_SECRET` | **obligatoria** (boot; sin fallback) | Firma JWT |
+| `PORT` | no (Vercel) | Puerto local |
+| `NODE_ENV` | opcional | `development` expone `devToken` de reset |
+| `FRONTEND_URL` | recomendada | CORS extra + links de mail |
+| `API_URL` | recomendada | Back-url de Mercado Pago |
+| `EMAIL_USER` / `EMAIL_PASSWORD` | registro / reset | SMTP (Gmail app password) |
+| `EMAIL_SERVICE` `EMAIL_HOST` `EMAIL_PORT` `EMAIL_SECURE` `EMAIL_FROM_NAME` | opcional | SMTP; defaults Gmail |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | login Google | OAuth |
+| `MP_ACCESS_TOKEN` | suscripciones | Checkout MP |
+| `MP_WEBHOOK_SECRET` | **fail-closed** | Firma webhook; sin esto el webhook no valida |
+| `MP_SUBSCRIPTION_AMOUNT` | opcional | Monto (default 15) |
+| `CRON_SECRET` | **fail-closed** | Auth de `/api/cron/*` |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_EMAIL` | push | Web Push |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | imágenes | Cloudinary |
 
-# JWT
-JWT_SECRET=tu_clave_secreta_muy_segura_aqui
-
-# Servidor
-PORT=3000
-NODE_ENV=development
-
-# Email (Gmail)
-EMAIL_SERVICE=gmail
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_SECURE=false
-EMAIL_USER=tu_email@gmail.com
-EMAIL_PASSWORD=tu_contraseña_de_aplicacion
-EMAIL_FROM_NAME=Nuri Task API
-
-# Frontend
-FRONTEND_URL=http://localhost:5173
-```
+Vercel setea `VERCEL`, `VERCEL_URL`, `VERCEL_PROJECT_PRODUCTION_URL`. No las pongas en `.env`.
 
 ### Configuración de Email (Gmail)
 
@@ -405,11 +401,27 @@ vercel login
 # 3. Desplegar
 vercel
 
-# 4. Configurar variables de entorno
+# 4. Configurar variables de entorno (todas las de .env.example que uses en prod)
 vercel env add MONGO_URI
 vercel env add JWT_SECRET
+vercel env add FRONTEND_URL
+vercel env add API_URL
 vercel env add EMAIL_USER
 vercel env add EMAIL_PASSWORD
+vercel env add EMAIL_SERVICE
+vercel env add EMAIL_FROM_NAME
+vercel env add GOOGLE_CLIENT_ID
+vercel env add GOOGLE_CLIENT_SECRET
+vercel env add MP_ACCESS_TOKEN
+vercel env add MP_WEBHOOK_SECRET
+vercel env add MP_SUBSCRIPTION_AMOUNT
+vercel env add CRON_SECRET
+vercel env add VAPID_PUBLIC_KEY
+vercel env add VAPID_PRIVATE_KEY
+vercel env add VAPID_EMAIL
+vercel env add CLOUDINARY_CLOUD_NAME
+vercel env add CLOUDINARY_API_KEY
+vercel env add CLOUDINARY_API_SECRET
 ```
 
 ---
@@ -489,6 +501,7 @@ Este proyecto se desarrolló basándose en documentación oficial y recursos de 
 - [Express.js](https://expressjs.com/) - Framework web para Node.js
 - [MongoDB](https://www.mongodb.com/) - Base de datos NoSQL
 - [Mongoose](https://mongoosejs.com/) - ODM para MongoDB
+- [Zod](https://zod.dev/) - Schemas de validación de DTOs
 - [JWT](https://jwt.io/) - Autenticación basada en tokens
 - [Nodemailer](https://nodemailer.com/) - Servicio de envío de emails
 

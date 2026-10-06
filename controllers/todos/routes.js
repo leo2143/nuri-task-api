@@ -51,21 +51,6 @@ export const setupTodoRoutes = app => {
     return TodoController.getTodoById(req, res);
   });
 
-  app.get('/api/todos/title/:title', validateToken, (req, res) => {
-    // #swagger.tags = ['Todos']
-    // #swagger.summary = 'Busca una tarea por título'
-    /* #swagger.parameters['title'] = {
-         in: 'path',
-         description: 'Título de la tarea',
-         required: true,
-         type: 'string'
-    } */
-    /* #swagger.security = [{
-         "bearerAuth": []
-    }] */
-    return TodoController.getByTitle(req, res);
-  });
-
   app.get('/api/goals/:goalId/todos', validateToken, (req, res) => {
     // #swagger.tags = ['Todos']
     // #swagger.summary = 'Obtiene todas las tareas de una meta específica'

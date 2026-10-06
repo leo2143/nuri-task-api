@@ -82,12 +82,17 @@ export class NotFoundResponseModel {
  * @property {Object|null} meta - Metadatos adicionales
  */
 export class CreatedResponseModel {
-  constructor(data, message = 'Recurso creado exitosamente') {
+  /**
+   * @param {*} data - Datos del recurso creado
+   * @param {string} message - Mensaje de éxito
+   * @param {Object|null} meta - Metadatos (p. ej. emailSent)
+   */
+  constructor(data, message = 'Recurso creado exitosamente', meta = null) {
     this.success = true;
     this.status = 201;
     this.message = message;
     this.data = data;
-    this.meta = null;
+    this.meta = meta;
   }
 }
 

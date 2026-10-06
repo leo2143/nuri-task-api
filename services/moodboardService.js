@@ -1,7 +1,7 @@
 import Moodboard from '../models/moodboardModel.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
-import { UpdateMoodboardDto, AddImageDto } from '../models/dtos/moodboard/index.js';
+import { CreateMoodboardDto, UpdateMoodboardDto, AddImageDto, UpdateImageDto } from '../models/dtos/moodboard/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { CloudinaryHelper } from './helpers/cloudinaryHelper.js';
 
@@ -53,9 +53,15 @@ export class MoodboardService {
    */
   static async createMoodboardForUser(userId) {
     try {
+      const createDto = new CreateMoodboardDto({ images: [] });
+      const validation = createDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
+      }
+
       const moodboard = new Moodboard({
         userId,
-        images: [],
+        ...createDto.toPlainObject(),
       });
 
       const savedMoodboard = await moodboard.save();
@@ -187,6 +193,13 @@ export class MoodboardService {
    */
   static async updateImage(imageId, imageData, userId) {
     try {
+      const updateDto = new UpdateImageDto(imageData || {});
+      const validation = updateDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
+      }
+
+      const cleanData = updateDto.toPlainObject();
       const { moodboard, error } = await this._findMoodboardByUser(userId);
       if (error) return error;
 
@@ -195,18 +208,16 @@ export class MoodboardService {
         return new NotFoundResponseModel('Imagen no encontrada');
       }
 
-      // Guardar la URL antigua si se va a cambiar
-      const oldImageUrl = imageData.imageUrl !== undefined && imageData.imageUrl !== image.imageUrl ? image.imageUrl : null;
-      const newImageUrl = imageData.imageUrl;
+      const oldImageUrl = cleanData.imageUrl !== undefined && cleanData.imageUrl !== image.imageUrl ? image.imageUrl : null;
+      const newImageUrl = cleanData.imageUrl;
 
-      // Actualizar en MongoDB PRIMERO y eliminar de Cloudinary DESPUÉS
       const updatedMoodboard = await CloudinaryHelper.updateImageWithCleanup(
         oldImageUrl,
         newImageUrl,
         async () => {
-          if (imageData.imageUrl !== undefined) image.imageUrl = imageData.imageUrl;
-          if (imageData.imageAlt !== undefined) image.imageAlt = imageData.imageAlt;
-          if (imageData.imagePositionNumber !== undefined) image.imagePositionNumber = imageData.imagePositionNumber;
+          if (cleanData.imageUrl !== undefined) image.imageUrl = cleanData.imageUrl;
+          if (cleanData.imageAlt !== undefined) image.imageAlt = cleanData.imageAlt;
+          if (cleanData.imagePositionNumber !== undefined) image.imagePositionNumber = cleanData.imagePositionNumber;
           return await moodboard.save();
         }
       );

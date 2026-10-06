@@ -1,5 +1,6 @@
 import { PushNotificationService } from '../../services/pushNotificationService.js';
 import { SuccessResponseModel, CreatedResponseModel, BadRequestResponseModel } from '../../models/responseModel.js';
+import { SubscribePushDto, PushEndpointDto } from '../../models/dtos/push/index.js';
 
 /**
  * Controlador para manejar las peticiones HTTP de notificaciones push
@@ -10,16 +11,21 @@ export class PushController {
    */
   static async subscribe(req, res) {
     try {
-      const userId = req.userId;
-      const { endpoint, keys } = req.body;
-
-      if (!endpoint || !keys?.p256dh || !keys?.auth) {
-        const response = new BadRequestResponseModel('Suscripción inválida: faltan endpoint o keys (p256dh, auth)');
+      const subscribeDto = new SubscribePushDto(req.body || {});
+      const validation = subscribeDto.validate();
+      if (!validation.isValid) {
+        const response = new BadRequestResponseModel(validation.errors.join(', '));
         return res.status(response.status).json(response);
       }
 
-      const subscription = await PushNotificationService.saveSubscription(userId, { endpoint, keys });
-      const response = new CreatedResponseModel(subscription, 'Suscripción push registrada correctamente');
+      const subscription = await PushNotificationService.saveSubscription(
+        req.userId,
+        subscribeDto.toPlainObject()
+      );
+      const response = new CreatedResponseModel(
+        { endpoint: subscription.endpoint },
+        'Suscripción push registrada correctamente'
+      );
       res.status(response.status).json(response);
     } catch (error) {
       console.error('Error en subscribe:', error);
@@ -32,15 +38,14 @@ export class PushController {
    */
   static async unsubscribe(req, res) {
     try {
-      const userId = req.userId;
-      const { endpoint } = req.body;
-
-      if (!endpoint) {
-        const response = new BadRequestResponseModel('Se requiere el endpoint de la suscripción');
+      const endpointDto = new PushEndpointDto(req.body || {});
+      const validation = endpointDto.validate();
+      if (!validation.isValid) {
+        const response = new BadRequestResponseModel(validation.errors.join(', '));
         return res.status(response.status).json(response);
       }
 
-      await PushNotificationService.removeSubscription(userId, endpoint);
+      await PushNotificationService.removeSubscription(req.userId, endpointDto.toPlainObject().endpoint);
       const response = new SuccessResponseModel(null, 'Suscripción push eliminada correctamente');
       res.status(response.status).json(response);
     } catch (error) {

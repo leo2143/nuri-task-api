@@ -1,5 +1,6 @@
 import { UsersController } from './usersController.js';
 import { validateAdminToken, validateToken } from '../../middlewares/authMiddleware.js';
+import { authRateLimiter, publicAuthRateLimiters } from '../../middlewares/authRateLimiter.js';
 
 /**
  * Función para configurar las rutas de usuarios
@@ -8,7 +9,7 @@ import { validateAdminToken, validateToken } from '../../middlewares/authMiddlew
    * Configura las rutas de usuarios, algunas públicas (login, registro) y otras protegidas
  */
 export const setupUserRoutes = app => {
-  app.post('/api/users/login', (req, res) => {
+  app.post('/api/users/login', ...publicAuthRateLimiters, (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Inicia sesión de usuario'
     /* #swagger.parameters['body'] = {
@@ -23,15 +24,22 @@ export const setupUserRoutes = app => {
     return UsersController.loginUser(req, res);
   });
 
-  app.post('/api/users', (req, res) => {
+  app.post('/api/users/logout', (req, res) => {
+    // #swagger.tags = ['Users']
+    // #swagger.summary = 'Cierra sesión y limpia la cookie HttpOnly'
+    return UsersController.logout(req, res);
+  });
+
+  app.post('/api/users', ...publicAuthRateLimiters, (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Registra un nuevo usuario'
+    // #swagger.description = '201 con meta.emailSent. Si el mail falla, el user igual existe.'
     /* #swagger.parameters['body'] = {
          in: 'body',
          description: 'Datos del nuevo usuario',
          required: true,
          schema: {
-           username: 'juanperez',
+           name: 'Juan Pérez',
            email: 'juan@example.com',
            password: 'password123'
          }
@@ -61,7 +69,7 @@ export const setupUserRoutes = app => {
     return UsersController.createAdminUser(req, res);
   });
 
-  app.post('/api/users/forgot-password', (req, res) => {
+  app.post('/api/users/forgot-password', ...publicAuthRateLimiters, (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Solicita recuperación de contraseña'
     /* #swagger.parameters['body'] = {
@@ -75,7 +83,7 @@ export const setupUserRoutes = app => {
     return UsersController.forgotPassword(req, res);
   });
 
-  app.get('/api/users/verify-reset-token/:token', (req, res) => {
+  app.get('/api/users/verify-reset-token/:token', authRateLimiter, (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Verifica si el token de recuperación es válido'
     /* #swagger.parameters['token'] = {
@@ -87,7 +95,7 @@ export const setupUserRoutes = app => {
     return UsersController.verifyResetToken(req, res);
   });
 
-  app.post('/api/users/reset-password', (req, res) => {
+  app.post('/api/users/reset-password', authRateLimiter, (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Restablece la contraseña con el token'
     /* #swagger.parameters['body'] = {
@@ -171,9 +179,17 @@ export const setupUserRoutes = app => {
     return UsersController.verifyEmail(req, res);
   });
 
-  app.post('/api/users/resend-verification', (req, res) => {
+  app.post('/api/users/resend-verification', ...publicAuthRateLimiters, (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Reenvía el email de verificación'
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Email a reenviar. Siempre responde 200 genérico.',
+         required: true,
+         schema: {
+           email: 'juan@example.com'
+         }
+    } */
     return UsersController.resendVerification(req, res);
   });
 
@@ -218,6 +234,16 @@ export const setupUserRoutes = app => {
          description: 'ID del usuario',
          required: true,
          type: 'string'
+    } */
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Datos a actualizar. No acepta password (usar change-password, reset o PUT /api/admin/users/:id)',
+         required: false,
+         schema: {
+           name: 'Juan Pérez Updated',
+           email: 'juan.updated@example.com',
+           profileImageUrl: 'https://example.com/new-avatar.jpg'
+         }
     } */
     /* #swagger.security = [{
          "bearerAuth": []

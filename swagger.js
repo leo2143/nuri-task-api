@@ -30,6 +30,7 @@ const doc = {
   produces: ['application/json'],
   tags: [
     { name: 'Users', description: 'Gestión de usuarios y autenticación' },
+    { name: 'Auth', description: 'Inicio de sesión con Google' },
     { name: 'Todos', description: 'Gestión de tareas' },
     { name: 'Goals', description: 'Gestión de metas' },
     { name: 'Metrics', description: 'Métricas de progreso' },
@@ -58,6 +59,7 @@ const endpointsFiles = [
   './controllers/moodboard/routes.js',
   './controllers/achievements/routes.js',
   './controllers/cloudinary/routes.js',
+  './controllers/auth/routes.js',
 ];
 
 swaggerAutogen(outputFile, endpointsFiles, doc).then(() => {

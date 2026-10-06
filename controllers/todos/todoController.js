@@ -76,16 +76,8 @@ export class TodoController {
    */
   static async updateTodoState(req, res) {
     const id = req.params.id;
-    const { completed } = req.body;
     const userId = req.userId;
-    const result = await TodoService.updateTodoState(id, completed, userId);
-    res.status(result.status).json(result);
-  }
-
-  static async getByTitle(req, res) {
-    const title = req.params.title;
-    const userId = req.userId;
-    const result = await TodoService.getTodoByTitle(title, userId);
+    const result = await TodoService.updateTodoState(id, req.body, userId);
     res.status(result.status).json(result);
   }
 
@@ -145,7 +137,6 @@ export class TodoController {
    * @param {string} req.params.id - ID de la tarea
    * @param {Object} req.body - Datos del comentario
    * @param {string} req.body.text - Texto del comentario (requerido)
-   * @param {string} req.body.author - Autor del comentario (requerido)
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
@@ -156,7 +147,7 @@ export class TodoController {
       const commentData = req.body;
       const userId = req.userId;
 
-      const result = await TodoService.addCommentToTodo(todoId, commentData, userId);
+      const result = await TodoService.addCommentToTodo(todoId, commentData, userId, req.user?.name);
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en addCommentToTodo:', error);
