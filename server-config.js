@@ -50,7 +50,8 @@ export const createServer = () => {
   }
 
   const app = express();
-  // Vercel (y cualquier reverse proxy) pone la IP real en X-Forwarded-For.
+  app.disable('x-powered-by');
+  
   app.set('trust proxy', 1);
   const PORT = process.env.PORT || 3000;
 

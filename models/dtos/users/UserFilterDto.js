@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { PaginationDto } from '../paginationDto.js';
-import { mergeValidations, optionalDateField, queryBooleanField, sortOrderField, validateZod } from '../zodHelpers.js';
+import { mergeValidations, optionalDateField, queryBooleanField, sortOrderField, toQueryBoolean, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para filtrar usuarios
@@ -72,12 +72,11 @@ export class UserFilterDto extends PaginationDto {
     }
 
     if (this.isAdmin !== undefined) {
-      query.isAdmin = this.isAdmin === 'true' || this.isAdmin === true;
+      query.isAdmin = toQueryBoolean(this.isAdmin);
     }
 
     if (this.isSubscribed !== undefined) {
-      const isSubscribed = this.isSubscribed === 'true' || this.isSubscribed === true;
-      query['subscription.isActive'] = isSubscribed;
+      query['subscription.isActive'] = toQueryBoolean(this.isSubscribed);
     }
 
     if (this.createdFrom !== undefined || this.createdTo !== undefined) {

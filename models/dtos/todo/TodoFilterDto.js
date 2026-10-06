@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { PaginationDto } from '../paginationDto.js';
-import { mergeValidations, optionalDateField, priorityField, queryBooleanField, sortOrderField, validateZod } from '../zodHelpers.js';
+import { mergeValidations, optionalDateField, priorityField, queryBooleanField, sortOrderField, toQueryBoolean, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para filtrar tareas
@@ -71,7 +71,7 @@ export class TodoFilterDto extends PaginationDto {
 
     if (this.completed !== undefined) {
       // Convertir a booleano si viene como string
-      query.completed = this.completed === 'true' || this.completed === true;
+      query.completed = toQueryBoolean(this.completed);
     }
 
     if (this.priority !== undefined) {

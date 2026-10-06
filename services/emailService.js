@@ -10,6 +10,17 @@ const DEFAULT_EMAIL_FROM_NAME = 'Nuri Task API';
 const DEFAULT_FRONTEND_URL = 'http://localhost:3000';
 
 /**
+ * Quita slashes finales sin regex (evita backtracking de /\/+$/).
+ */
+function stripTrailingSlashes(url) {
+  let result = url;
+  while (result.endsWith('/')) {
+    result = result.slice(0, -1);
+  }
+  return result;
+}
+
+/**
  * Servicio para enviar correos electrónicos
  */
 export class EmailService {
@@ -237,7 +248,7 @@ export class EmailService {
     try {
       const transporter = this.createTransport();
 
-      const frontendBase = (process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL).replace(/\/+$/, '');
+      const frontendBase = stripTrailingSlashes(process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL);
       const verifyUrl = `${frontendBase}/verify-email?token=${verificationToken}`;
 
       const mailOptions = {
