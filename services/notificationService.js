@@ -28,7 +28,7 @@ export class NotificationService {
       const query = { userId, ...filterDto.toMongoQuery() };
 
       const notifications = await Notification.find(query)
-        .sort({ createdAt: -1 })
+        .sort(filterDto.toMongoSort())
         .limit(filterDto.limit + 1)
         .lean();
 

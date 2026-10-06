@@ -1,58 +1,33 @@
-import { ValidationHelpers } from '../../../services/helpers/validationHelpers.js';
+import { z } from 'zod';
+import { imageUrlField, queryNumberField, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para agregar una imagen a un moodboard
- * @class AddImageDto
- * @description Define la estructura y validaciones para agregar una imagen
  */
 export class AddImageDto {
-  /**
-   * @param {Object} data - Datos de la imagen
-   * @param {string} data.imageUrl - URL de la imagen (requerido)
-   * @param {string} data.imageAlt - Texto alternativo (requerido)
-   * @param {number} data.imagePositionNumber - Posición de la imagen (requerido)
-   */
+  static schema = z.object({
+    imageUrl: imageUrlField(true, 'La URL de la imagen'),
+    imageAlt: z
+      .string({ required_error: 'El texto alternativo es requerido y debe ser un string válido' })
+      .trim()
+      .min(1, 'El texto alternativo es requerido y debe ser un string válido'),
+    imagePositionNumber: queryNumberField.refine(value => value >= 0, 'La posición debe ser mayor o igual a 0'),
+  });
+
   constructor(data) {
     this.imageUrl = data.imageUrl;
     this.imageAlt = data.imageAlt;
     this.imagePositionNumber = data.imagePositionNumber;
   }
 
-  /**
-   * Valida que los datos del DTO sean correctos
-   * @returns {Object} Objeto con isValid y errores
-   */
   validate() {
-    const errors = [];
-
-    // Validar imageUrl
-    const imageUrlError = ValidationHelpers.validateImageUrl(this.imageUrl, true, 'La URL de la imagen');
-    if (imageUrlError) errors.push(imageUrlError);
-
-    // Validar imageAlt
-    if (!this.imageAlt || typeof this.imageAlt !== 'string' || this.imageAlt.trim() === '') {
-      errors.push('El texto alternativo es requerido y debe ser un string válido');
-    }
-
-    // Validar imagePositionNumber
-    if (this.imagePositionNumber === undefined || this.imagePositionNumber === null) {
-      errors.push('La posición de la imagen es requerida');
-    } else if (typeof this.imagePositionNumber !== 'number') {
-      errors.push('La posición debe ser un número');
-    } else if (this.imagePositionNumber < 0) {
-      errors.push('La posición debe ser mayor o igual a 0');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return validateZod(this.constructor.schema, {
+      imageUrl: this.imageUrl,
+      imageAlt: this.imageAlt,
+      imagePositionNumber: this.imagePositionNumber,
+    });
   }
 
-  /**
-   * Convierte el DTO a un objeto plano
-   * @returns {Object} Objeto plano con los datos de la imagen
-   */
   toPlainObject() {
     return {
       imageUrl: this.imageUrl.trim(),

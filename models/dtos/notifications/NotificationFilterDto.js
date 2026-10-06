@@ -1,4 +1,9 @@
+import { z } from 'zod';
 import { PaginationDto } from '../paginationDto.js';
+import { ValidationHelpers } from '../../../services/helpers/validationHelpers.js';
+import { mergeValidations, queryBooleanField, validateZod } from '../zodHelpers.js';
+
+const NOTIFICATION_TYPES = ['due_task', 'streak_risk', 'inactivity', 'streak_increase', 'achievement_completed'];
 
 /**
  * DTO para filtrar y paginar notificaciones
@@ -8,35 +13,30 @@ import { PaginationDto } from '../paginationDto.js';
 export class NotificationFilterDto extends PaginationDto {
   constructor(data) {
     super(data);
-    if (data.read !== undefined) this.read = data.read;
+    if (data.read !== undefined) this.read = ValidationHelpers.parseBoolean(data.read);
     if (data.type !== undefined) this.type = data.type;
   }
 
+  static schema = z.object({
+    read: queryBooleanField.optional(),
+    type: z.enum(NOTIFICATION_TYPES, { errorMap: () => ({ message: `El tipo debe ser uno de: ${NOTIFICATION_TYPES.join(', ')}` }) }).optional(),
+  });
+
   validate() {
-    const parentValidation = super.validate();
-    const errors = [...parentValidation.errors];
-
-    if (this.read !== undefined) {
-      if (this.read !== 'true' && this.read !== 'false' && typeof this.read !== 'boolean') {
-        errors.push('El filtro read debe ser "true" o "false"');
-      }
-    }
-
-    if (this.type !== undefined) {
-      const validTypes = ['due_task', 'streak_risk', 'inactivity', 'streak_increase'];
-      if (!validTypes.includes(this.type)) {
-        errors.push(`El tipo debe ser uno de: ${validTypes.join(', ')}`);
-      }
-    }
-
-    return { isValid: errors.length === 0, errors };
+    return mergeValidations(
+      super.validate(),
+      validateZod(NotificationFilterDto.schema, {
+        read: this.read === null ? 'invalid' : this.read,
+        type: this.type,
+      })
+    );
   }
 
   toMongoQuery() {
     const query = {};
 
-    if (this.read !== undefined) {
-      query.read = this.read === 'true' || this.read === true;
+    if (this.read !== undefined && this.read !== null) {
+      query.read = this.read;
     }
 
     if (this.type !== undefined) {

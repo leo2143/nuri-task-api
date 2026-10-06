@@ -1,13 +1,11 @@
 import UserAchievement from '../models/userAchievementModel.js';
 import Achievement from '../models/achievementModel.js';
 import User from '../models/userModel.js';
-import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
+import { NotFoundResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel } from '../models/responseModel.js';
-import { IncrementProgressDto } from '../models/dtos/achievements/index.js';
 import { PaginationDto } from '../models/dtos/paginationDto.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
-import { PushNotificationService } from './pushNotificationService.js';
-import { NotificationService } from './notificationService.js';
+import { persistAndNotify } from './helpers/persistAndNotify.js';
 import chalk from 'chalk';
 
 const POPULATE_USER_FIELDS = 'name email avatar';
@@ -42,7 +40,7 @@ export class UserAchievementService {
       paginationDto.applyCursorToQuery(query);
 
       const achievements = await Achievement.find(query)
-        .sort({ tier: 1, createdAt: 1 })
+        .sort(paginationDto.toMongoSort())
         .limit(paginationDto.limit + 1)
         .lean();
 
@@ -115,64 +113,6 @@ export class UserAchievementService {
   }
 
   /**
-   * Incrementa el progreso en un logro
-   * @param {string} userId - ID del usuario
-   * @param {string} achievementId - ID del logro
-   * @param {number} [amount=1] - Cantidad a incrementar
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el progreso actualizado
-   */
-  static async incrementProgress(userId, achievementId, amount = 1) {
-    try {
-      const incrementDto = new IncrementProgressDto({ amount });
-      const validation = incrementDto.validate();
-
-      if (!validation.isValid) {
-        return new BadRequestResponseModel(validation.errors.join(', '));
-      }
-
-      // Verificar que el logro exista
-      const achievementData = await Achievement.findById(achievementId);
-      if (!achievementData) {
-        return new NotFoundResponseModel('Logro no encontrado');
-      }
-
-      // Buscar o crear el logro del usuario
-      let userAchievement = await UserAchievement.findOne({ user: userId, achievement: achievementId });
-
-      if (!userAchievement) {
-        userAchievement = new UserAchievement({
-          user: userId,
-          achievement: achievementId,
-          currentCount: 0,
-          status: 'locked',
-        });
-      }
-
-      userAchievement.currentCount += amount;
-
-      const wasCompleted = userAchievement.status === 'completed';
-
-      if (userAchievement.currentCount >= achievementData.targetCount) {
-        if (userAchievement.status === 'locked') {
-          userAchievement.status = 'unlocked';
-          userAchievement.unlockedAt = new Date();
-        }
-
-        userAchievement.status = 'completed';
-        userAchievement.completedAt = new Date();
-      }
-
-      await userAchievement.save();
-
-      await userAchievement.populate('achievement');
-
-      return new SuccessResponseModel(userAchievement, 'Progreso actualizado correctamente');
-    } catch (error) {
-      return ErrorHandler.handleDatabaseError(error, 'incrementar progreso');
-    }
-  }
-
-  /**
    * Obtiene estadísticas de logros del usuario
    * @param {string} userId - ID del usuario
    * @returns {Promise<SuccessResponseModel|ErrorResponseModel>}
@@ -230,7 +170,7 @@ export class UserAchievementService {
   /**
    * Procesa un evento de usuario y actualiza el progreso en todos los logros que lo escuchan.
    * Se llama desde otros servicios (todoService, goalService, metricsService) sin interrumpir
-   * el flujo principal: los errores aquí nunca rompen la respuesta al usuario.
+   * el flujo principal: los errores aquí nunca rompen la respuesta al usuario (side-effect; 017).
    * @param {string} triggerEvent - Evento disparado ('task:completed', 'goal:completed', 'streak:updated')
    * @param {string} userId - ID del usuario que disparó el evento
    * @param {number|null} value - Solo para 'streak:updated': valor absoluto del streak actual
@@ -256,7 +196,10 @@ export class UserAchievementService {
 
       await this._checkAndCompleteAchievements(userId, matchingAchievements, shouldSetAbsoluteValue);
     } catch (error) {
-      console.error(chalk.red('Error al procesar evento de logros:'), error);
+      console.error(
+        chalk.red('[side-effect] Error al procesar evento de logros (el request no falla; retry en 017):'),
+        error
+      );
     }
   }
 
@@ -327,16 +270,14 @@ export class UserAchievementService {
         icon: '/notifications/crown.svg',
       };
 
-      Promise.all([
-        NotificationService.createMany([{
-          userId,
-          title: payload.title,
-          body: payload.body,
-          url: payload.url,
-          type: 'achievement_completed',
-        }]),
-        PushNotificationService.sendNotification(userId, payload),
-      ]).catch(err => console.error(chalk.yellow('Error enviando notificación de logro:', err)));
+      await persistAndNotify({
+        userId,
+        title: payload.title,
+        body: payload.body,
+        url: payload.url,
+        type: 'achievement_completed',
+        icon: payload.icon,
+      });
     }
   }
 }

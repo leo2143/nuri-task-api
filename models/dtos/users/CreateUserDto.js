@@ -1,70 +1,43 @@
+import { z } from 'zod';
+import { EmailDto } from './EmailDto.js';
+import { passwordField, validateZod } from '../zodHelpers.js';
+
 /**
  * DTO para crear un nuevo usuario
  */
-export class CreateUserDto {
+export class CreateUserDto extends EmailDto {
+  static schema = EmailDto.schema.extend({
+    name: z
+      .string({ required_error: 'El nombre es requerido y debe ser un valor válido' })
+      .trim()
+      .min(1, 'El nombre es requerido y debe ser un valor válido'),
+    password: passwordField,
+  });
+
   constructor(data) {
+    super(data);
     this.name = data.name;
-    this.email = data.email;
     this.password = data.password;
-    this.isAdmin = data.isAdmin || false;
   }
 
-  _validateName() {
-    if (!this.name || typeof this.name !== 'string' || this.name.trim() === '') {
-      return 'El nombre es requerido y debe ser un valor válido';
-    }
-    return null;
-  }
-
-  _validateEmail() {
-    if (!this.email || typeof this.email !== 'string') {
-      return 'El email es requerido';
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(this.email)) {
-      return 'Email inválido';
-    }
-
-    return null;
-  }
-
-  _validatePassword() {
-    if (!this.password) {
-      return 'La contraseña es requerida';
-    }
-
-    if (this.password.length < 6) {
-      return 'La contraseña debe tener al menos 6 caracteres';
-    }
-
-    return null;
+  static validatePasswordValue(password) {
+    const result = passwordField.safeParse(password);
+    return result.success ? null : result.error.issues[0].message;
   }
 
   validate() {
-    const errors = [];
-
-    const nameError = this._validateName();
-    if (nameError) errors.push(nameError);
-
-    const emailError = this._validateEmail();
-    if (emailError) errors.push(emailError);
-
-    const passwordError = this._validatePassword();
-    if (passwordError) errors.push(passwordError);
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return validateZod(this.constructor.schema, {
+      email: this.email,
+      name: this.name,
+      password: this.password,
+    });
   }
 
   toPlainObject() {
     return {
       name: this.name.trim(),
-      email: this.email.trim().toLowerCase(),
+      ...super.toPlainObject(),
       password: this.password,
-      isAdmin: this.isAdmin,
     };
   }
 }

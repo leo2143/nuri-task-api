@@ -1,7 +1,8 @@
 import { GoogleAuthController } from './googleAuthController.js';
+import { authRateLimiter } from '../../middlewares/authRateLimiter.js';
 
 export const setupAuthRoutes = app => {
-  app.post('/api/auth/google', (req, res) => {
+  app.post('/api/auth/google', authRateLimiter, (req, res) => {
     // #swagger.tags = ['Auth']
     // #swagger.summary = 'Inicia sesión o registra con Google OAuth'
     /* #swagger.parameters['body'] = {

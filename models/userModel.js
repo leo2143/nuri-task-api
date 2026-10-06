@@ -32,7 +32,6 @@ const userSchema = new mongoose.Schema({
   },
   googleId: {
     type: String,
-    default: null,
     sparse: true,
     unique: true,
   },
@@ -89,6 +88,8 @@ const userSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 });
+
+userSchema.index({ 'subscription.mercadoPagoId': 1 }, { sparse: true });
 
 /**
  * Modelo de Usuario para MongoDB

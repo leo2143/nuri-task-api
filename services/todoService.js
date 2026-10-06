@@ -5,8 +5,10 @@ import { MetricsService } from './metricsService.js';
 import { UserAchievementService } from './userAchievementService.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel, ForbiddenResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
-import { CreateTodoDto, UpdateTodoDto, TodoFilterDto, AddCommentDto } from '../models/dtos/todo/index.js';
+import { CreateTodoDto, UpdateTodoDto, UpdateTodoStateDto, TodoFilterDto, AddCommentDto } from '../models/dtos/todo/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
+import { findOwnedGoal } from './helpers/goalOwnership.js';
+import { runWithOneRetry, ensureSuccessWithRetry } from './helpers/runWithOneRetry.js';
 import chalk from 'chalk';
 
 /**
@@ -17,21 +19,19 @@ export class TodoService {
    * Actualiza los contadores de tareas de un goal
    * @private
    */
-  static async _updateGoalTaskCounters(goalId, label = 'Goal') {
+  static async _updateGoalTaskCounters(goalId, userId, label = 'Goal') {
     if (!goalId) return;
 
-    try {
-      const goal = await Goal.findById(goalId);
-      if (goal) {
-        await goal.updateTaskCount();
-        await goal.save();
-        console.log(
-          chalk.blue(`${label} actualizado: ${goal.completedTasks}/${goal.totalTasks} tareas (${goal.progress}%)`)
-        );
-      }
-    } catch (goalError) {
-      console.error(chalk.yellow(`Error al actualizar ${label.toLowerCase()}:`, goalError));
-    }
+    await runWithOneRetry(async () => {
+      const goal = await Goal.findOne({ _id: goalId, userId });
+      if (!goal) return;
+
+      await goal.updateTaskCount();
+      await goal.save();
+      console.log(
+        chalk.blue(`${label} actualizado: ${goal.completedTasks}/${goal.totalTasks} tareas (${goal.progress}%)`)
+      );
+    }, `actualizar contadores de ${label.toLowerCase()}`);
   }
 
   /**
@@ -109,24 +109,6 @@ export class TodoService {
   }
 
   /**
-   * Busca tareas por título del usuario autenticado (búsqueda exacta)
-   * @param {string} title - Título exacto a buscar
-   * @param {string} userId - ID del usuario autenticado
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea encontrada o error
-   */
-  static async getTodoByTitle(title, userId) {
-    try {
-      const todo = await Todo.findOne({ title, userId });
-      if (!todo) {
-        return new NotFoundResponseModel('No se encontró la tarea con el título: ' + title);
-      }
-      return new SuccessResponseModel(todo, 'Tarea obtenida correctamente');
-    } catch (error) {
-      return ErrorHandler.handleDatabaseError(error, 'obtener tarea por título');
-    }
-  }
-
-  /**
    * Crea una nueva tarea para un usuario específico
    * @param {Object} todoData - Datos de la tarea a crear
    * @param {string} todoData.title - Título de la tarea (requerido)
@@ -146,6 +128,14 @@ export class TodoService {
       }
 
       const cleanData = createDto.toPlainObject();
+
+      if (cleanData.GoalId) {
+        const { error: goalError } = await findOwnedGoal(cleanData.GoalId, userId);
+        if (goalError) {
+          return goalError;
+        }
+      }
+
       const todo = new Todo({
         ...cleanData,
         userId,
@@ -154,7 +144,7 @@ export class TodoService {
       const savedTodo = await todo.save();
 
       // Actualizar contadores del goal si está asociado
-      await this._updateGoalTaskCounters(savedTodo.GoalId, 'Goal');
+      await this._updateGoalTaskCounters(savedTodo.GoalId, userId, 'Goal');
 
       return new CreatedResponseModel(savedTodo, 'Tarea creada correctamente');
     } catch (error) {
@@ -187,10 +177,18 @@ export class TodoService {
         return new BadRequestResponseModel('Esta tarea ya fue confirmada y no se puede modificar');
       }
 
-      const oldGoalId = currentTodo.GoalId?.toString();
-      const newGoalId = todoData.GoalId?.toString();
-
       const cleanData = updateDto.toPlainObject();
+
+      if (cleanData.GoalId) {
+        const { error: goalError } = await findOwnedGoal(cleanData.GoalId, userId);
+        if (goalError) {
+          return goalError;
+        }
+      }
+
+      const oldGoalId = currentTodo.GoalId?.toString();
+      const newGoalId = cleanData.GoalId !== undefined ? cleanData.GoalId?.toString() : oldGoalId;
+
       const todo = await Todo.findOneAndUpdate({ _id: id, userId }, cleanData, {
         new: true,
         runValidators: true,
@@ -198,8 +196,8 @@ export class TodoService {
 
       // Actualizar contadores si cambió el goal
       if (oldGoalId !== newGoalId) {
-        await this._updateGoalTaskCounters(oldGoalId, 'Goal anterior');
-        await this._updateGoalTaskCounters(newGoalId, 'Goal nuevo');
+        await this._updateGoalTaskCounters(oldGoalId, userId, 'Goal anterior');
+        await this._updateGoalTaskCounters(newGoalId, userId, 'Goal nuevo');
       }
 
       return new SuccessResponseModel(todo, 'Tarea actualizada correctamente');
@@ -212,15 +210,19 @@ export class TodoService {
    * Actualiza solo el estado (completed) de una tarea
    * Actualiza métricas del usuario y progreso del goal automáticamente
    * @param {string} id - ID de la tarea
-   * @param {boolean} completed - Nuevo estado de completado (true/false)
+   * @param {Object} body - Body con completed
    * @param {string} userId - ID del usuario autenticado
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea actualizada o error
    */
-  static async updateTodoState(id, completed, userId) {
+  static async updateTodoState(id, body, userId) {
     try {
-      if (typeof completed !== 'boolean') {
-        return new BadRequestResponseModel('El campo completed debe ser un booleano (true/false)');
+      const stateDto = new UpdateTodoStateDto(body || {});
+      const validation = stateDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
+
+      const { completed } = stateDto.toPlainObject();
 
       const existingTodo = await Todo.findOne({ _id: id, userId });
 
@@ -240,18 +242,22 @@ export class TodoService {
         existingTodo.isLocked = true;
         await existingTodo.save();
 
-        try {
-          await MetricsService.recordTaskCompleted(userId);
-        } catch (metricsError) {
-          console.error(chalk.yellow('Error al actualizar métricas del usuario:', metricsError));
+        await this._updateGoalTaskCounters(existingTodo.GoalId, userId, 'Goal');
+
+        const metricsResult = await ensureSuccessWithRetry(
+          await MetricsService.recordTaskCompleted(userId),
+          () => MetricsService.recordTaskCompleted(userId),
+          'registrar métricas de tarea'
+        );
+        if (!metricsResult.success) {
+          return metricsResult;
         }
 
         await UserAchievementService.processEvent('task:completed', userId);
       } else {
         await existingTodo.save();
+        await this._updateGoalTaskCounters(existingTodo.GoalId, userId, 'Goal');
       }
-
-      await this._updateGoalTaskCounters(existingTodo.GoalId, 'Goal');
 
       return new SuccessResponseModel(
         existingTodo,
@@ -287,7 +293,7 @@ export class TodoService {
       todo.deleted_at = new Date();
       await todo.save();
 
-      await this._updateGoalTaskCounters(goalId, 'Goal');
+      await this._updateGoalTaskCounters(goalId, userId, 'Goal');
 
       return new SuccessResponseModel(todo, 'Tarea eliminada correctamente');
     } catch (error) {
@@ -309,7 +315,7 @@ export class TodoService {
       paginationDto.applyCursorToQuery(query);
 
       const todos = await Todo.find(query)
-        .sort({ createdAt: -1 })
+        .sort(paginationDto.toMongoSort())
         .limit(paginationDto.limit + 1)
         .lean();
 
@@ -343,7 +349,7 @@ export class TodoService {
       paginationDto.applyCursorToQuery(query);
 
       const todos = await Todo.find(query)
-        .sort({ createdAt: -1 })
+        .sort(paginationDto.toMongoSort())
         .limit(paginationDto.limit + 1)
         .lean();
 
@@ -372,7 +378,7 @@ export class TodoService {
       paginationDto.applyCursorToQuery(query);
 
       const todos = await Todo.find(query)
-        .sort({ createdAt: -1 })
+        .sort(paginationDto.toMongoSort())
         .limit(paginationDto.limit + 1)
         .lean();
 
@@ -392,12 +398,16 @@ export class TodoService {
    * @param {string} todoId - ID de la tarea
    * @param {Object} commentData - Datos del comentario
    * @param {string} commentData.text - Texto del comentario (requerido)
-   * @param {string} commentData.author - Autor del comentario (requerido)
    * @param {string} userId - ID del usuario autenticado
+   * @param {string} authorName - Nombre del usuario del token
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea actualizada o error
    */
-  static async addCommentToTodo(todoId, commentData, userId) {
+  static async addCommentToTodo(todoId, commentData, userId, authorName) {
     try {
+      if (!authorName || typeof authorName !== 'string' || authorName.trim().length < 2) {
+        return new BadRequestResponseModel('No se pudo determinar el autor del comentario');
+      }
+
       const commentDto = new AddCommentDto(commentData);
       const validation = commentDto.validate();
 
@@ -411,7 +421,10 @@ export class TodoService {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + todoId);
       }
 
-      const newComment = commentDto.toPlainObject();
+      const newComment = {
+        ...commentDto.toPlainObject(),
+        author: authorName.trim(),
+      };
       todo.comments.push(newComment);
 
       await todo.save();

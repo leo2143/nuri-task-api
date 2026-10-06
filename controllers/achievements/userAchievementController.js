@@ -35,25 +35,6 @@ export class UserAchievementController {
   }
 
   /**
-   * Incrementa el progreso en un logro
-   * @param {Object} req - Objeto request de Express
-   * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)
-   * @param {Object} req.params - Parámetros de URL
-   * @param {string} req.params.id - ID del logro
-   * @param {Object} req.body - Cuerpo de la petición
-   * @param {number} [req.body.amount=1] - Cantidad a incrementar
-   * @param {Object} res - Objeto response de Express
-   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
-   */
-  static async incrementProgress(req, res) {
-    const userId = req.userId;
-    const { id } = req.params;
-    const amount = req.body.amount || 1;
-    const result = await UserAchievementService.incrementProgress(userId, id, amount);
-    res.status(result.status).json(result);
-  }
-
-  /**
    * Obtiene estadísticas de logros del usuario
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por el middleware de autenticación)

@@ -1,54 +1,38 @@
+import { z } from 'zod';
 import { CreateUserDto } from './CreateUserDto.js';
+import { validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para crear un usuario con control admin completo
- * Extiende CreateUserDto y agrega control de isAdmin y suscripción
- * Las fechas de suscripción se calculan automáticamente en el backend
  */
 export class CreateAdminUserDto extends CreateUserDto {
+  static schema = CreateUserDto.schema.extend({
+    isAdmin: z.boolean({ invalid_type_error: 'isAdmin debe ser un valor booleano' }).optional(),
+    isSubscribed: z.boolean({ invalid_type_error: 'isSubscribed debe ser un valor booleano' }).optional(),
+    profileImageUrl: z.string().nullable().optional(),
+  });
+
   constructor(data) {
     super(data);
-    
     this.isAdmin = data.isAdmin || false;
     this.profileImageUrl = data.profileImageUrl || null;
     this.isSubscribed = data.isSubscribed || false;
   }
 
-  _validateIsAdmin() {
-    if (typeof this.isAdmin !== 'boolean') {
-      return 'isAdmin debe ser un valor booleano';
-    }
-    return null;
-  }
-
-  _validateIsSubscribed() {
-    if (typeof this.isSubscribed !== 'boolean') {
-      return 'isSubscribed debe ser un valor booleano';
-    }
-    return null;
-  }
-
   validate() {
-    const parentValidation = super.validate();
-    const errors = [...parentValidation.errors];
-
-    const isAdminError = this._validateIsAdmin();
-    if (isAdminError) errors.push(isAdminError);
-
-    const isSubscribedError = this._validateIsSubscribed();
-    if (isSubscribedError) errors.push(isSubscribedError);
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return validateZod(this.constructor.schema, {
+      name: this.name,
+      email: this.email,
+      password: this.password,
+      isAdmin: this.isAdmin,
+      isSubscribed: this.isSubscribed,
+      profileImageUrl: this.profileImageUrl,
+    });
   }
 
   toPlainObject() {
-    const parentData = super.toPlainObject();
-    
     return {
-      ...parentData,
+      ...super.toPlainObject(),
       isAdmin: this.isAdmin,
       profileImageUrl: this.profileImageUrl,
       isSubscribed: this.isSubscribed,

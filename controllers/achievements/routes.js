@@ -171,26 +171,4 @@ export const setupAchievementRoutes = app => {
     }] */
     return UserAchievementController.getUserAchievementProgress(req, res);
   });
-
-  app.post('/api/user/achievements/:id/progress', validateToken, (req, res) => {
-    // #swagger.tags = ['User Achievements']
-    // #swagger.summary = 'Incrementa el progreso en un logro'
-    /* #swagger.parameters['id'] = {
-         in: 'path',
-         description: 'ID del logro',
-         required: true,
-         type: 'string'
-    } */
-    /* #swagger.parameters['body'] = {
-         in: 'body',
-         description: 'Cantidad a incrementar',
-         schema: {
-           amount: 1
-         }
-    } */
-    /* #swagger.security = [{
-         "bearerAuth": []
-    }] */
-    return UserAchievementController.incrementProgress(req, res);
-  });
 };

@@ -1,4 +1,6 @@
+import { z } from 'zod';
 import { PaginationDto } from '../paginationDto.js';
+import { goalStatusField, mergeValidations, optionalDateField, priorityField, sortOrderField, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para filtrar metas
@@ -33,52 +35,29 @@ export class GoalFilterDto extends PaginationDto {
    * Valida que los filtros sean correctos
    * @returns {Object} Objeto con isValid y errores
    */
+  static schema = z.object({
+    status: goalStatusField.optional(),
+    priority: priorityField.optional(),
+    search: z.string().optional(),
+    dueDateFrom: optionalDateField,
+    dueDateTo: optionalDateField,
+    sortOrder: sortOrderField.optional(),
+    parentGoalId: z.string().optional(),
+  });
+
   validate() {
-    const parentValidation = super.validate();
-    const errors = [...parentValidation.errors];
-
-    // Validar status si existe
-    if (this.status !== undefined) {
-      const validStatuses = ['active', 'paused', 'completed'];
-      if (!validStatuses.includes(this.status)) {
-        errors.push(`El estado debe ser uno de: ${validStatuses.join(', ')}`);
-      }
-    }
-
-    // Validar priority si existe
-    if (this.priority !== undefined) {
-      const validPriorities = ['low', 'medium', 'high'];
-      if (!validPriorities.includes(this.priority)) {
-        errors.push(`La prioridad debe ser una de: ${validPriorities.join(', ')}`);
-      }
-    }
-
-    // Validar dueDateFrom si existe
-    if (this.dueDateFrom !== undefined) {
-      const date = new Date(this.dueDateFrom);
-      if (isNaN(date.getTime())) {
-        errors.push('La fecha desde debe ser una fecha válida');
-      }
-    }
-
-    // Validar dueDateTo si existe
-    if (this.dueDateTo !== undefined) {
-      const date = new Date(this.dueDateTo);
-      if (isNaN(date.getTime())) {
-        errors.push('La fecha hasta debe ser una fecha válida');
-      }
-    }
-
-    // Validar sortOrder
-    const validSortOrder = ['asc', 'desc'];
-    if (this.sortOrder && !validSortOrder.includes(this.sortOrder)) {
-      errors.push(`El orden debe ser uno de: ${validSortOrder.join(', ')}`);
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return mergeValidations(
+      super.validate(),
+      validateZod(GoalFilterDto.schema, {
+        status: this.status,
+        priority: this.priority,
+        search: this.search,
+        dueDateFrom: this.dueDateFrom,
+        dueDateTo: this.dueDateTo,
+        sortOrder: this.sortOrder,
+        parentGoalId: this.parentGoalId,
+      })
+    );
   }
 
   /**
@@ -123,12 +102,10 @@ export class GoalFilterDto extends PaginationDto {
   }
 
   /**
-   * Obtiene el objeto de ordenamiento para MongoDB
-   * Siempre ordena por createdAt con el sortOrder especificado
-   * @returns {Object} Sort object para MongoDB
+   * Ordena por `_id` (alineado al cursor). Default desc = más recientes primero.
+   * @returns {{ _id: 1 | -1 }}
    */
   toMongoSort() {
-    const sortOrder = this.sortOrder === 'asc' ? 1 : -1;
-    return { createdAt: sortOrder };
+    return super.toMongoSort(this.sortOrder);
   }
 }
