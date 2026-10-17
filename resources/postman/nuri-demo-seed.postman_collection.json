@@ -1,0 +1,2699 @@
+{
+  "info": {
+    "_postman_id": "a8f3c2e1-7b4d-4c9a-9e21-6d2c8f0b1a44",
+    "name": "Nuri Demo Seed",
+    "description": "Seeds a professor demo account and fires notification jobs for the thesis defense.\n\nBefore Run Collection:\n1. Set collection variables adminEmail and adminPassword (your admin).\n2. Keep demoEmail / demoPassword as-is, or change them if you already seeded.\n3. Point baseUrl at local or a dedicated demo database.\n4. Do NOT run folders 03/07 against production with real users: jobs notify every matching account.\n5. In Runner, use a 300ms delay if login hits 429.\n\nWhat it creates (professor, free then promoted):\n- 2 free goals (due today + empty) then premium-nag + due/empty/day-recap\n- After promote: overdue, backlog, stalled, paused, high-priority, parent/child, completed + comment\n- seed-clock rewinds only [Demo] documents so crons match yesterday / 8d / 15d\n\nGive professors demoEmail / demoPassword. They land verified, past onboarding, with seeded data.\nWave 1 stays in their inbox (clean only clears the admin inbox).\nDo not fire inactivity / streak-risk here: those need real lastLogin / streak, not fake clocks.\nRe-run is idempotent on titles: existing [Demo] docs are reused, not duplicated.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function artDue(offsetDays) {",
+          "  const ymd = new Intl.DateTimeFormat('en-CA', {",
+          "    timeZone: 'America/Argentina/Buenos_Aires',",
+          "    year: 'numeric',",
+          "    month: '2-digit',",
+          "    day: '2-digit'",
+          "  }).format(new Date());",
+          "  const parts = ymd.split('-').map(Number);",
+          "  return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + offsetDays, 12, 0, 0)).toISOString();",
+          "}",
+          "pm.collectionVariables.set('dueToday', artDue(0));",
+          "pm.collectionVariables.set('dueTomorrow', artDue(1));",
+          "pm.collectionVariables.set('dueInFourDays', artDue(4));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "adminEmail",
+      "value": ""
+    },
+    {
+      "key": "adminPassword",
+      "value": ""
+    },
+    {
+      "key": "demoEmail",
+      "value": "nuri.demo.profesor@nuri-task.invalid"
+    },
+    {
+      "key": "demoPassword",
+      "value": "DemoNuri2026!"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "demoToken",
+      "value": ""
+    },
+    {
+      "key": "adminUserId",
+      "value": ""
+    },
+    {
+      "key": "demoUserId",
+      "value": ""
+    },
+    {
+      "key": "dueToday",
+      "value": ""
+    },
+    {
+      "key": "dueTomorrow",
+      "value": ""
+    },
+    {
+      "key": "dueInFourDays",
+      "value": ""
+    },
+    {
+      "key": "demoGoalDueId",
+      "value": ""
+    },
+    {
+      "key": "demoGoalEmptyId",
+      "value": ""
+    },
+    {
+      "key": "demoGoalOverdueId",
+      "value": ""
+    },
+    {
+      "key": "demoGoalBacklogId",
+      "value": ""
+    },
+    {
+      "key": "demoGoalStalledId",
+      "value": ""
+    },
+    {
+      "key": "demoGoalPausedId",
+      "value": ""
+    },
+    {
+      "key": "demoGoalHighId",
+      "value": ""
+    },
+    {
+      "key": "demoGoalParentId",
+      "value": ""
+    },
+    {
+      "key": "demoGoalChildId",
+      "value": ""
+    },
+    {
+      "key": "demoGoalDoneId",
+      "value": ""
+    },
+    {
+      "key": "demoTodoTodayId",
+      "value": ""
+    },
+    {
+      "key": "demoTodoYdayId",
+      "value": ""
+    },
+    {
+      "key": "demoTodoBacklogId",
+      "value": ""
+    },
+    {
+      "key": "demoTodoHighId",
+      "value": ""
+    },
+    {
+      "key": "demoTodoCommentId",
+      "value": ""
+    },
+    {
+      "key": "demoTodoDoneId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 Auth admin",
+      "item": [
+        {
+          "name": "Login admin",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
+            },
+            "description": "Captures nuri_auth cookie into adminToken and unsets the cookie so later Bearer calls are not overridden.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const cookie = pm.cookies.get('nuri_auth');",
+                  "const token = cookie || (json && json.data && json.data.token);",
+                  "if (token) {",
+                  "  pm.collectionVariables.set('adminToken', token);",
+                  "}",
+                  "const baseUrl = pm.collectionVariables.get('baseUrl');",
+                  "try {",
+                  "  pm.cookies.jar().unset(baseUrl, 'nuri_auth', function () {});",
+                  "} catch (e) {}",
+                  "if (json && json.data && json.data.user && json.data.user._id) {",
+                  "  pm.collectionVariables.set('adminUserId', json.data.user._id);",
+                  "}",
+                  "pm.test('Login ok', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  pm.expect(pm.collectionVariables.get('adminToken')).to.be.ok;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Uses your existing admin. Fill adminEmail / adminPassword first."
+    },
+    {
+      "name": "01 Provision professor",
+      "item": [
+        {
+          "name": "Create professor",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Admin-created users are emailVerified and skip onboarding so professors can log in immediately.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Profesor Demo\",\n  \"email\": \"{{demoEmail}}\",\n  \"password\": \"{{demoPassword}}\",\n  \"isAdmin\": false,\n  \"isSubscribed\": false\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data._id) {",
+                  "    pm.collectionVariables.set('demoUserId', json.data._id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already exists', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resolve professor",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?search={{demoEmail}}&limit=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "{{demoEmail}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const users = (json && json.data) || [];",
+                  "const email = (pm.collectionVariables.get('demoEmail') || '').toLowerCase();",
+                  "const found = users.find(function (user) {",
+                  "  return user.email && user.email.toLowerCase() === email;",
+                  "});",
+                  "if (found && found._id) {",
+                  "  pm.collectionVariables.set('demoUserId', found._id);",
+                  "}",
+                  "pm.test('Professor resolved', function () {",
+                  "  pm.expect(pm.collectionVariables.get('demoUserId')).to.be.ok;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login professor",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{demoEmail}}\",\n  \"password\": \"{{demoPassword}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const cookie = pm.cookies.get('nuri_auth');",
+                  "const token = cookie || (json && json.data && json.data.token);",
+                  "if (token) {",
+                  "  pm.collectionVariables.set('demoToken', token);",
+                  "}",
+                  "const baseUrl = pm.collectionVariables.get('baseUrl');",
+                  "try {",
+                  "  pm.cookies.jar().unset(baseUrl, 'nuri_auth', function () {});",
+                  "} catch (e) {}",
+                  "if (json && json.data && json.data.user && json.data.user._id) {",
+                  "  pm.collectionVariables.set('demoUserId', json.data.user._id);",
+                  "}",
+                  "pm.test('Login ok', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  pm.expect(pm.collectionVariables.get('demoToken')).to.be.ok;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Creates a free, verified professor. 409 on re-run is expected."
+    },
+    {
+      "name": "02 Seed free (2 goals)",
+      "item": [
+        {
+          "name": "List existing demo goals",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals?search=Demo&limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Demo"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const items = (json && json.data) || [];",
+                  "const titles = {\"[Demo] Due today\":\"demoGoalDueId\",\"[Demo] Empty goal\":\"demoGoalEmptyId\",\"[Demo] Overdue yday\":\"demoGoalOverdueId\",\"[Demo] Backlog\":\"demoGoalBacklogId\",\"[Demo] Stalled\":\"demoGoalStalledId\",\"[Demo] Paused long\":\"demoGoalPausedId\",\"[Demo] High prio\":\"demoGoalHighId\",\"[Demo] Parent\":\"demoGoalParentId\",\"[Demo] Child\":\"demoGoalChildId\",\"[Demo] Done\":\"demoGoalDoneId\"};",
+                  "items.forEach(function (item) {",
+                  "  if (item && item.title && titles[item.title] && item._id) {",
+                  "    pm.collectionVariables.set(titles[item.title], item._id);",
+                  "  }",
+                  "});",
+                  "pm.test('List ok or empty', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List existing demo todos",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/todos?search=Demo&limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "todos"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Demo"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const items = (json && json.data) || [];",
+                  "const titles = {\"[Demo] Task today\":\"demoTodoTodayId\",\"[Demo] Task yday\":\"demoTodoYdayId\",\"[Demo] Task backlog\":\"demoTodoBacklogId\",\"[Demo] Task high\":\"demoTodoHighId\",\"[Demo] Task comment\":\"demoTodoCommentId\",\"[Demo] Task done\":\"demoTodoDoneId\"};",
+                  "items.forEach(function (item) {",
+                  "  if (item && item.title && titles[item.title] && item._id) {",
+                  "    pm.collectionVariables.set(titles[item.title], item._id);",
+                  "  }",
+                  "});",
+                  "pm.test('List ok or empty', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Due today",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Due today\",\n  \"description\": \"Has a task due today\",\n  \"reason\": \"Show due today\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueToday}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoGoalDueId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoGoalDueId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Task today",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/todos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "todos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Task today\",\n  \"description\": \"Seeded for thesis demo\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueToday}}\",\n  \"completed\": false,\n  \"GoalId\": \"{{demoGoalDueId}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoTodoTodayId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoTodoTodayId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Empty goal",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Empty goal\",\n  \"description\": \"No first step yet\",\n  \"reason\": \"Show empty nag\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueToday}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoGoalEmptyId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoGoalEmptyId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Free plan ceiling is 2 goals. This is the state premium-nag needs."
+    },
+    {
+      "name": "03 Fire wave 1",
+      "item": [
+        {
+          "name": "Clean admin inbox",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/clean",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "clean"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "premium-nag",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/premium-nag",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "premium-nag"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "due-tasks",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/due-tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "due-tasks"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "due-goals",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/due-goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "due-goals"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "empty-goals",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/empty-goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "empty-goals"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "day-recap",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/day-recap",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "day-recap"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Hits every matching user. Professor keeps these; clean only wipes the admin inbox."
+    },
+    {
+      "name": "04 Promote professor",
+      "item": [
+        {
+          "name": "Grant 30-day subscription",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{demoUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{demoUserId}}"
+              ]
+            },
+            "description": "Admin grant. No Mercado Pago id. After this the professor can create more than 2 goals.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isSubscribed\": true\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Promoted', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 Seed full catalog",
+      "item": [
+        {
+          "name": "Create [Demo] Overdue yday",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Overdue yday\",\n  \"description\": \"Clock will move this to yesterday\",\n  \"reason\": \"Overdue demo\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueTomorrow}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoGoalOverdueId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoGoalOverdueId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Task yday",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/todos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "todos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Task yday\",\n  \"description\": \"Seeded for thesis demo\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueTomorrow}}\",\n  \"completed\": false,\n  \"GoalId\": \"{{demoGoalOverdueId}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoTodoYdayId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoTodoYdayId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Backlog",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Backlog\",\n  \"description\": \"Clock will move this to -8 days\",\n  \"reason\": \"Backlog demo\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueTomorrow}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoGoalBacklogId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoGoalBacklogId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Task backlog",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/todos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "todos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Task backlog\",\n  \"description\": \"Seeded for thesis demo\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueTomorrow}}\",\n  \"completed\": false,\n  \"GoalId\": \"{{demoGoalBacklogId}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoTodoBacklogId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoTodoBacklogId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Stalled",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Stalled\",\n  \"description\": \"Clock will age lastChildActivity\",\n  \"reason\": \"Stalled demo\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueToday}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoGoalStalledId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoGoalStalledId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Paused long",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Paused long\",\n  \"description\": \"Will be paused then clocked to -15 days\",\n  \"reason\": \"Pause demo\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueToday}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoGoalPausedId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoGoalPausedId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pause [Demo] Paused long",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals/{{demoGoalPausedId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals",
+                "{{demoGoalPausedId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"paused\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Paused or already paused', function () {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] High prio",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] High prio\",\n  \"description\": \"Important work in progress\",\n  \"reason\": \"High prio demo\",\n  \"priority\": \"high\",\n  \"dueDate\": \"{{dueInFourDays}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoGoalHighId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoGoalHighId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Task high",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/todos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "todos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Task high\",\n  \"description\": \"Seeded for thesis demo\",\n  \"priority\": \"high\",\n  \"dueDate\": \"{{dueInFourDays}}\",\n  \"completed\": false,\n  \"GoalId\": \"{{demoGoalHighId}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoTodoHighId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoTodoHighId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Parent",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Parent\",\n  \"description\": \"Parent with a child goal\",\n  \"reason\": \"Hierarchy demo\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueToday}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoGoalParentId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoGoalParentId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Child",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Child\",\n  \"description\": \"Child of parent\",\n  \"reason\": \"Hierarchy demo\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueToday}}\",\n  \"parentGoalId\": \"{{demoGoalParentId}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoGoalChildId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoGoalChildId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Done",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Done\",\n  \"description\": \"Completed during seed\",\n  \"reason\": \"Complete demo\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueToday}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoGoalDoneId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoGoalDoneId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Task done",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/todos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "todos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Task done\",\n  \"description\": \"Seeded for thesis demo\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueToday}}\",\n  \"completed\": false,\n  \"GoalId\": \"{{demoGoalDoneId}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoTodoDoneId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoTodoDoneId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete [Demo] Task done",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/todos/{{demoTodoDoneId}}/state",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "todos",
+                "{{demoTodoDoneId}}",
+                "state"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"completed\": true\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Task completed', function () {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete [Demo] Done",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/goals/{{demoGoalDoneId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "goals",
+                "{{demoGoalDoneId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Goal completed', function () {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create [Demo] Task comment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/todos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "todos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[Demo] Task comment\",\n  \"description\": \"Receives a comment\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"{{dueToday}}\",\n  \"completed\": false,\n  \"GoalId\": \"{{demoGoalParentId}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('demoTodoCommentId')) {",
+                  "  if (typeof pm.execution !== 'undefined' && pm.execution.skipRequest) {",
+                  "    pm.execution.skipRequest();",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json && json.data && json.data._id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('demoTodoCommentId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Created or already seeded', function () {",
+                  "  pm.expect([200, 201, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comment on [Demo] Task comment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/todos/{{demoTodoCommentId}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "todos",
+                "{{demoTodoCommentId}}",
+                "comments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Demo comment so professors can see the thread\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Comment added', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Covers overdue, backlog, stalled, pause, high priority, parent/child, complete, and comments."
+    },
+    {
+      "name": "06 Seed clock",
+      "item": [
+        {
+          "name": "Rewind [Demo] dates",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/seed-clock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "seed-clock"
+              ]
+            },
+            "description": "Only patches titles that start with [Demo] for this userId. Public APIs cannot create past due dates.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{demoUserId}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Clock applied', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 Fire wave 2",
+      "item": [
+        {
+          "name": "Clean admin inbox",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/clean",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "clean"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "pause-too-long",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/pause-too-long",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "pause-too-long"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "stalled-goals",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/stalled-goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "stalled-goals"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "overdue-backlog",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/overdue-backlog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "overdue-backlog"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "overdue-tasks",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/overdue-tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "overdue-tasks"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "overdue-goals",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/overdue-goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "overdue-goals"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "high-priority",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/high-priority",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "high-priority"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "high-priority-goals",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/high-priority-goals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "high-priority-goals"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "moodboard-nudge",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/demo/notifications/moodboard-nudge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "demo",
+                "notifications",
+                "moodboard-nudge"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Job ran', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Fire backlog before overdue so both can land the same day. Skip inactivity and streak-risk."
+    },
+    {
+      "name": "08 Verify inbox",
+      "item": [
+        {
+          "name": "Professor notifications",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{demoToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Sanity check after Run Collection. Login as the professor in the app to walk the same inbox."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const items = (json && json.data) || [];",
+                  "console.log('Professor inbox count:', items.length);",
+                  "items.forEach(function (item) {",
+                  "  console.log((item.type || '') + ' — ' + (item.title || ''));",
+                  "});",
+                  "pm.test('Inbox readable', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
