@@ -81,7 +81,7 @@ export class MetricsService {
         const payload = {
           title: `¡Día ${metrics.currentStreak} de racha!`,
           body: '¡Seguiste sumando días, cada tarea cuenta. Seguí así!',
-          url: '/',
+          url: '/metrics',
           icon: '/notifications/nuri-fire.svg',
         };
 
@@ -265,10 +265,18 @@ export class MetricsService {
    * @returns {Promise<Object>} { completed, total, percentage }
    */
   static async _calculateAchievementsProgress(userId) {
-    const [completedCount, totalCount] = await Promise.all([
-      UserAchievement.countDocuments({ user: userId, status: 'completed' }),
-      Achievement.countDocuments({ isActive: true }),
-    ]);
+    const activeAchievements = await Achievement.find({ isActive: true }).select('_id').lean();
+    const activeIds = activeAchievements.map(achievement => achievement._id);
+    const totalCount = activeIds.length;
+
+    const completedCount =
+      totalCount === 0
+        ? 0
+        : await UserAchievement.countDocuments({
+            user: userId,
+            status: 'completed',
+            achievement: { $in: activeIds },
+          });
 
     const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 

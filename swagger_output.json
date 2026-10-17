@@ -43,10 +43,14 @@
     {
       "name": "Cloudinary",
       "description": "Operaciones con imágenes en Cloudinary"
+    },
+    {
+      "name": "Notifications - Demo",
+      "description": "Disparo on-demand de jobs de notificación (solo admin)"
     }
   ],
   "schemes": [
-    "http"
+    "https"
   ],
   "securityDefinitions": {
     "bearerAuth": {
@@ -1470,7 +1474,7 @@
           "Goals"
         ],
         "summary": "Actualiza solo el estado de una meta",
-        "description": "Actualiza únicamente el campo status de la meta. Si la meta tiene parentGoalId, actualiza automáticamente los contadores del padre.",
+        "description": "active ↔ paused libre. completed solo si hay al menos un hijo (tarea o submeta), todas las tareas están hechas y todas las submetas completed. Una meta vacía no se cierra. paused no puede pasar a completed. Un completed no se reabre por este endpoint (sí al agregar un hijo).",
         "parameters": [
           {
             "name": "id",
@@ -1521,6 +1525,9 @@
                 "name": "main"
               }
             }
+          },
+          "400": {
+            "description": "Transición inválida o la meta no cumple la regla de hijos para completed"
           }
         },
         "security": [
@@ -2335,6 +2342,365 @@
             "description": ""
           }
         }
+      }
+    },
+    "/api/admin/demo/seed-clock": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Atrasa fechas de documentos [Demo] para disparar crons",
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Usuario dueño de los documentos [Demo]",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "userId": {
+                  "type": "string",
+                  "example": "507f1f77bcf86cd799439011"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/clean": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Limpia las notificaciones cron del admin para poder reenviarlas",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/run-all": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara todos los jobs de notificación, sin limpiar el inbox",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/due-tasks": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job due-tasks (tareas de hoy)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/due-goals": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job due-goals (metas de hoy)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/overdue-tasks": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job overdue-tasks (tareas de ayer)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/overdue-goals": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job overdue-goals (metas de ayer)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/empty-goals": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job empty-goals (metas sin el primer paso)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/stalled-goals": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job stalled-goals (metas que no se mueven)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/high-priority": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job high-priority (tareas importantes en camino)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/high-priority-goals": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job high-priority-goals (metas importantes en camino)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/pause-too-long": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job pause-too-long (metas en pausa larga)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/inactivity": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job inactivity (sin actividad reciente)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/overdue-backlog": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job overdue-backlog (fechas de hace 7+ días)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/moodboard-nudge": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job moodboard-nudge (tablero vacío o quieto)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/premium-nag": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job premium-nag (techo de 2 metas del plan free)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/day-recap": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job day-recap (resumen del día)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/demo/notifications/streak-risk": {
+      "post": {
+        "tags": [
+          "Notifications - Demo"
+        ],
+        "summary": "Dispara el job streak-risk (racha en riesgo)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     }
   }

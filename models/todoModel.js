@@ -86,7 +86,7 @@ const todoSchema = new mongoose.Schema(
 );
 
 todoSchema.index({ userId: 1, deleted_at: 1, _id: -1 });
-// Cron morning: dueDate hoy + no completadas
+// Cron due-tasks / overdue-tasks: dueDate + no completadas
 todoSchema.index({ completed: 1, deleted_at: 1, dueDate: 1 });
 todoSchema.index({ GoalId: 1 });
 

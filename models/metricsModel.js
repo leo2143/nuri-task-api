@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { getStartOfDayInTimeZone } from '../services/helpers/dateTime.js';
 
 /**
  * Esquema de Mongoose para métricas generales del usuario
@@ -71,17 +72,14 @@ metricsSchema.index({ lastActivityDate: 1, currentStreak: 1 });
  * @returns {Object} { today: Date, lastActivity: Date, diffDays: number }
  */
 metricsSchema.methods._getDaysSinceLastActivity = function () {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = getStartOfDayInTimeZone();
 
   if (!this.lastActivityDate) {
     return { today, lastActivity: null, diffDays: null };
   }
 
-  const lastActivity = new Date(this.lastActivityDate);
-  lastActivity.setHours(0, 0, 0, 0);
-
-  const diffDays = Math.floor((today - lastActivity) / (1000 * 60 * 60 * 24));
+  const lastActivity = getStartOfDayInTimeZone(new Date(this.lastActivityDate));
+  const diffDays = Math.round((today.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
 
   return { today, lastActivity, diffDays };
 };
@@ -109,7 +107,9 @@ metricsSchema.methods.onTaskCompleted = function () {
 
   if (diffDays === 0) {
     // misma fecha - incrementar contador del día
-    const todayRecord = this.history.find(h => h.date.toDateString() === today.toDateString());
+    const todayRecord = this.history.find(
+      (entry) => getStartOfDayInTimeZone(entry.date).getTime() === today.getTime()
+    );
     if (todayRecord) {
       todayRecord.tasksCompleted++;
     }
@@ -138,6 +138,7 @@ metricsSchema.methods.onTaskCompleted = function () {
  */
 metricsSchema.methods.onGoalCompleted = function () {
   this.totalGoalsCompleted++;
+  this.lastActivityDate = new Date();
 };
 
 /**

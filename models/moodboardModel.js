@@ -45,6 +45,10 @@ const moodboardSchema = new mongoose.Schema(
         },
       },
     ],
+    lastImageAddedAt: {
+      type: Date,
+      default: null,
+    },
     // COMENTADO: Funcionalidad de frases pendiente de definir
     // phrases: [
     //   {

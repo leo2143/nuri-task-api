@@ -127,7 +127,7 @@ export class MoodboardService {
       const cleanImage = addImageDto.toPlainObject();
       const moodboard = await Moodboard.findOneAndUpdate(
         { userId },
-        { $push: { images: cleanImage } },
+        { $push: { images: cleanImage }, $set: { lastImageAddedAt: new Date() } },
         { new: true, runValidators: true }
       );
 

@@ -15,6 +15,7 @@ import mongoose from 'mongoose';
  * @property {number} totalTasks - Total de tareas
  * @property {number} completedTasks - Tareas completadas
  * @property {number} progress - Progreso de la meta (0-100)
+ * @property {Date|null} firstCompletedAt - Primer cierre (métricas/logros); no se limpia al reabrir
  * @property {mongoose.Types.ObjectId} userId - ID del usuario propietario (requerido)
  * @property {Date} createdAt - Fecha de creación (automático)
  * @property {Date} updatedAt - Fecha de última actualización (automático)
@@ -87,6 +88,18 @@ const goalSchema = new mongoose.Schema(
       max: 100,
       default: 0,
     },
+    firstCompletedAt: {
+      type: Date,
+      default: null,
+    },
+    lastChildActivity: {
+      type: Date,
+      default: null,
+    },
+    pausedAt: {
+      type: Date,
+      default: null,
+    },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -104,6 +117,8 @@ const goalSchema = new mongoose.Schema(
 
 goalSchema.index({ userId: 1, deleted_at: 1, _id: -1 });
 goalSchema.index({ parentGoalId: 1 });
+goalSchema.index({ status: 1, lastChildActivity: 1, deleted_at: 1 });
+goalSchema.index({ status: 1, pausedAt: 1, deleted_at: 1 });
 
 /**
  * Mongoose query middleware para borrado lógico.
@@ -130,6 +145,22 @@ goalSchema.pre('countDocuments', function () {
 // ========== MÉTODOS DEL ESQUEMA ==========
 
 /**
+ * Progreso 0-100 según hijos: tareas y submetas con el mismo peso.
+ * Sin hijos → 0. El status no se deriva de este valor.
+ * @param {{ totalTasks?: number, completedTasks?: number, totalSubGoals?: number, completedSubGoals?: number }} goal
+ * @returns {number}
+ */
+export function calculateGoalProgress(goal) {
+  const totalTasks = goal.totalTasks || 0;
+  const totalSubGoals = goal.totalSubGoals || 0;
+  const totalChildren = totalTasks + totalSubGoals;
+  if (totalChildren === 0) return 0;
+
+  const completedChildren = (goal.completedTasks || 0) + (goal.completedSubGoals || 0);
+  return Math.round((completedChildren / totalChildren) * 100);
+}
+
+/**
  * Actualiza los contadores de tareas y recalcula el progreso
  * Debe llamarse cuando se agregan, completan o eliminan tareas asociadas
  * @method updateTaskCount
@@ -145,7 +176,7 @@ goalSchema.methods.updateTaskCount = async function () {
 };
 
 /**
- * Actualiza los contadores de submetas
+ * Actualiza los contadores de submetas y recalcula el progreso
  * Debe llamarse cuando se completa o elimina una submeta
  * @method updateSubGoalCount
  * @returns {Promise<void>}
@@ -156,16 +187,16 @@ goalSchema.methods.updateSubGoalCount = async function () {
 
   this.totalSubGoals = subGoals.length;
   this.completedSubGoals = subGoals.filter(g => g.status === 'completed').length;
+  this.progress = this.calculatedProgress;
 };
 
 /**
- * Calcula el progreso basado en tareas completadas
+ * Calcula el progreso basado en tareas y submetas completadas
  * @virtual calculatedProgress
  * @returns {number} Progreso de 0 a 100
  */
 goalSchema.virtual('calculatedProgress').get(function () {
-  if (this.totalTasks === 0) return 0;
-  return Math.round((this.completedTasks / this.totalTasks) * 100);
+  return calculateGoalProgress(this);
 });
 
 goalSchema.set('toJSON', { versionKey: false });

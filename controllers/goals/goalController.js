@@ -176,7 +176,7 @@ export class GoalController {
   }
 
   /**
-   * Actualiza solo el estado de una meta
+   * Actualiza solo el estado de una meta (reglas de ciclo de vida en GoalService)
    * @param {Object} req - Objeto request de Express
    * @param {string} req.params.id - ID de la meta
    * @param {Object} req.body - Datos

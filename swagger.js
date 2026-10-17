@@ -38,6 +38,7 @@ const doc = {
     { name: 'Achievements', description: 'Gestión de logros (solo admin)' },
     { name: 'User Achievements', description: 'Progreso personal de logros' },
     { name: 'Cloudinary', description: 'Operaciones con imágenes en Cloudinary' },
+    { name: 'Notifications - Demo', description: 'Disparo on-demand de jobs de notificación (solo admin)' },
   ],
   securityDefinitions: {
     bearerAuth: {
@@ -60,6 +61,7 @@ const endpointsFiles = [
   './controllers/achievements/routes.js',
   './controllers/cloudinary/routes.js',
   './controllers/auth/routes.js',
+  './controllers/admin/routes.js',
 ];
 
 swaggerAutogen(outputFile, endpointsFiles, doc).then(() => {

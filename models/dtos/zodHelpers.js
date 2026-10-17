@@ -18,6 +18,19 @@ export const optionalDateField = z
   .optional()
   .refine(value => !value || !Number.isNaN(new Date(value).getTime()), 'Debe ser una fecha válida');
 
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * YYYY-MM-DD se interpreta como medianoche UTC; el filtro "hasta" debe incluir ese día.
+ */
+export function toInclusiveDueDateTo(value) {
+  const date = new Date(value);
+  if (typeof value === 'string' && DATE_ONLY_PATTERN.test(value)) {
+    date.setUTCHours(23, 59, 59, 999);
+  }
+  return date;
+}
+
 export function validateZod(schema, data) {
   const result = schema.safeParse(data);
   if (result.success) {

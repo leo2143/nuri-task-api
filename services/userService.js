@@ -29,6 +29,7 @@ import {
 import { UpdateProfileImageDto } from '../models/dtos/users/UpdateProfileImageDto.js';
 import { CloudinaryHelper } from './helpers/cloudinaryHelper.js';
 import { deleteUserOwnedDocuments } from './helpers/userOwnedDocuments.js';
+import { MercadoPagoService } from './mercadoPagoService.js';
 
 dotenv.config();
 
@@ -49,6 +50,34 @@ export class UserService {
     await User.deleteOne({ _id: userId });
     console.error(chalk.red('Moodboard falló; se revirtió el usuario:'), userId);
     return new ErrorResponseModel(moodboardResult.message, moodboardResult.status);
+  }
+
+  /**
+   * Arma subscription desde el toggle admin sin pisar mercadoPagoId.
+   * Si apaga y hay preapproval, cancela en Mercado Pago.
+   */
+  static async _subscriptionFromAdminToggle(currentSubscription, isSubscribed) {
+    const current = currentSubscription || {};
+    const existingMpId = current.mercadoPagoId ?? null;
+    const nextActive = Boolean(isSubscribed);
+
+    if (!nextActive && existingMpId) {
+      try {
+        await MercadoPagoService.cancelSubscription(existingMpId);
+      } catch (error) {
+        return { error: ErrorHandler.handleDatabaseError(error, 'cancelar suscripción MercadoPago') };
+      }
+    }
+
+    const grantMs = 30 * 24 * 60 * 60 * 1000;
+    return {
+      subscription: {
+        isActive: nextActive,
+        startDate: nextActive ? current.startDate ?? new Date() : null,
+        endDate: nextActive ? current.endDate ?? new Date(Date.now() + grantMs) : null,
+        mercadoPagoId: nextActive ? existingMpId : null,
+      },
+    };
   }
 
   /**
@@ -317,6 +346,8 @@ export class UserService {
         isAdmin: cleanData.isAdmin,
         profileImageUrl: cleanData.profileImageUrl,
         subscription: subscriptionData,
+        emailVerified: true,
+        onboardingCompleted: true,
       });
 
       const savedUser = await user.save();
@@ -403,12 +434,14 @@ export class UserService {
       }
 
       if (cleanData.isSubscribed !== undefined) {
-        const subscriptionData = {
-          isActive: cleanData.isSubscribed,
-          startDate: cleanData.isSubscribed ? new Date() : null,
-          endDate: cleanData.isSubscribed ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null,
-        };
-        cleanData.subscription = subscriptionData;
+        const subscriptionUpdate = await this._subscriptionFromAdminToggle(
+          user.subscription,
+          cleanData.isSubscribed
+        );
+        if (subscriptionUpdate.error) {
+          return subscriptionUpdate.error;
+        }
+        cleanData.subscription = subscriptionUpdate.subscription;
         delete cleanData.isSubscribed;
       }
 

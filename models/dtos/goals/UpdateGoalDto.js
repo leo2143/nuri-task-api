@@ -28,6 +28,7 @@ export class UpdateGoalDto extends CreateGoalDto {
 
   constructor(data) {
     super({});
+    this.status = undefined;
     this.title = data.title;
     if (data.description !== undefined) this.description = data.description;
     if (data.reason !== undefined) this.reason = data.reason;

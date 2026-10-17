@@ -174,13 +174,14 @@ export class UserAchievementService {
    * @param {string} triggerEvent - Evento disparado ('task:completed', 'goal:completed', 'streak:updated')
    * @param {string} userId - ID del usuario que disparó el evento
    * @param {number|null} value - Solo para 'streak:updated': valor absoluto del streak actual
+   * @returns {Promise<{notifiedAchievement: boolean}>} Si este evento desbloqueó y notificó un logro
    */
   static async processEvent(triggerEvent, userId, value = null) {
     try {
       const shouldSetAbsoluteValue = triggerEvent === 'streak:updated';
 
       const matchingAchievements = await Achievement.find({ triggerEvent, isActive: true }).lean();
-      if (!matchingAchievements.length) return;
+      if (!matchingAchievements.length) return { notifiedAchievement: false };
 
       const progressUpdateOps = matchingAchievements.map(achievement => ({
         updateOne: {
@@ -194,12 +195,13 @@ export class UserAchievementService {
 
       await UserAchievement.bulkWrite(progressUpdateOps);
 
-      await this._checkAndCompleteAchievements(userId, matchingAchievements, shouldSetAbsoluteValue);
+      return await this._checkAndCompleteAchievements(userId, matchingAchievements, shouldSetAbsoluteValue);
     } catch (error) {
       console.error(
         chalk.red('[side-effect] Error al procesar evento de logros (el request no falla; retry en 017):'),
         error
       );
+      return { notifiedAchievement: false };
     }
   }
 
@@ -210,6 +212,7 @@ export class UserAchievementService {
    * @param {string} userId
    * @param {Array} achievements - Logros consultados (con _id y targetCount)
    * @param {boolean} shouldSetAbsoluteValue - true cuando el evento es streak:updated (asigna el valor en lugar de incrementar)
+   * @returns {Promise<{notifiedAchievement: boolean}>}
    */
   static async _checkAndCompleteAchievements(userId, achievements, shouldSetAbsoluteValue) {
     const achievementIds = achievements.map(achievement => achievement._id);
@@ -218,7 +221,7 @@ export class UserAchievementService {
       achievement: { $in: achievementIds },
     });
 
-    if (!userProgressList.length) return;
+    if (!userProgressList.length) return { notifiedAchievement: false };
 
     const achievementById = new Map(achievements.map(achievement => [achievement._id.toString(), achievement]));
     const now = new Date();
@@ -270,14 +273,20 @@ export class UserAchievementService {
         icon: '/notifications/crown.svg',
       };
 
-      await persistAndNotify({
-        userId,
-        title: payload.title,
-        body: payload.body,
-        url: payload.url,
-        type: 'achievement_completed',
-        icon: payload.icon,
-      });
+      try {
+        await persistAndNotify({
+          userId,
+          title: payload.title,
+          body: payload.body,
+          url: payload.url,
+          type: 'achievement_completed',
+          icon: payload.icon,
+        });
+      } catch (error) {
+        console.error(chalk.yellow('[side-effect] Error al notificar logro desbloqueado:'), error);
+      }
     }
+
+    return { notifiedAchievement: achievementsJustCompleted.length > 0 };
   }
 }

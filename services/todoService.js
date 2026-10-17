@@ -3,12 +3,25 @@ import Goal from '../models/goalsModel.js';
 import User from '../models/userModel.js';
 import { MetricsService } from './metricsService.js';
 import { UserAchievementService } from './userAchievementService.js';
-import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel, ForbiddenResponseModel } from '../models/responseModel.js';
+import {
+  NotFoundResponseModel,
+  ErrorResponseModel,
+  BadRequestResponseModel,
+  ForbiddenResponseModel,
+} from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
-import { CreateTodoDto, UpdateTodoDto, UpdateTodoStateDto, TodoFilterDto, AddCommentDto } from '../models/dtos/todo/index.js';
+import {
+  CreateTodoDto,
+  UpdateTodoDto,
+  UpdateTodoStateDto,
+  TodoFilterDto,
+  AddCommentDto,
+} from '../models/dtos/todo/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { findOwnedGoal } from './helpers/goalOwnership.js';
 import { runWithOneRetry, ensureSuccessWithRetry } from './helpers/runWithOneRetry.js';
+import { reopenCompletedGoal } from './helpers/reopenCompletedGoal.js';
+import { touchLastChildActivity } from './helpers/goalActivity.js';
 import chalk from 'chalk';
 
 /**
@@ -145,6 +158,8 @@ export class TodoService {
 
       // Actualizar contadores del goal si está asociado
       await this._updateGoalTaskCounters(savedTodo.GoalId, userId, 'Goal');
+      await reopenCompletedGoal(savedTodo.GoalId, userId);
+      await touchLastChildActivity(savedTodo.GoalId, userId);
 
       return new CreatedResponseModel(savedTodo, 'Tarea creada correctamente');
     } catch (error) {
@@ -198,6 +213,8 @@ export class TodoService {
       if (oldGoalId !== newGoalId) {
         await this._updateGoalTaskCounters(oldGoalId, userId, 'Goal anterior');
         await this._updateGoalTaskCounters(newGoalId, userId, 'Goal nuevo');
+        await reopenCompletedGoal(newGoalId, userId);
+        await touchLastChildActivity(newGoalId, userId);
       }
 
       return new SuccessResponseModel(todo, 'Tarea actualizada correctamente');
@@ -243,6 +260,7 @@ export class TodoService {
         await existingTodo.save();
 
         await this._updateGoalTaskCounters(existingTodo.GoalId, userId, 'Goal');
+        await touchLastChildActivity(existingTodo.GoalId, userId);
 
         const metricsResult = await ensureSuccessWithRetry(
           await MetricsService.recordTaskCompleted(userId),
