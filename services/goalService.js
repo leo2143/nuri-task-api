@@ -1,7 +1,12 @@
-import Goal from '../models/goalsModel.js';
+import Goal, { calculateGoalProgress } from '../models/goalsModel.js';
 import Todo from '../models/todoModel.js';
 import User from '../models/userModel.js';
-import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel, ForbiddenResponseModel } from '../models/responseModel.js';
+import {
+  NotFoundResponseModel,
+  ErrorResponseModel,
+  BadRequestResponseModel,
+  ForbiddenResponseModel,
+} from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import {
   CreateGoalDto,
@@ -15,7 +20,11 @@ import { ErrorHandler } from './helpers/errorHandler.js';
 import { findOwnedGoal } from './helpers/goalOwnership.js';
 import { UserAchievementService } from './userAchievementService.js';
 import { MetricsService } from './metricsService.js';
+import { persistAndNotify } from './helpers/persistAndNotify.js';
 import { runWithOneRetry, ensureSuccessWithRetry } from './helpers/runWithOneRetry.js';
+import { getStatusTransitionError, getCompleteEligibilityError } from './helpers/goalStatusRules.js';
+import { reopenCompletedGoal } from './helpers/reopenCompletedGoal.js';
+import { pausedAtFieldsForStatus, touchLastChildActivity } from './helpers/goalActivity.js';
 import chalk from 'chalk';
 
 const FREE_GOALS_LIMIT = 2;
@@ -99,6 +108,83 @@ export class GoalService {
   }
 
   /**
+   * Valida transición de status y, si va a completed, la regla de hijos.
+   * @returns {Promise<BadRequestResponseModel|null>}
+   */
+  static async _getStatusChangeError(goal, nextStatus) {
+    if (!nextStatus || nextStatus === goal.status) return null;
+
+    const transitionError = getStatusTransitionError(goal.status, nextStatus);
+    if (transitionError) {
+      return new BadRequestResponseModel(transitionError);
+    }
+
+    if (nextStatus !== 'completed') return null;
+
+    await goal.updateTaskCount();
+    await goal.updateSubGoalCount();
+    const eligibilityError = getCompleteEligibilityError(goal);
+    return eligibilityError ? new BadRequestResponseModel(eligibilityError) : null;
+  }
+
+  /**
+   * Reabre el padre si estaba completed (submeta reactivada o nuevo hijo).
+   */
+  static async _reopenParentIfNeeded(parentGoalId, userId, childStatus) {
+    if (childStatus !== 'active' || !parentGoalId) return;
+    await reopenCompletedGoal(parentGoalId, userId);
+  }
+
+  /**
+   * Registra métricas y dispara el logro al completar una meta.
+   * Idempotente por goalId: un segundo cierre no infla métricas ni logros.
+   * Si el click desbloqueó un logro, no apila toast de meta completada.
+   * @private
+   * @param {string} userId
+   * @param {string} goalId
+   * @returns {Promise<null|Object>} null si ok; ResponseModel de error si fallan las métricas
+   */
+  static async _handleGoalCompleted(userId, goalId) {
+    const claimed = await Goal.findOneAndUpdate(
+      { _id: goalId, userId, firstCompletedAt: null },
+      { $set: { firstCompletedAt: new Date() } },
+      { new: true }
+    );
+    if (!claimed) {
+      return null;
+    }
+
+    const metricsResult = await ensureSuccessWithRetry(
+      await MetricsService.recordGoalCompleted(userId),
+      () => MetricsService.recordGoalCompleted(userId),
+      'registrar métricas de meta'
+    );
+    if (!metricsResult.success) {
+      return metricsResult;
+    }
+
+    const achievementResult = await UserAchievementService.processEvent('goal:completed', userId);
+    if (achievementResult?.notifiedAchievement) {
+      return null;
+    }
+
+    try {
+      await persistAndNotify({
+        userId,
+        title: '¡Meta completada!',
+        body: 'Cerraste una meta. Ese avance cuenta — miralo cuando quieras.',
+        url: `/goals/${goalId}`,
+        type: 'goal_completed',
+        icon: '/notifications/nuri-happy.svg',
+      });
+    } catch (error) {
+      console.error(chalk.yellow('[side-effect] Error al notificar meta completada:'), error);
+    }
+
+    return null;
+  }
+
+  /**
    * Obtiene todas las metas del usuario  con filtros opcionales
    * @param {string} userId - ID del usuario
    * @param {Object} [filters={}] - Filtros de búsqueda (status, priority, search, dueDateFrom, dueDateTo, sortBy, sortOrder)
@@ -120,7 +206,9 @@ export class GoalService {
 
       const goals = await Goal.find(query)
         .populate('parentGoalId', POPULATE_PARENT_TITLE)
-        .select('title status priority dueDate parentGoalId progress createdAt updatedAt')
+        .select(
+          'title status priority dueDate parentGoalId progress totalTasks completedTasks totalSubGoals completedSubGoals createdAt updatedAt'
+        )
         .sort(sort)
         .limit(filterDto.limit + 1)
         .lean();
@@ -130,6 +218,10 @@ export class GoalService {
       if (results.length === 0) {
         return new NotFoundResponseModel('No se encontraron metas para este usuario');
       }
+
+      results.forEach((goal) => {
+        goal.progress = calculateGoalProgress(goal);
+      });
 
       return new SuccessResponseModel(results, 'Metas obtenidas correctamente', 200, meta);
     } catch (error) {
@@ -150,6 +242,7 @@ export class GoalService {
       if (!goal) {
         return new NotFoundResponseModel('Meta no encontrada');
       }
+      goal.progress = goal.calculatedProgress;
       return new SuccessResponseModel(goal, 'Meta obtenida correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener meta');
@@ -203,6 +296,8 @@ export class GoalService {
 
       if (savedGoal.parentGoalId) {
         await this._updateParentGoalCounters(savedGoal.parentGoalId, userId);
+        await reopenCompletedGoal(savedGoal.parentGoalId, userId);
+        await touchLastChildActivity(savedGoal.parentGoalId, userId);
       }
 
       return new CreatedResponseModel(savedGoal, 'Meta creada correctamente');
@@ -249,6 +344,21 @@ export class GoalService {
       const parentChange = this._detectParentGoalChange(currentGoal, cleanData);
       const statusChange = this._detectStatusChange(currentGoal, cleanData);
 
+      const statusError = await this._getStatusChangeError(currentGoal, cleanData.status);
+      if (statusError) {
+        return statusError;
+      }
+
+      if (statusChange.newStatus === 'completed') {
+        cleanData.totalTasks = currentGoal.totalTasks;
+        cleanData.completedTasks = currentGoal.completedTasks;
+        cleanData.totalSubGoals = currentGoal.totalSubGoals;
+        cleanData.completedSubGoals = currentGoal.completedSubGoals;
+        cleanData.progress = currentGoal.progress;
+      }
+
+      Object.assign(cleanData, pausedAtFieldsForStatus(currentGoal.status, cleanData.status));
+
       const goal = await Goal.findOneAndUpdate({ _id: goalId, userId }, cleanData, {
         new: true,
         runValidators: true,
@@ -256,22 +366,22 @@ export class GoalService {
 
       if (parentChange.changed) {
         await this._handleParentGoalUpdates(parentChange, userId);
+        if (parentChange.newParentId) {
+          await reopenCompletedGoal(parentChange.newParentId, userId);
+          await touchLastChildActivity(parentChange.newParentId, userId);
+        }
       } else if (statusChange.changed && goal.parentGoalId) {
         await this._updateParentGoalCounters(goal.parentGoalId, userId);
+        await this._reopenParentIfNeeded(goal.parentGoalId, userId, statusChange.newStatus);
+        await touchLastChildActivity(goal.parentGoalId, userId);
         console.log(chalk.green(`Estado cambiado: ${statusChange.oldStatus} → ${statusChange.newStatus}`));
       }
 
       if (statusChange.changed && statusChange.newStatus === 'completed') {
-        const metricsResult = await ensureSuccessWithRetry(
-          await MetricsService.recordGoalCompleted(userId),
-          () => MetricsService.recordGoalCompleted(userId),
-          'registrar métricas de meta'
-        );
-        if (!metricsResult.success) {
-          return metricsResult;
+        const completedResult = await this._handleGoalCompleted(userId, goalId);
+        if (completedResult) {
+          return completedResult;
         }
-
-        await UserAchievementService.processEvent('goal:completed', userId);
       }
 
       return new SuccessResponseModel(goal, 'Meta actualizada correctamente');
@@ -423,13 +533,14 @@ export class GoalService {
       }
 
       await this._updateParentGoalCounters(parentGoalId, userId, 'Meta padre');
+      await reopenCompletedGoal(parentGoalId, userId);
+      await touchLastChildActivity(parentGoalId, userId);
 
       return new SuccessResponseModel(subgoal, 'Submeta agregada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'agregar submeta');
     }
   }
-
 
   /**
    * Obtiene lista catalog de metas (solo id y título) del usuario
@@ -478,16 +589,31 @@ export class GoalService {
       }
 
       const oldStatus = goal.status;
+      if (oldStatus === status) {
+        return new SuccessResponseModel(goal, 'Estado de la meta actualizado correctamente');
+      }
+
+      const statusError = await this._getStatusChangeError(goal, status);
+      if (statusError) {
+        return statusError;
+      }
+
       goal.status = status;
+      Object.assign(goal, pausedAtFieldsForStatus(oldStatus, status));
       const updatedGoal = await goal.save();
 
-      if (oldStatus !== status && goal.parentGoalId) {
+      if (goal.parentGoalId) {
         await this._updateParentGoalCounters(goal.parentGoalId, userId);
+        await this._reopenParentIfNeeded(goal.parentGoalId, userId, status);
+        await touchLastChildActivity(goal.parentGoalId, userId);
         console.log(chalk.green(`Estado cambiado: ${oldStatus} → ${status}`));
       }
 
-      if (oldStatus !== status && status === 'completed') {
-        await UserAchievementService.processEvent('goal:completed', userId);
+      if (status === 'completed') {
+        const completedResult = await this._handleGoalCompleted(userId, goal._id);
+        if (completedResult) {
+          return completedResult;
+        }
       }
 
       return new SuccessResponseModel(updatedGoal, 'Estado de la meta actualizado correctamente');

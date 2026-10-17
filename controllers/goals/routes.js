@@ -5,7 +5,7 @@ import { validateToken } from '../../middlewares/authMiddleware.js';
  * Función para configurar las rutas de metas (goals)
  * @param {Object} app - Instancia de Express
  * @returns {void} No retorna valor, configura las rutas de goals en la app
-   * Configura todas las rutas relacionadas con metas, todas requieren autenticación
+ * Configura todas las rutas relacionadas con metas, todas requieren autenticación
  */
 export const setupGoalRoutes = app => {
   app.get('/api/goals', validateToken, (req, res) => {
@@ -203,7 +203,7 @@ export const setupGoalRoutes = app => {
   app.patch('/api/goals/:id/status', validateToken, (req, res) => {
     // #swagger.tags = ['Goals']
     // #swagger.summary = 'Actualiza solo el estado de una meta'
-    // #swagger.description = 'Actualiza únicamente el campo status de la meta. Si la meta tiene parentGoalId, actualiza automáticamente los contadores del padre.'
+    // #swagger.description = 'active ↔ paused libre. completed solo si hay al menos un hijo (tarea o submeta), todas las tareas están hechas y todas las submetas completed. Una meta vacía no se cierra. paused no puede pasar a completed. Un completed no se reabre por este endpoint (sí al agregar un hijo).'
     /* #swagger.parameters['id'] = {
          in: 'path',
          description: 'ID de la meta',
@@ -226,6 +226,9 @@ export const setupGoalRoutes = app => {
            message: 'Estado de la meta actualizado correctamente',
            data: { $ref: '#/definitions/Goal' }
          }
+    } */
+    /* #swagger.responses[400] = {
+         description: 'Transición inválida o la meta no cumple la regla de hijos para completed'
     } */
     /* #swagger.security = [{
          "bearerAuth": []
