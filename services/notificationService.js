@@ -2,6 +2,7 @@ import Notification from '../models/notificationModel.js';
 import { SuccessResponseModel, NotFoundResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { NotificationFilterDto } from '../models/dtos/notifications/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
+import chalk from 'chalk';
 
 export class NotificationService {
   /**
@@ -90,4 +91,36 @@ export class NotificationService {
       return ErrorHandler.handleDatabaseError(error, 'marcar notificación como leída');
     }
   }
+
+  /**
+   * Borra tipos cron del inbox de un usuario para poder re-disparar el job.
+   */
+  static async deleteCronTypesForUser(userId, types) {
+    try {
+      const result = await Notification.deleteMany({
+        userId,
+        type: { $in: types },
+      });
+      return new SuccessResponseModel(
+        { deletedCount: result.deletedCount },
+        'Notificaciones cron limpiadas'
+      );
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'limpiar notificaciones cron');
+    }
+  }
+
+  /**
+   * Borra notificaciones anteriores al plazo de retención.
+   */
+  static async deleteExpired() {
+    const cutoff = new Date();
+    cutoff.setTime(cutoff.getTime() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+
+    const result = await Notification.deleteMany({ createdAt: { $lt: cutoff } });
+    console.log(chalk.green(`[Cron] expire-notifications: ${result.deletedCount} borradas`));
+    return { deletedCount: result.deletedCount };
+  }
 }
+
+const RETENTION_DAYS = 30;

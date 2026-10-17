@@ -7,15 +7,9 @@ import { validateCronSecret } from '../../middlewares/cronAuthMiddleware.js';
  * @param {Object} app - Instancia de Express
  */
 export const setupCronRoutes = app => {
-  app.get('/api/cron/morning', validateCronSecret, (req, res) => {
+  app.get('/api/cron/:jobName', validateCronSecret, (req, res) => {
     // #swagger.tags = ['Cron Jobs']
-    // #swagger.summary = 'Job mañana: tareas por vencer + usuarios inactivos'
-    return CronController.morningJob(req, res);
-  });
-
-  app.get('/api/cron/evening', validateCronSecret, (req, res) => {
-    // #swagger.tags = ['Cron Jobs']
-    // #swagger.summary = 'Job noche: rachas en riesgo'
-    return CronController.eveningJob(req, res);
+    // #swagger.summary = 'Ejecuta un job de cron por nombre (allowlist)'
+    return CronController.run(req, res);
   });
 };

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { PaginationDto } from '../paginationDto.js';
-import { mergeValidations, optionalDateField, priorityField, queryBooleanField, sortOrderField, toQueryBoolean, validateZod } from '../zodHelpers.js';
+import { mergeValidations, optionalDateField, priorityField, queryBooleanField, sortOrderField, toInclusiveDueDateTo, toQueryBoolean, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para filtrar tareas
@@ -88,7 +88,7 @@ export class TodoFilterDto extends PaginationDto {
         query.dueDate.$gte = new Date(this.dueDateFrom);
       }
       if (this.dueDateTo !== undefined) {
-        query.dueDate.$lte = new Date(this.dueDateTo);
+        query.dueDate.$lte = toInclusiveDueDateTo(this.dueDateTo);
       }
     }
     this.applyCursorToQuery(query, this.sortOrder);

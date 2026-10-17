@@ -1,61 +1,36 @@
-import { ScheduledNotificationService } from '../../services/scheduledNotificationService.js';
-import { SuccessResponseModel } from '../../models/responseModel.js';
+import { CRON_JOBS } from './cronJobs.js';
+import {
+  SuccessResponseModel,
+  NotFoundResponseModel,
+  ErrorResponseModel,
+} from '../../models/responseModel.js';
 import chalk from 'chalk';
 
 /**
- * Controlador para los endpoints cron invocados por Vercel Cron Jobs.
- * Cada método agrupa uno o más checks de notificaciones programadas.
+ * Un job diario por responsabilidad. vercel.json define el schedule.
  */
 export class CronController {
   /**
-   * Job nocturno: reset de rachas + tareas por vencer + usuarios inactivos
-   * Ejecutado por Vercel Cron a las 00:00 (Argentina)
+   * Ejecuta el cron allowlisted en :jobName.
    */
-  static async morningJob(_req, res) {
-    try {
-      console.log(chalk.cyan('[Cron] Ejecutando morning job...'));
+  static async run(req, res) {
+    const { jobName } = req.params;
+    const job = CRON_JOBS[jobName];
 
-      await ScheduledNotificationService.resetExpiredStreaks();
-
-      const [dueResult, inactiveResult] = await Promise.all([
-        ScheduledNotificationService.checkDueTasks(),
-        ScheduledNotificationService.checkInactiveUsers(),
-      ]);
-
-      const response = new SuccessResponseModel(
-        {
-          dueTasks: dueResult,
-          inactiveUsers: inactiveResult,
-        },
-        'Morning job ejecutado correctamente'
-      );
-
-      res.status(response.status).json(response);
-    } catch (error) {
-      console.error(chalk.red('[Cron] Error en morning job:'), error);
-      res.status(500).json({ message: 'Error ejecutando morning job', status: 500, success: false });
+    if (!job) {
+      const response = new NotFoundResponseModel(`Cron job desconocido: ${jobName}`);
+      return res.status(response.status).json(response);
     }
-  }
 
-  /**
-   * Job de la noche: rachas en riesgo
-   * Ejecutado por Vercel Cron a las 8 PM (Argentina)
-   */
-  static async eveningJob(_req, res) {
     try {
-      console.log(chalk.cyan('[Cron] Ejecutando evening job...'));
-
-      const streakResult = await ScheduledNotificationService.checkStreaksAtRisk();
-
-      const response = new SuccessResponseModel(
-        { streaksAtRisk: streakResult },
-        'Evening job ejecutado correctamente'
-      );
-
-      res.status(response.status).json(response);
+      console.log(chalk.cyan(`[Cron] Ejecutando ${jobName}...`));
+      const data = await job();
+      const response = new SuccessResponseModel(data, `Cron ${jobName} ejecutado correctamente`);
+      return res.status(response.status).json(response);
     } catch (error) {
-      console.error(chalk.red('[Cron] Error en evening job:'), error);
-      res.status(500).json({ message: 'Error ejecutando evening job', status: 500, success: false });
+      console.error(chalk.red(`[Cron] Error en ${jobName}:`), error);
+      const response = new ErrorResponseModel(`Error ejecutando cron ${jobName}`, 500);
+      return res.status(response.status).json(response);
     }
   }
 }

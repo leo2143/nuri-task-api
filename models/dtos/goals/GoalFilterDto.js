@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { PaginationDto } from '../paginationDto.js';
-import { goalStatusField, mergeValidations, optionalDateField, priorityField, sortOrderField, validateZod } from '../zodHelpers.js';
+import { goalStatusField, mergeValidations, optionalDateField, priorityField, sortOrderField, toInclusiveDueDateTo, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para filtrar metas
@@ -88,7 +88,7 @@ export class GoalFilterDto extends PaginationDto {
         query.dueDate.$gte = new Date(this.dueDateFrom);
       }
       if (this.dueDateTo !== undefined) {
-        query.dueDate.$lte = new Date(this.dueDateTo);
+        query.dueDate.$lte = toInclusiveDueDateTo(this.dueDateTo);
       }
     }
 

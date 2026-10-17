@@ -2,12 +2,72 @@
   "version": 2,
   "crons": [
     {
-      "path": "/api/cron/morning",
+      "path": "/api/cron/streak-reset",
       "schedule": "0 3 * * *"
     },
     {
-      "path": "/api/cron/evening",
+      "path": "/api/cron/due-tasks",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/due-goals",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/overdue-tasks",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/overdue-goals",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/empty-goals",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/high-priority",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/high-priority-goals",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/inactivity",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/day-recap",
+      "schedule": "0 22 * * *"
+    },
+    {
+      "path": "/api/cron/streak-risk",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/stalled-goals",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron/pause-too-long",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/overdue-backlog",
+      "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/cron/moodboard-nudge",
+      "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/premium-nag",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/expire-notifications",
+      "schedule": "0 2 * * *"
     }
   ],
   "builds": [
