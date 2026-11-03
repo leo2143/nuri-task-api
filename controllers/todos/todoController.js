@@ -1,4 +1,5 @@
 import { TodoService } from '../../services/todoService.js';
+import { withCompletionEvents } from '../../services/helpers/completionEvents.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con tareas (todos)
@@ -78,7 +79,7 @@ export class TodoController {
     const id = req.params.id;
     const userId = req.userId;
     const result = await TodoService.updateTodoState(id, req.body, userId);
-    res.status(result.status).json(result);
+    res.status(result.status).json(withCompletionEvents(result));
   }
 
   static async deleteTodo(req, res) {

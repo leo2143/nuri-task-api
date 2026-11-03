@@ -22,6 +22,7 @@ import { findOwnedGoal } from './helpers/goalOwnership.js';
 import { runWithOneRetry, ensureSuccessWithRetry } from './helpers/runWithOneRetry.js';
 import { reopenCompletedGoal } from './helpers/reopenCompletedGoal.js';
 import { touchLastChildActivity } from './helpers/goalActivity.js';
+import { buildCompletionEvents, emptyCompletionEvents } from './helpers/completionEvents.js';
 import chalk from 'chalk';
 
 /**
@@ -252,6 +253,7 @@ export class TodoService {
       }
 
       const wasCompleted = existingTodo.completed;
+      let events = emptyCompletionEvents();
 
       existingTodo.completed = completed;
 
@@ -271,7 +273,24 @@ export class TodoService {
           return metricsResult;
         }
 
-        await UserAchievementService.processEvent('task:completed', userId);
+        const taskEvent = await UserAchievementService.processEvent('task:completed', userId);
+
+        try {
+          const streakMeta = metricsResult.meta ?? {};
+          events = buildCompletionEvents({
+            taskCompleted: { id: existingTodo._id.toString(), title: existingTodo.title },
+            streak:
+              typeof streakMeta.currentStreak === 'number'
+                ? { increased: Boolean(streakMeta.streakIncreased), current: streakMeta.currentStreak }
+                : null,
+            achievementsUnlocked: [
+              ...(streakMeta.achievementsUnlocked ?? []),
+              ...(taskEvent?.achievementsUnlocked ?? []),
+            ],
+          });
+        } catch (eventError) {
+          console.error(chalk.yellow('[side-effect] Error al armar eventos de tarea completada:'), eventError);
+        }
       } else {
         await existingTodo.save();
         await this._updateGoalTaskCounters(existingTodo.GoalId, userId, 'Goal');
@@ -279,7 +298,9 @@ export class TodoService {
 
       return new SuccessResponseModel(
         existingTodo,
-        `Tarea ${completed ? 'completada' : 'marcada como pendiente'} correctamente`
+        `Tarea ${completed ? 'completada' : 'marcada como pendiente'} correctamente`,
+        200,
+        { events }
       );
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar estado de la tarea');

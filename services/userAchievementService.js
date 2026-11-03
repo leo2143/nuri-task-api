@@ -174,14 +174,15 @@ export class UserAchievementService {
    * @param {string} triggerEvent - Evento disparado ('task:completed', 'goal:completed', 'streak:updated')
    * @param {string} userId - ID del usuario que disparó el evento
    * @param {number|null} value - Solo para 'streak:updated': valor absoluto del streak actual
-   * @returns {Promise<{notifiedAchievement: boolean}>} Si este evento desbloqueó y notificó un logro
+   * @returns {Promise<{notifiedAchievement: boolean, achievementsUnlocked: Array<{id: string, title: string, description: string}>}>}
+   *   Si este evento desbloqueó y notificó un logro, y cuáles se completaron en esta llamada
    */
   static async processEvent(triggerEvent, userId, value = null) {
     try {
       const shouldSetAbsoluteValue = triggerEvent === 'streak:updated';
 
       const matchingAchievements = await Achievement.find({ triggerEvent, isActive: true }).lean();
-      if (!matchingAchievements.length) return { notifiedAchievement: false };
+      if (!matchingAchievements.length) return { notifiedAchievement: false, achievementsUnlocked: [] };
 
       const progressUpdateOps = matchingAchievements.map(achievement => ({
         updateOne: {
@@ -201,7 +202,7 @@ export class UserAchievementService {
         chalk.red('[side-effect] Error al procesar evento de logros (el request no falla; retry en 017):'),
         error
       );
-      return { notifiedAchievement: false };
+      return { notifiedAchievement: false, achievementsUnlocked: [] };
     }
   }
 
@@ -212,7 +213,7 @@ export class UserAchievementService {
    * @param {string} userId
    * @param {Array} achievements - Logros consultados (con _id y targetCount)
    * @param {boolean} shouldSetAbsoluteValue - true cuando el evento es streak:updated (asigna el valor en lugar de incrementar)
-   * @returns {Promise<{notifiedAchievement: boolean}>}
+   * @returns {Promise<{notifiedAchievement: boolean, achievementsUnlocked: Array<{id: string, title: string, description: string}>}>}
    */
   static async _checkAndCompleteAchievements(userId, achievements, shouldSetAbsoluteValue) {
     const achievementIds = achievements.map(achievement => achievement._id);
@@ -221,7 +222,7 @@ export class UserAchievementService {
       achievement: { $in: achievementIds },
     });
 
-    if (!userProgressList.length) return { notifiedAchievement: false };
+    if (!userProgressList.length) return { notifiedAchievement: false, achievementsUnlocked: [] };
 
     const achievementById = new Map(achievements.map(achievement => [achievement._id.toString(), achievement]));
     const now = new Date();
@@ -287,6 +288,13 @@ export class UserAchievementService {
       }
     }
 
-    return { notifiedAchievement: achievementsJustCompleted.length > 0 };
+    return {
+      notifiedAchievement: achievementsJustCompleted.length > 0,
+      achievementsUnlocked: achievementsJustCompleted.map(achievement => ({
+        id: achievement._id.toString(),
+        title: achievement.title,
+        description: achievement.description ?? '',
+      })),
+    };
   }
 }
