@@ -50,7 +50,7 @@
     }
   ],
   "schemes": [
-    "https"
+    "http"
   ],
   "securityDefinitions": {
     "bearerAuth": {

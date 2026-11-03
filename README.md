@@ -50,7 +50,7 @@ Celebramos tus progresos y te acompañamos en el camino, con mensajes cálidos y
 - [🏗️ Arquitectura](#️-arquitectura)
 - [🚀 Inicio Rápido](#-inicio-rápido)
 - [⚙️ Configuración](#️-configuración)
-- [📚 Documentación](#-documentación)
+- [📚 Documentación](#-documentación) — guía completa en [DOCUMENTACION.md](DOCUMENTACION.md)
 - [🔐 Autenticación](#-autenticación)
 - [🛠️ Scripts](#️-scripts)
 - [🌐 Despliegue](#-despliegue)
@@ -234,6 +234,8 @@ mongod --dbpath=/ruta/a/tu/carpeta/datos
 ---
 
 ## 📚 Documentación
+
+La explicación de arquitectura, modelo de datos, endpoints reales, Zod, auth, reglas de negocio e integraciones está en **[DOCUMENTACION.md](DOCUMENTACION.md)**. Este README es el arranque rápido; aquel es la referencia para la tesis.
 
 ### Swagger UI
 

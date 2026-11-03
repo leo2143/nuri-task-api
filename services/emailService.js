@@ -9,9 +9,7 @@ const DEFAULT_SMTP_PORT = 587;
 const DEFAULT_EMAIL_FROM_NAME = 'Nuri Task API';
 const DEFAULT_FRONTEND_URL = 'http://localhost:3000';
 
-/**
- * Quita slashes finales sin regex (evita backtracking de /\/+$/).
- */
+
 function stripTrailingSlashes(url) {
   let result = url;
   while (result.endsWith('/')) {
