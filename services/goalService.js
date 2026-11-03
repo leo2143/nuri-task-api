@@ -25,6 +25,7 @@ import { runWithOneRetry, ensureSuccessWithRetry } from './helpers/runWithOneRet
 import { getStatusTransitionError, getCompleteEligibilityError } from './helpers/goalStatusRules.js';
 import { reopenCompletedGoal } from './helpers/reopenCompletedGoal.js';
 import { pausedAtFieldsForStatus, touchLastChildActivity } from './helpers/goalActivity.js';
+import { buildCompletionEvents, emptyCompletionEvents } from './helpers/completionEvents.js';
 import chalk from 'chalk';
 
 const FREE_GOALS_LIMIT = 2;
@@ -142,7 +143,8 @@ export class GoalService {
    * @private
    * @param {string} userId
    * @param {string} goalId
-   * @returns {Promise<null|Object>} null si ok; ResponseModel de error si fallan las métricas
+   * @returns {Promise<{error: Object|null, events: Object}>} error: ResponseModel si fallan las métricas (null si ok);
+   *   events: eventos de completado (goalCompleted solo si esta llamada reclamó el cierre)
    */
   static async _handleGoalCompleted(userId, goalId) {
     const claimed = await Goal.findOneAndUpdate(
@@ -151,7 +153,7 @@ export class GoalService {
       { new: true }
     );
     if (!claimed) {
-      return null;
+      return { error: null, events: emptyCompletionEvents() };
     }
 
     const metricsResult = await ensureSuccessWithRetry(
@@ -160,12 +162,16 @@ export class GoalService {
       'registrar métricas de meta'
     );
     if (!metricsResult.success) {
-      return metricsResult;
+      return { error: metricsResult, events: emptyCompletionEvents() };
     }
 
     const achievementResult = await UserAchievementService.processEvent('goal:completed', userId);
+    const events = buildCompletionEvents({
+      goalCompleted: { id: claimed._id.toString(), title: claimed.title },
+      achievementsUnlocked: achievementResult?.achievementsUnlocked ?? [],
+    });
     if (achievementResult?.notifiedAchievement) {
-      return null;
+      return { error: null, events };
     }
 
     try {
@@ -181,7 +187,7 @@ export class GoalService {
       console.error(chalk.yellow('[side-effect] Error al notificar meta completada:'), error);
     }
 
-    return null;
+    return { error: null, events };
   }
 
   /**
@@ -378,9 +384,9 @@ export class GoalService {
       }
 
       if (statusChange.changed && statusChange.newStatus === 'completed') {
-        const completedResult = await this._handleGoalCompleted(userId, goalId);
-        if (completedResult) {
-          return completedResult;
+        const { error: completedError } = await this._handleGoalCompleted(userId, goalId);
+        if (completedError) {
+          return completedError;
         }
       }
 
@@ -609,14 +615,16 @@ export class GoalService {
         console.log(chalk.green(`Estado cambiado: ${oldStatus} → ${status}`));
       }
 
+      let events = emptyCompletionEvents();
       if (status === 'completed') {
-        const completedResult = await this._handleGoalCompleted(userId, goal._id);
-        if (completedResult) {
-          return completedResult;
+        const completed = await this._handleGoalCompleted(userId, goal._id);
+        if (completed.error) {
+          return completed.error;
         }
+        events = completed.events;
       }
 
-      return new SuccessResponseModel(updatedGoal, 'Estado de la meta actualizado correctamente');
+      return new SuccessResponseModel(updatedGoal, 'Estado de la meta actualizado correctamente', 200, { events });
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar estado de meta');
     }

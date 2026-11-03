@@ -8,7 +8,6 @@ const RESET_TOKEN_BYTES = 32;
 const RESET_TOKEN_EXPIRATION_MS = 3600000;
 const VERIFICATION_TOKEN_EXPIRATION_MS = 3600000;
 const RESEND_COOLDOWN_MS = 60000;
-/** Hash de un plaintext fijo (no es credencial). Iguala timing de login si el user no existe. */
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync('nuri-timing-dummy', BCRYPT_SALT_ROUNDS);
 
 export class UserServiceHelpers {

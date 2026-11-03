@@ -1,4 +1,5 @@
 import { GoalService } from '../../services/goalService.js';
+import { withCompletionEvents } from '../../services/helpers/completionEvents.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con metas (goals)
@@ -189,6 +190,6 @@ export class GoalController {
     const { id } = req.params;
     const userId = req.userId;
     const result = await GoalService.updateGoalStatus(id, req.body, userId);
-    res.status(result.status).json(result);
+    res.status(result.status).json(withCompletionEvents(result));
   }
 }

@@ -77,7 +77,9 @@ export class MetricsService {
         )
       );
 
-      if (metrics.currentStreak > prevStreak) {
+      const streakIncreased = metrics.currentStreak > prevStreak;
+
+      if (streakIncreased) {
         const payload = {
           title: `¡Día ${metrics.currentStreak} de racha!`,
           body: '¡Seguiste sumando días, cada tarea cuenta. Seguí así!',
@@ -95,9 +97,13 @@ export class MetricsService {
         });
       }
 
-      await UserAchievementService.processEvent('streak:updated', userId, metrics.currentStreak);
+      const streakEvent = await UserAchievementService.processEvent('streak:updated', userId, metrics.currentStreak);
 
-      return new SuccessResponseModel(metrics, 'Tarea registrada en métricas correctamente');
+      return new SuccessResponseModel(metrics, 'Tarea registrada en métricas correctamente', 200, {
+        streakIncreased,
+        currentStreak: metrics.currentStreak,
+        achievementsUnlocked: streakEvent?.achievementsUnlocked ?? [],
+      });
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'registrar tarea completada');
     }
