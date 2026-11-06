@@ -20,8 +20,20 @@ export const setupGoalRoutes = app => {
 
   app.get('/api/goals/catalogs', validateToken, (req, res) => {
     // #swagger.tags = ['Goals']
-    // #swagger.summary = 'Obtiene lista catalog de metas (solo id y título)'
-    // #swagger.description = 'Retorna solo id y título de las metas, ideal para dropdowns y selects'
+    // #swagger.summary = 'Obtiene lista catalog de metas (id, título y estado)'
+    // #swagger.description = 'Retorna id, título y estado de las metas, ideal para dropdowns y selects. excludeCompleted=true omite las completadas; excludeRelatedTo=<goalId> omite esa meta, sus ancestros y sus descendientes (400 si el id es inválido). Sin resultados responde 200 con lista vacía.'
+    /* #swagger.parameters['excludeCompleted'] = {
+         in: 'query',
+         description: 'Si es true, omite las metas completadas',
+         required: false,
+         type: 'string'
+    } */
+    /* #swagger.parameters['excludeRelatedTo'] = {
+         in: 'query',
+         description: 'ID de una meta: se omiten ella, sus ancestros y sus descendientes',
+         required: false,
+         type: 'string'
+    } */
     /* #swagger.security = [{
          "bearerAuth": []
     }] */
@@ -33,9 +45,9 @@ export const setupGoalRoutes = app => {
            message: 'Lista simple de metas obtenida correctamente',
            count: 3,
            data: [
-             { id: '507f1f77bcf86cd799439011', title: 'Aprender Node.js' },
-             { id: '507f1f77bcf86cd799439012', title: 'Dominar React' },
-             { id: '507f1f77bcf86cd799439013', title: 'Crear portafolio' }
+             { id: '507f1f77bcf86cd799439011', title: 'Aprender Node.js', status: 'active' },
+             { id: '507f1f77bcf86cd799439012', title: 'Dominar React', status: 'completed' },
+             { id: '507f1f77bcf86cd799439013', title: 'Crear portafolio', status: 'paused' }
            ]
          }
     } */

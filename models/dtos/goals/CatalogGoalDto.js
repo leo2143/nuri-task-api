@@ -1,5 +1,5 @@
 /**
- * DTO Catalog solo ID y título
+ * DTO Catalog con ID, título y estado
  * @class CatalogGoalDto
    * DTO para selects
  */
@@ -10,6 +10,7 @@ export class CatalogGoalDto {
   constructor(goal) {
     this.id = goal._id;
     this.title = goal.title;
+    this.status = goal.status;
   }
 
   /**
@@ -29,6 +30,7 @@ export class CatalogGoalDto {
     return {
       id: this.id,
       title: this.title,
+      status: this.status,
     };
   }
 }

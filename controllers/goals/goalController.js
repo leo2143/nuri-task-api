@@ -146,16 +146,17 @@ export class GoalController {
   }
 
   /**
-   * Obtiene lista catalog de metas (solo id y título)
+   * Obtiene lista catalog de metas (id, título y estado)
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.query - Query params (excludeCompleted, excludeRelatedTo)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    * Útilizado para selects
    */
   static async getCatalogGoals(req, res) {
     const userId = req.userId;
-    const result = await GoalService.getCatalogGoals(userId);
+    const result = await GoalService.getCatalogGoals(userId, req.query);
     res.status(result.status).json(result);
   }
 

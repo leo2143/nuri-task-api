@@ -16,6 +16,7 @@ import {
   AddSubgoalDto,
   GoalFilterDto,
   CatalogGoalDto,
+  CatalogGoalsQueryDto,
 } from '../models/dtos/goals/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { findOwnedGoal } from './helpers/goalOwnership.js';
@@ -28,7 +29,12 @@ import {
   getCompleteEligibilityError,
   isReopenTransition,
 } from './helpers/goalStatusRules.js';
-import { getAncestorChain } from './helpers/goalHierarchy.js';
+import {
+  getAncestorChain,
+  getDescendantIds,
+  wouldCreateGoalCycle,
+  GOAL_CYCLE_MESSAGE,
+} from './helpers/goalHierarchy.js';
 import { assertGoalOpen } from './helpers/goalOpenGuard.js';
 import { pausedAtFieldsForStatus, touchLastChildActivity } from './helpers/goalActivity.js';
 import { buildCompletionEvents, emptyCompletionEvents } from './helpers/completionEvents.js';
@@ -425,9 +431,6 @@ export class GoalService {
       const cleanData = updateDto.toPlainObject();
 
       if (cleanData.parentGoalId) {
-        if (cleanData.parentGoalId.toString() === goalId.toString()) {
-          return new BadRequestResponseModel('Una meta no puede ser submeta de sí misma');
-        }
         const { error: parentError } = await this._findGoalByIdAndUser(cleanData.parentGoalId, userId);
         if (parentError) {
           return parentError;
@@ -437,6 +440,10 @@ export class GoalService {
       const parentChange = this._detectParentGoalChange(currentGoal, cleanData);
 
       if (parentChange.changed && parentChange.newParentId) {
+        if (await wouldCreateGoalCycle(goalId, parentChange.newParentId, userId)) {
+          return new ConflictResponseModel(GOAL_CYCLE_MESSAGE);
+        }
+
         const completedParentConflict = await assertGoalOpen(parentChange.newParentId, userId);
         if (completedParentConflict) {
           return completedParentConflict;
@@ -615,10 +622,6 @@ export class GoalService {
 
       const { subgoalId } = addDto.toPlainObject();
 
-      if (subgoalId === parentGoalId) {
-        return new BadRequestResponseModel('Una meta no puede ser submeta de sí misma');
-      }
-
       // Early return: Verificar que la meta padre existe
       const { goal: parentGoal, error: parentError } = await this._findGoalByIdAndUser(parentGoalId, userId);
       if (parentError) {
@@ -631,6 +634,11 @@ export class GoalService {
         return new NotFoundResponseModel('Meta no encontrada');
       }
 
+      if (await wouldCreateGoalCycle(subgoalId, parentGoalId, userId)) {
+        return new ConflictResponseModel(GOAL_CYCLE_MESSAGE);
+      }
+
+      // Una meta completada puede colgarse de un padre activo (el padre no se autocompleta); no al revés
       const completedParentConflict = await assertGoalOpen(parentGoalId, userId);
       if (completedParentConflict) {
         return completedParentConflict;
@@ -655,18 +663,40 @@ export class GoalService {
   }
 
   /**
-   * Obtiene lista catalog de metas (solo id y título) del usuario
+   * Obtiene lista catalog de metas (id, título y estado) del usuario
    * @param {string} userId - ID del usuario
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con lista catalog de metas
-   * Útilzado para selects
+   * @param {Object} [query={}] - Query params
+   * @param {string} [query.excludeCompleted] - 'true' para omitir las metas completadas
+   * @param {string} [query.excludeRelatedTo] - ID de una meta; se omiten ella, sus ancestros y sus descendientes
+   * @returns {Promise<SuccessResponseModel|BadRequestResponseModel|ErrorResponseModel>} Respuesta con lista catalog de metas
+   * (lista vacía = 200 con [], nunca 404). Utilizado para selects
    */
-  static async getCatalogGoals(userId) {
+  static async getCatalogGoals(userId, query = {}) {
     try {
-      const goals = await Goal.find({ userId }).select('_id title').sort({ createdAt: -1 });
-
-      if (goals.length === 0) {
-        return new NotFoundResponseModel('No se encontraron metas para este usuario');
+      const queryDto = new CatalogGoalsQueryDto(query);
+      const validation = queryDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
+
+      const { excludeCompleted, excludeRelatedTo } = queryDto.toPlainObject();
+      const filter = { userId };
+
+      if (excludeCompleted) {
+        filter.status = { $ne: 'completed' };
+      }
+
+      if (excludeRelatedTo) {
+        const [ancestors, descendantIds] = await Promise.all([
+          getAncestorChain(excludeRelatedTo, userId),
+          getDescendantIds(excludeRelatedTo, userId),
+        ]);
+        filter._id = {
+          $nin: [excludeRelatedTo, ...ancestors.map(ancestor => ancestor._id.toString()), ...descendantIds],
+        };
+      }
+
+      const goals = await Goal.find(filter).select('_id title status').sort({ createdAt: -1 });
 
       const catalogGoals = CatalogGoalDto.fromArray(goals);
 
