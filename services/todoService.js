@@ -26,10 +26,20 @@ import { touchLastChildActivity } from './helpers/goalActivity.js';
 import { buildCompletionEvents, emptyCompletionEvents } from './helpers/completionEvents.js';
 import chalk from 'chalk';
 
+const CONFIRMED_TODO_MESSAGE = 'Esta tarea ya fue confirmada y no se puede modificar';
+
 /**
  * Servicio para manejar la lógica de negocio de tareas (todos)
  */
 export class TodoService {
+  /**
+   * Respuesta de una tarea completada junto con los eventos de la completación (vacíos si no fue este request).
+   * @private
+   */
+  static _buildCompletedTodoResponse(todo, events) {
+    return new SuccessResponseModel(todo, 'Tarea completada correctamente', 200, { events });
+  }
+
   /**
    * Actualiza los contadores de tareas de un goal
    * @private
@@ -197,7 +207,7 @@ export class TodoService {
       }
 
       if (currentTodo.completed || currentTodo.isLocked) {
-        return new BadRequestResponseModel('Esta tarea ya fue confirmada y no se puede modificar');
+        return new BadRequestResponseModel(CONFIRMED_TODO_MESSAGE);
       }
 
       const cleanData = updateDto.toPlainObject();
@@ -268,60 +278,77 @@ export class TodoService {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
       }
 
-      if (existingTodo.isLocked) {
-        return new BadRequestResponseModel('Esta tarea ya fue confirmada y no se puede modificar');
-      }
-
-      const wasCompleted = existingTodo.completed;
-      let events = emptyCompletionEvents();
-
-      existingTodo.completed = completed;
-
-      if (!wasCompleted && completed === true) {
-        existingTodo.isLocked = true;
-        await existingTodo.save();
-
-        await this._updateGoalTaskCounters(existingTodo.GoalId, userId, 'Goal');
-        await touchLastChildActivity(existingTodo.GoalId, userId);
-
-        const metricsResult = await ensureSuccessWithRetry(
-          await MetricsService.recordTaskCompleted(userId),
-          () => MetricsService.recordTaskCompleted(userId),
-          'registrar métricas de tarea'
-        );
-        if (!metricsResult.success) {
-          return metricsResult;
+      if (completed === false) {
+        if (existingTodo.completed || existingTodo.isLocked) {
+          return new BadRequestResponseModel(CONFIRMED_TODO_MESSAGE);
         }
 
-        const taskEvent = await UserAchievementService.processEvent('task:completed', userId);
-
-        try {
-          const streakMeta = metricsResult.meta ?? {};
-          events = buildCompletionEvents({
-            taskCompleted: { id: existingTodo._id.toString(), title: existingTodo.title },
-            streak:
-              typeof streakMeta.currentStreak === 'number'
-                ? { increased: Boolean(streakMeta.streakIncreased), current: streakMeta.currentStreak }
-                : null,
-            achievementsUnlocked: [
-              ...(streakMeta.achievementsUnlocked ?? []),
-              ...(taskEvent?.achievementsUnlocked ?? []),
-            ],
-          });
-        } catch (eventError) {
-          console.error(chalk.yellow('[side-effect] Error al armar eventos de tarea completada:'), eventError);
-        }
-      } else {
-        await existingTodo.save();
         await this._updateGoalTaskCounters(existingTodo.GoalId, userId, 'Goal');
+        return new SuccessResponseModel(existingTodo, 'Tarea marcada como pendiente correctamente', 200, {
+          events: emptyCompletionEvents(),
+        });
       }
 
-      return new SuccessResponseModel(
-        existingTodo,
-        `Tarea ${completed ? 'completada' : 'marcada como pendiente'} correctamente`,
-        200,
-        { events }
+      // Una tarea ya completada (con o sin lock, incluidas las legacy) es éxito idempotente y sin efectos
+      if (existingTodo.completed) {
+        return this._buildCompletedTodoResponse(existingTodo, emptyCompletionEvents());
+      }
+
+      // Reclamo atómico: solo el request que gana pasa de pendiente a completada y dispara métricas y logros
+      const completedAt = new Date();
+      const claimedTodo = await Todo.findOneAndUpdate(
+        { _id: id, userId, completed: false, isLocked: false },
+        { $set: { completed: true, isLocked: true, completedAt } },
+        { new: true }
       );
+
+      if (!claimedTodo) {
+        const latestTodo = await Todo.findOne({ _id: id, userId });
+        if (latestTodo?.completed) {
+          return this._buildCompletedTodoResponse(latestTodo, emptyCompletionEvents());
+        }
+        if (!latestTodo) {
+          return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
+        }
+        return new BadRequestResponseModel(CONFIRMED_TODO_MESSAGE);
+      }
+
+      await this._updateGoalTaskCounters(claimedTodo.GoalId, userId, 'Goal');
+      await touchLastChildActivity(claimedTodo.GoalId, userId);
+
+      const metricsResult = await ensureSuccessWithRetry(
+        await MetricsService.recordTaskCompleted(userId),
+        () => MetricsService.recordTaskCompleted(userId),
+        'registrar métricas de tarea'
+      );
+      if (!metricsResult.success) {
+        return metricsResult;
+      }
+
+      // occurredAt es el reloj del servidor del reclamo; los logros con condiciones lo consumen (S5)
+      const taskEvent = await UserAchievementService.processEvent('task:completed', userId, null, {
+        occurredAt: claimedTodo.completedAt,
+      });
+
+      let events = emptyCompletionEvents();
+      try {
+        const streakMeta = metricsResult.meta ?? {};
+        events = buildCompletionEvents({
+          taskCompleted: { id: claimedTodo._id.toString(), title: claimedTodo.title },
+          streak:
+            typeof streakMeta.currentStreak === 'number'
+              ? { increased: Boolean(streakMeta.streakIncreased), current: streakMeta.currentStreak }
+              : null,
+          achievementsUnlocked: [
+            ...(streakMeta.achievementsUnlocked ?? []),
+            ...(taskEvent?.achievementsUnlocked ?? []),
+          ],
+        });
+      } catch (eventError) {
+        console.error(chalk.yellow('[side-effect] Error al armar eventos de tarea completada:'), eventError);
+      }
+
+      return this._buildCompletedTodoResponse(claimedTodo, events);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar estado de la tarea');
     }

@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
  * @property {string} title - Título de la tarea (requerido)
  * @property {string} description - Descripción de la tarea
  * @property {boolean} completed - Estado de completado de la tarea
+ * @property {Date|null} completedAt - Instante (reloj del servidor) en que se reclamó la completación; null en tareas legacy o pendientes
  * @property {mongoose.Types.ObjectId} userId - ID del usuario propietario (requerido)
  * @property {string} priority - Prioridad de la tarea (low/medium/high)
  * @property {Date} dueDate - Fecha límite de la tarea
@@ -55,6 +56,10 @@ const todoSchema = new mongoose.Schema(
     isLocked: {
       type: Boolean,
       default: false,
+    },
+    completedAt: {
+      type: Date,
+      default: null,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,

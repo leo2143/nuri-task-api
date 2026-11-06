@@ -11,7 +11,6 @@ export class UpdateTodoDto extends CreateTodoDto {
     description: optionalDescriptionField,
     priority: priorityField.optional(),
     dueDate: optionalDueDateField,
-    completed: z.boolean({ invalid_type_error: 'El estado completado debe ser un booleano' }).optional(),
     GoalId: z.string().nullable().optional(),
   });
 
@@ -21,7 +20,6 @@ export class UpdateTodoDto extends CreateTodoDto {
     if (data.description !== undefined) this.description = data.description;
     if (data.priority !== undefined) this.priority = data.priority;
     if (data.dueDate !== undefined) this.dueDate = data.dueDate;
-    if (data.completed !== undefined) this.completed = data.completed;
     if (data.GoalId !== undefined) this.GoalId = data.GoalId;
   }
 
@@ -31,7 +29,6 @@ export class UpdateTodoDto extends CreateTodoDto {
       description: this.description,
       priority: this.priority,
       dueDate: this.dueDate,
-      completed: this.completed,
       GoalId: this.GoalId,
     });
   }
@@ -43,7 +40,6 @@ export class UpdateTodoDto extends CreateTodoDto {
     if (this.description !== undefined) result.description = this.description.trim();
     if (this.priority !== undefined) result.priority = this.priority;
     if (this.dueDate !== undefined) result.dueDate = this.dueDate;
-    if (this.completed !== undefined) result.completed = this.completed;
     if (this.GoalId !== undefined) result.GoalId = this.GoalId;
 
     return result;
