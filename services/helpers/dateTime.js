@@ -24,17 +24,22 @@ const MAX_TIMEZONE_LENGTH = 64;
 const DENIED_FIRST_SEGMENT_PATTERN = /^(etc|(utc|gmt)[+-].*)$/i;
 
 const partsFormatters = new Map();
+// Tope del cache: hay ~420 zonas IANA, así que 512 cubre todas las grafías reales; más allá no se cachea
+const MAX_CACHED_FORMATTERS = 512;
 
 /**
  * Formateador de partes por zona, cacheado: construir un Intl.DateTimeFormat es caro y las zonas son pocas.
- * @param {string} timeZone
+ * El cache tiene tope para que entradas arbitrarias nunca lo hagan crecer sin límite.
+ * Una zona null/vacía se resuelve a `DEFAULT_TIMEZONE`; una cadena inválida lanza RangeError (Intl).
+ * @param {string|null|undefined} timeZone
  * @returns {Intl.DateTimeFormat}
  */
 function getPartsFormatter(timeZone) {
-  let formatter = partsFormatters.get(timeZone);
+  const zone = timeZone || DEFAULT_TIMEZONE;
+  let formatter = partsFormatters.get(zone);
   if (!formatter) {
     formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone,
+      timeZone: zone,
       hourCycle: 'h23',
       year: 'numeric',
       month: '2-digit',
@@ -43,7 +48,9 @@ function getPartsFormatter(timeZone) {
       minute: '2-digit',
       second: '2-digit',
     });
-    partsFormatters.set(timeZone, formatter);
+    if (partsFormatters.size < MAX_CACHED_FORMATTERS) {
+      partsFormatters.set(zone, formatter);
+    }
   }
   return formatter;
 }
@@ -51,7 +58,7 @@ function getPartsFormatter(timeZone) {
 /**
  * Partes de calendario locales de un instante en una zona.
  * @param {Date|number} instant
- * @param {string} [timeZone]
+ * @param {string|null} [timeZone] - null/undefined = `DEFAULT_TIMEZONE`
  * @returns {{year:number, month:number, day:number, hour:number, minute:number, second:number, weekday:number}}
  *   `month` 1-12 y `weekday` 0 (domingo) a 6 (sábado)
  */
@@ -144,8 +151,9 @@ export function diffYmdDays(a, b) {
 /**
  * Instante UTC de una hora de pared local (`ymd` + `HH:mm`) en una zona.
  * Resuelve el desfase en el instante objetivo con dos pasadas. En una hora repetida (fin del horario de verano)
- * devuelve la primera ocurrencia; en una hora inexistente (inicio del horario de verano) devuelve el instante
- * en que la hora de pared salta hacia adelante.
+ * devuelve la primera ocurrencia; en una hora inexistente (inicio del horario de verano) devuelve la hora de pared
+ * corrida hacia adelante por el salto (p. ej. 02:30 en Nueva York el día del cambio da 07:30Z, es decir 03:30 EDT).
+ * Solo las 02:00 devuelven el instante exacto del salto: para decidir "qué hora local es" usar `getZonedParts`.
  * @param {string} ymd - `YYYY-MM-DD`
  * @param {string} hourMinute - `HH:mm`
  * @param {string} [timeZone]
@@ -171,7 +179,7 @@ export function zonedTimeToInstant(ymd, hourMinute, timeZone = DEFAULT_TIMEZONE)
     return new Date(secondGuess);
   }
 
-  // La hora de pared no existe (salto de horario de verano): primer instante válido posterior
+  // La hora de pared no existe (salto de horario de verano): se corre hacia adelante por el tamaño del salto
   return new Date(Math.max(firstGuess, secondGuess));
 }
 
@@ -206,7 +214,8 @@ export function isValidTimeZone(timeZone) {
   if (DENIED_FIRST_SEGMENT_PATTERN.test(candidate.split('/')[0])) return false;
 
   try {
-    getPartsFormatter(candidate);
+    // Formateador descartable: el input llega sin autenticar y no debe ensuciar el cache
+    new Intl.DateTimeFormat('en-US', { timeZone: candidate });
     return true;
   } catch {
     return false;
