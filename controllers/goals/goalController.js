@@ -192,4 +192,19 @@ export class GoalController {
     const result = await GoalService.updateGoalStatus(id, req.body, userId);
     res.status(result.status).json(withCompletionEvents(result));
   }
+
+  /**
+   * Reabre una meta completada (y los ancestros completados que la contienen)
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.params.id - ID de la meta a reabrir
+   * @param {string} req.userId - ID del usuario
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>}
+   */
+  static async reopenGoal(req, res) {
+    const { id } = req.params;
+    const userId = req.userId;
+    const result = await GoalService.reopenGoal(id, userId);
+    res.status(result.status).json(result);
+  }
 }

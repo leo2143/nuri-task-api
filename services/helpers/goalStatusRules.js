@@ -2,6 +2,20 @@
  * Transiciones de status de meta. Completar no se deriva del progreso.
  */
 
+export const COMPLETED_GOAL_STATUS_MESSAGE =
+  'Esta meta ya está completada. Si querés retomarla, reabrila desde su detalle.';
+
+/**
+ * Indica si el cambio de status es una reapertura (completed -> active).
+ * Esa transición solo se resuelve delegando en GoalService.reopenGoal, nunca con una escritura directa del campo.
+ * @param {string} currentStatus
+ * @param {string} nextStatus
+ * @returns {boolean}
+ */
+export function isReopenTransition(currentStatus, nextStatus) {
+  return currentStatus === 'completed' && nextStatus === 'active';
+}
+
 /**
  * @param {string} currentStatus
  * @param {string} nextStatus
@@ -10,8 +24,10 @@
 export function getStatusTransitionError(currentStatus, nextStatus) {
   if (!nextStatus || currentStatus === nextStatus) return null;
 
+  if (isReopenTransition(currentStatus, nextStatus)) return null;
+
   if (currentStatus === 'completed') {
-    return 'Una meta cerrada se reabre al agregar una tarea o submeta';
+    return COMPLETED_GOAL_STATUS_MESSAGE;
   }
 
   if (nextStatus === 'completed' && currentStatus === 'paused') {
