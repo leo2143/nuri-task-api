@@ -122,7 +122,7 @@ export const setupGoalRoutes = app => {
   app.put('/api/goals/:id', validateToken, (req, res) => {
     // #swagger.tags = ['Goals']
     // #swagger.summary = 'Actualiza completamente una meta'
-    // #swagger.description = 'Actualiza una meta completa. DEBES enviar title (requerido), los demás campos son opcionales. Si cambia el status, actualiza automáticamente el progreso de metas padre.'
+    // #swagger.description = 'Actualiza una meta completa. DEBES enviar title (requerido), los demás campos son opcionales. Si cambia el status, actualiza automáticamente el progreso de metas padre. Si la meta pasa a completed, la respuesta incluye meta.events (toast de logros). Cambiar status de completed a active reabre la meta con la misma lógica que POST /api/goals/:id/reopen. 409 si el nuevo padre está completado o si el vínculo formaría un ciclo.'
     /* #swagger.parameters['id'] = {
          in: 'path',
          description: 'ID de la meta',

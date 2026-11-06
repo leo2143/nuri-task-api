@@ -68,7 +68,7 @@ export class GoalController {
     const updateData = req.body;
     const userId = req.userId;
     const result = await GoalService.updateGoal(id, updateData, userId);
-    res.status(result.status).json(result);
+    res.status(result.status).json(withCompletionEvents(result));
   }
 
   /**

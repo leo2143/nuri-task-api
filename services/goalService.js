@@ -501,14 +501,16 @@ export class GoalService {
         console.log(chalk.green(`Estado cambiado: ${statusChange.oldStatus} → ${statusChange.newStatus}`));
       }
 
+      let events = emptyCompletionEvents();
       if (statusChange.changed && statusChange.newStatus === 'completed') {
-        const { error: completedError } = await this._handleGoalCompleted(userId, goalId);
-        if (completedError) {
-          return completedError;
+        const completed = await this._handleGoalCompleted(userId, goalId);
+        if (completed.error) {
+          return completed.error;
         }
+        events = completed.events;
       }
 
-      return new SuccessResponseModel(goal, 'Meta actualizada correctamente');
+      return new SuccessResponseModel(goal, 'Meta actualizada correctamente', 200, { events });
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar meta');
     }
