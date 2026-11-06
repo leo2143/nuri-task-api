@@ -29,7 +29,7 @@ import {
   isReopenTransition,
 } from './helpers/goalStatusRules.js';
 import { getAncestorChain } from './helpers/goalHierarchy.js';
-import { reopenCompletedGoal } from './helpers/reopenCompletedGoal.js';
+import { assertGoalOpen } from './helpers/goalOpenGuard.js';
 import { pausedAtFieldsForStatus, touchLastChildActivity } from './helpers/goalActivity.js';
 import { buildCompletionEvents, emptyCompletionEvents } from './helpers/completionEvents.js';
 import chalk from 'chalk';
@@ -375,6 +375,11 @@ export class GoalService {
         if (parentError) {
           return parentError;
         }
+
+        const completedParentConflict = await assertGoalOpen(cleanData.parentGoalId, userId);
+        if (completedParentConflict) {
+          return completedParentConflict;
+        }
       }
 
       const goal = new Goal({
@@ -385,7 +390,6 @@ export class GoalService {
 
       if (savedGoal.parentGoalId) {
         await this._updateParentGoalCounters(savedGoal.parentGoalId, userId);
-        await reopenCompletedGoal(savedGoal.parentGoalId, userId);
         await touchLastChildActivity(savedGoal.parentGoalId, userId);
       }
 
@@ -432,6 +436,13 @@ export class GoalService {
 
       const parentChange = this._detectParentGoalChange(currentGoal, cleanData);
 
+      if (parentChange.changed && parentChange.newParentId) {
+        const completedParentConflict = await assertGoalOpen(parentChange.newParentId, userId);
+        if (completedParentConflict) {
+          return completedParentConflict;
+        }
+      }
+
       // completed -> active solo ocurre a través del servicio de reapertura (misma cascada y mismo sellado)
       if (isReopenTransition(currentGoal.status, cleanData.status)) {
         const { error: reopenError } = await this._reopenWithAncestors(goalId, userId);
@@ -466,7 +477,6 @@ export class GoalService {
       if (parentChange.changed) {
         await this._handleParentGoalUpdates(parentChange, userId);
         if (parentChange.newParentId) {
-          await reopenCompletedGoal(parentChange.newParentId, userId);
           await touchLastChildActivity(parentChange.newParentId, userId);
         }
       } else if (statusChange.changed && goal.parentGoalId) {
@@ -621,6 +631,11 @@ export class GoalService {
         return new NotFoundResponseModel('Meta no encontrada');
       }
 
+      const completedParentConflict = await assertGoalOpen(parentGoalId, userId);
+      if (completedParentConflict) {
+        return completedParentConflict;
+      }
+
       const oldParentGoalId = subgoal.parentGoalId;
 
       subgoal.parentGoalId = parentGoalId;
@@ -631,7 +646,6 @@ export class GoalService {
       }
 
       await this._updateParentGoalCounters(parentGoalId, userId, 'Meta padre');
-      await reopenCompletedGoal(parentGoalId, userId);
       await touchLastChildActivity(parentGoalId, userId);
 
       return new SuccessResponseModel(subgoal, 'Submeta agregada correctamente');

@@ -20,7 +20,7 @@ import {
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { findOwnedGoal } from './helpers/goalOwnership.js';
 import { runWithOneRetry, ensureSuccessWithRetry } from './helpers/runWithOneRetry.js';
-import { reopenCompletedGoal } from './helpers/reopenCompletedGoal.js';
+import { assertGoalOpen } from './helpers/goalOpenGuard.js';
 import { touchLastChildActivity } from './helpers/goalActivity.js';
 import { buildCompletionEvents, emptyCompletionEvents } from './helpers/completionEvents.js';
 import chalk from 'chalk';
@@ -148,6 +148,11 @@ export class TodoService {
         if (goalError) {
           return goalError;
         }
+
+        const completedGoalConflict = await assertGoalOpen(cleanData.GoalId, userId);
+        if (completedGoalConflict) {
+          return completedGoalConflict;
+        }
       }
 
       const todo = new Todo({
@@ -159,7 +164,6 @@ export class TodoService {
 
       // Actualizar contadores del goal si está asociado
       await this._updateGoalTaskCounters(savedTodo.GoalId, userId, 'Goal');
-      await reopenCompletedGoal(savedTodo.GoalId, userId);
       await touchLastChildActivity(savedTodo.GoalId, userId);
 
       return new CreatedResponseModel(savedTodo, 'Tarea creada correctamente');
@@ -205,6 +209,14 @@ export class TodoService {
       const oldGoalId = currentTodo.GoalId?.toString();
       const newGoalId = cleanData.GoalId !== undefined ? cleanData.GoalId?.toString() : oldGoalId;
 
+      // Solo mover una tarea HACIA una meta completada es conflicto; editar una tarea que ya vive en ella no lo es
+      if (oldGoalId !== newGoalId) {
+        const completedGoalConflict = await assertGoalOpen(newGoalId, userId);
+        if (completedGoalConflict) {
+          return completedGoalConflict;
+        }
+      }
+
       const todo = await Todo.findOneAndUpdate({ _id: id, userId }, cleanData, {
         new: true,
         runValidators: true,
@@ -214,7 +226,6 @@ export class TodoService {
       if (oldGoalId !== newGoalId) {
         await this._updateGoalTaskCounters(oldGoalId, userId, 'Goal anterior');
         await this._updateGoalTaskCounters(newGoalId, userId, 'Goal nuevo');
-        await reopenCompletedGoal(newGoalId, userId);
         await touchLastChildActivity(newGoalId, userId);
       }
 
