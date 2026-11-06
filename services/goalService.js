@@ -187,7 +187,7 @@ export class GoalService {
 
     const completedAncestors = [];
     for (const ancestor of await getAncestorChain(target._id, userId)) {
-      if (ancestor.status !== 'completed') break;
+      if (ancestor.status !== 'completed') continue;
       completedAncestors.push(ancestor);
     }
 
