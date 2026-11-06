@@ -28,7 +28,7 @@ import {
 } from '../models/dtos/users/index.js';
 import { UpdateProfileImageDto } from '../models/dtos/users/UpdateProfileImageDto.js';
 import { UpdateTimezoneDto } from '../models/dtos/users/UpdateTimezoneDto.js';
-import { syncUserTimezone } from './helpers/userTimezoneSync.js';
+import { syncUserTimezone, syncUserTimezoneBestEffort } from './helpers/userTimezoneSync.js';
 import { DEFAULT_TIMEZONE } from './helpers/dateTime.js';
 import { CloudinaryHelper } from './helpers/cloudinaryHelper.js';
 import { deleteUserOwnedDocuments } from './helpers/userOwnedDocuments.js';
@@ -515,7 +515,7 @@ export class UserService {
         return new ErrorResponseModel('Credenciales inválidas');
       }
 
-      await syncUserTimezone(user, cleanData.timezone);
+      await syncUserTimezoneBestEffort(user, cleanData.timezone);
 
       const payload = UserServiceHelpers.createJWTPayload(user);
       const token = UserServiceHelpers.generateJWT(payload);
@@ -847,7 +847,7 @@ export class UserService {
       user.emailVerificationExpires = null;
       await user.save();
 
-      await syncUserTimezone(user, new UpdateTimezoneDto({ timezone }).toPlainObject().timezone);
+      await syncUserTimezoneBestEffort(user, new UpdateTimezoneDto({ timezone }).toPlainObject().timezone);
 
       const payload = UserServiceHelpers.createJWTPayload(user);
       const authToken = UserServiceHelpers.generateJWT(payload);

@@ -9,7 +9,7 @@ import { UserServiceHelpers } from './helpers/userServiceHelpers.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { MoodboardService } from './moodboardService.js';
 import { GoogleLoginDto } from '../models/dtos/auth/index.js';
-import { syncUserTimezone } from './helpers/userTimezoneSync.js';
+import { syncUserTimezoneBestEffort } from './helpers/userTimezoneSync.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -108,7 +108,7 @@ export class GoogleAuthService {
         await user.save();
       }
 
-      await syncUserTimezone(user, timezone);
+      await syncUserTimezoneBestEffort(user, timezone);
 
       const payload = UserServiceHelpers.createJWTPayload(user);
       const token = UserServiceHelpers.generateJWT(payload);
