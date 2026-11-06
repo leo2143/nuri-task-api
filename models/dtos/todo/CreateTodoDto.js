@@ -6,17 +6,30 @@ import { dueDateNotPastField, optionalDescriptionField, priorityField, titleFiel
  * DTO para crear una nueva tarea
  */
 export class CreateTodoDto extends BaseValidationDto {
-  static schema = z.object({
-    title: titleField,
-    description: optionalDescriptionField,
-    priority: priorityField.optional(),
-    dueDate: dueDateNotPastField(),
-    completed: z.boolean({ invalid_type_error: 'El estado completado debe ser un booleano' }).optional(),
-    GoalId: z.string().nullable().optional(),
-  });
+  /**
+   * @param {string} [todayYmd] - Hoy (YYYY-MM-DD) del usuario para validar que la fecha límite no sea pasada
+   */
+  static buildSchema(todayYmd) {
+    return z.object({
+      title: titleField,
+      description: optionalDescriptionField,
+      priority: priorityField.optional(),
+      dueDate: dueDateNotPastField({ todayYmd }),
+      completed: z.boolean({ invalid_type_error: 'El estado completado debe ser un booleano' }).optional(),
+      GoalId: z.string().nullable().optional(),
+    });
+  }
 
-  constructor(data) {
+  static schema = CreateTodoDto.buildSchema();
+
+  /**
+   * @param {Object} data - Datos de la tarea
+   * @param {Object} [options]
+   * @param {string} [options.todayYmd] - Hoy (YYYY-MM-DD) del usuario; por defecto, hoy en la zona de producto
+   */
+  constructor(data, { todayYmd } = {}) {
     super(data);
+    this.todayYmd = todayYmd;
     this.description = data.description || '';
     this.priority = data.priority || 'medium';
     this.completed = data.completed !== undefined ? data.completed : false;
@@ -24,7 +37,7 @@ export class CreateTodoDto extends BaseValidationDto {
   }
 
   validate() {
-    return validateZod(this.constructor.schema, {
+    return validateZod(CreateTodoDto.buildSchema(this.todayYmd), {
       title: this.title,
       description: this.description,
       priority: this.priority,

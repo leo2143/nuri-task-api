@@ -21,6 +21,7 @@ import { ErrorHandler } from './helpers/errorHandler.js';
 import { findOwnedGoal } from './helpers/goalOwnership.js';
 import { runWithOneRetry, ensureSuccessWithRetry } from './helpers/runWithOneRetry.js';
 import { assertGoalOpen } from './helpers/goalOpenGuard.js';
+import { getDueDateChangeError } from './helpers/dueDateRules.js';
 import { touchLastChildActivity } from './helpers/goalActivity.js';
 import { buildCompletionEvents, emptyCompletionEvents } from './helpers/completionEvents.js';
 import chalk from 'chalk';
@@ -130,11 +131,13 @@ export class TodoService {
    * @param {string} [todoData.priority='medium'] - Prioridad (low/medium/high)
    * @param {Date} [todoData.dueDate=null] - Fecha límite de la tarea
    * @param {string} userId - ID del usuario autenticado
+   * @param {Object} [options]
+   * @param {string} [options.todayYmd] - Hoy (YYYY-MM-DD) del usuario, para validar la fecha límite
    * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con la tarea creada o error
    */
-  static async createTodo(todoData, userId) {
+  static async createTodo(todoData, userId, { todayYmd } = {}) {
     try {
-      const createDto = new CreateTodoDto(todoData);
+      const createDto = new CreateTodoDto(todoData, { todayYmd });
       const validation = createDto.validate();
 
       if (!validation.isValid) {
@@ -198,6 +201,12 @@ export class TodoService {
       }
 
       const cleanData = updateDto.toPlainObject();
+
+      // La fecha límite solo se valida si cambia respecto de la guardada
+      const dueDateError = getDueDateChangeError(cleanData.dueDate, currentTodo.dueDate);
+      if (dueDateError) {
+        return new BadRequestResponseModel(dueDateError);
+      }
 
       if (cleanData.GoalId) {
         const { error: goalError } = await findOwnedGoal(cleanData.GoalId, userId);

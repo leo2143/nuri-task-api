@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import { ValidationHelpers } from '../../services/helpers/validationHelpers.js';
+import {
+  DUE_DATE_INVALID_MESSAGE,
+  DUE_DATE_PAST_MESSAGE,
+  isDueDateInPast,
+} from '../../services/helpers/dueDateRules.js';
 
 /**
  * Corre un schema Zod y lo adapta a { isValid, errors }.
@@ -117,20 +122,23 @@ export const optionalDescriptionField = z
   .max(100, 'La descripción no puede superar los 100 caracteres')
   .optional();
 
-export function dueDateNotPastField(message = 'La fecha límite no puede ser anterior al día actual') {
-  return z
-    .union([z.date(), z.string(), z.null()])
-    .optional()
-    .refine(value => {
-      if (value === undefined || value === null || value === '') return true;
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return false;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const due = new Date(date);
-      due.setHours(0, 0, 0, 0);
-      return due >= today;
-    }, { message });
+/**
+ * Fecha límite flotante (calendario, sin zona horaria): opcional, nullable y con formato de fecha válido.
+ * No valida que sea futura; eso lo hacen los DTOs de creación o el servicio en los updates.
+ */
+export const optionalDueDateField = z
+  .union([z.date(), z.string(), z.null()])
+  .optional()
+  .refine(value => !value || !Number.isNaN(new Date(value).getTime()), DUE_DATE_INVALID_MESSAGE);
+
+/**
+ * Fecha límite flotante que no puede estar antes de "hoy". Solo para DTOs de creación.
+ * @param {Object} [options]
+ * @param {string} [options.todayYmd] - Hoy (YYYY-MM-DD) para el usuario; por defecto, hoy en la zona de producto
+ * @param {string} [options.message]
+ */
+export function dueDateNotPastField({ todayYmd, message = DUE_DATE_PAST_MESSAGE } = {}) {
+  return optionalDueDateField.refine(value => !isDueDateInPast(value, todayYmd), { message });
 }
 
 export function imageUrlField(required = true, fieldName = 'La URL de la imagen') {

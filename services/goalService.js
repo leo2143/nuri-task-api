@@ -36,6 +36,7 @@ import {
   GOAL_CYCLE_MESSAGE,
 } from './helpers/goalHierarchy.js';
 import { assertGoalOpen } from './helpers/goalOpenGuard.js';
+import { getDueDateChangeError } from './helpers/dueDateRules.js';
 import { pausedAtFieldsForStatus, touchLastChildActivity } from './helpers/goalActivity.js';
 import { buildCompletionEvents, emptyCompletionEvents } from './helpers/completionEvents.js';
 import chalk from 'chalk';
@@ -353,11 +354,13 @@ export class GoalService {
    * @param {Date} goalData.dueDate - Fecha límite
    * @param {string} goalData.reason - Razón de importancia de la meta
    * @param {string} userId - ID del usuario
+   * @param {Object} [options]
+   * @param {string} [options.todayYmd] - Hoy (YYYY-MM-DD) del usuario, para validar la fecha límite
    * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con la meta creada o error
    */
-  static async createGoal(goalData, userId) {
+  static async createGoal(goalData, userId, { todayYmd } = {}) {
     try {
-      const createDto = new CreateGoalDto(goalData);
+      const createDto = new CreateGoalDto(goalData, { todayYmd });
       const validation = createDto.validate();
 
       if (!validation.isValid) {
@@ -429,6 +432,12 @@ export class GoalService {
       }
 
       const cleanData = updateDto.toPlainObject();
+
+      // La fecha límite solo se valida si cambia: editar otros campos de una meta vencida debe funcionar
+      const dueDateError = getDueDateChangeError(cleanData.dueDate, currentGoal.dueDate);
+      if (dueDateError) {
+        return new BadRequestResponseModel(dueDateError);
+      }
 
       if (cleanData.parentGoalId) {
         const { error: parentError } = await this._findGoalByIdAndUser(cleanData.parentGoalId, userId);

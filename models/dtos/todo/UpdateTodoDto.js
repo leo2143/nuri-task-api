@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { CreateTodoDto } from './CreateTodoDto.js';
-import { dueDateNotPastField, optionalDescriptionField, optionalTitleField, priorityField, validateZod } from '../zodHelpers.js';
+import { optionalDescriptionField, optionalDueDateField, optionalTitleField, priorityField, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para actualizar una tarea existente
@@ -10,7 +10,7 @@ export class UpdateTodoDto extends CreateTodoDto {
     title: optionalTitleField,
     description: optionalDescriptionField,
     priority: priorityField.optional(),
-    dueDate: dueDateNotPastField(),
+    dueDate: optionalDueDateField,
     completed: z.boolean({ invalid_type_error: 'El estado completado debe ser un booleano' }).optional(),
     GoalId: z.string().nullable().optional(),
   });

@@ -1,5 +1,6 @@
 import { GoalService } from '../../services/goalService.js';
 import { withCompletionEvents } from '../../services/helpers/completionEvents.js';
+import { getTodayYmd } from '../../services/helpers/dueDateRules.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con metas (goals)
@@ -48,7 +49,7 @@ export class GoalController {
   static async createGoal(req, res) {
     const goalData = req.body;
     const userId = req.userId;
-    const result = await GoalService.createGoal(goalData, userId);
+    const result = await GoalService.createGoal(goalData, userId, { todayYmd: getTodayYmd() });
     res.status(result.status).json(result);
   }
 

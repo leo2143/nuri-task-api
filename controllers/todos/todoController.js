@@ -1,5 +1,6 @@
 import { TodoService } from '../../services/todoService.js';
 import { withCompletionEvents } from '../../services/helpers/completionEvents.js';
+import { getTodayYmd } from '../../services/helpers/dueDateRules.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con tareas (todos)
@@ -53,7 +54,7 @@ export class TodoController {
   static async createTodo(req, res) {
     const todoData = req.body;
     const userId = req.userId;
-    const result = await TodoService.createTodo(todoData, userId);
+    const result = await TodoService.createTodo(todoData, userId, { todayYmd: getTodayYmd() });
     res.status(result.status).json(result);
   }
 

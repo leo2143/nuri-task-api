@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { CreateGoalDto } from './CreateGoalDto.js';
 import {
-  dueDateNotPastField,
   goalStatusField,
   optionalDescriptionField,
+  optionalDueDateField,
   priorityField,
   titleField,
   validateZod,
@@ -22,7 +22,7 @@ export class UpdateGoalDto extends CreateGoalDto {
       .optional(),
     status: goalStatusField.optional(),
     priority: priorityField.optional(),
-    dueDate: dueDateNotPastField(),
+    dueDate: optionalDueDateField,
     parentGoalId: z.string().nullable().optional(),
   });
 
