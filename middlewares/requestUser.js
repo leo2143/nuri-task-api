@@ -1,9 +1,9 @@
 import User from '../models/userModel.js';
 
-const USER_DOC_SELECT = 'subscription isAdmin';
+const USER_DOC_SELECT = 'subscription isAdmin timezone';
 
 /**
- * Devuelve el usuario de Mongo para este request (isAdmin + subscription).
+ * Devuelve el usuario de Mongo para este request (isAdmin + subscription + timezone).
  * Cachea en req.userDoc para no repetir el findById en el mismo ciclo.
  * @param {Object} req
  * @returns {Promise<Object|null>}

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import { ValidationHelpers } from '../../services/helpers/validationHelpers.js';
+import { canonicalTimeZone } from '../../services/helpers/dateTime.js';
 import {
   DUE_DATE_INVALID_MESSAGE,
   DUE_DATE_PAST_MESSAGE,
@@ -140,6 +141,16 @@ export const optionalDueDateField = z
 export function dueDateNotPastField({ todayYmd, message = DUE_DATE_PAST_MESSAGE } = {}) {
   return optionalDueDateField.refine(value => !isDueDateInPast(value, todayYmd), { message });
 }
+
+/**
+ * Zona horaria IANA del dispositivo, LENIENTE: un valor inválido se descarta (queda `undefined`) y la request
+ * sigue su curso, nunca falla por un dato de zona raro. Un valor válido sale en la forma que resuelve `Intl`
+ * (por ejemplo `asia/kolkata` → la grafía de Kolkata de este runtime), que es la que se guarda.
+ */
+export const timezoneField = z
+  .unknown()
+  .optional()
+  .transform(value => canonicalTimeZone(value) ?? undefined);
 
 export function imageUrlField(required = true, fieldName = 'La URL de la imagen') {
   return z

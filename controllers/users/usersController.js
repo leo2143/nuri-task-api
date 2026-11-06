@@ -130,6 +130,24 @@ export class UsersController {
   }
 
   /**
+   * Sincroniza la zona horaria del usuario autenticado con la del dispositivo
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.userId - ID del usuario (del token)
+   * @param {Object} req.body - { timezone }
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   */
+  static async updateTimezone(req, res) {
+    try {
+      const result = await UserService.updateTimezone(req.userId, req.body);
+      res.status(result.status).json(result);
+    } catch (error) {
+      console.error('Error en updateTimezone:', error);
+      res.status(500).json({ message: 'Error interno del servidor', status: 500, success: false });
+    }
+  }
+
+  /**
    * Actualiza solo la foto de perfil del usuario autenticado
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (del token)
@@ -180,13 +198,14 @@ export class UsersController {
    * @param {Object} req.body - Credenciales del usuario
    * @param {string} req.body.email - Email del usuario
    * @param {string} req.body.password - Contraseña del usuario
+   * @param {string} [req.body.timezone] - Zona horaria IANA del dispositivo (opcional)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP con token
    * @example
    */
   static async loginUser(req, res) {
-    const { email, password } = req.body;
-    const result = attachAuthCookie(res, await UserService.loginUser(email, password));
+    const { email, password, timezone } = req.body;
+    const result = attachAuthCookie(res, await UserService.loginUser(email, password, timezone));
     res.status(result.status).json(result);
   }
 
@@ -312,7 +331,7 @@ export class UsersController {
   static async verifyEmail(req, res) {
     try {
       const { token } = req.params;
-      const result = attachAuthCookie(res, await UserService.verifyEmail(token));
+      const result = attachAuthCookie(res, await UserService.verifyEmail(token, req.query.timezone));
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error en verifyEmail:', error);

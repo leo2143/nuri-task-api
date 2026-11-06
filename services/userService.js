@@ -27,6 +27,9 @@ import {
   UserFilterDto,
 } from '../models/dtos/users/index.js';
 import { UpdateProfileImageDto } from '../models/dtos/users/UpdateProfileImageDto.js';
+import { UpdateTimezoneDto } from '../models/dtos/users/UpdateTimezoneDto.js';
+import { syncUserTimezone } from './helpers/userTimezoneSync.js';
+import { DEFAULT_TIMEZONE } from './helpers/dateTime.js';
 import { CloudinaryHelper } from './helpers/cloudinaryHelper.js';
 import { deleteUserOwnedDocuments } from './helpers/userOwnedDocuments.js';
 import { MercadoPagoService } from './mercadoPagoService.js';
@@ -482,10 +485,13 @@ export class UserService {
 
   /**
    * Autentica un usuario y genera un token JWT
+   * @param {string} email
+   * @param {string} password
+   * @param {string} [timezone] - Zona del dispositivo; opcional y leniente (inválida => se ignora)
    */
-  static async loginUser(email, password) {
+  static async loginUser(email, password, timezone) {
     try {
-      const loginDto = new LoginUserDto({ email, password });
+      const loginDto = new LoginUserDto({ email, password, timezone });
 
       const validation = loginDto.validate();
       if (!validation.isValid) {
@@ -508,6 +514,8 @@ export class UserService {
       if (!isPasswordValid) {
         return new ErrorResponseModel('Credenciales inválidas');
       }
+
+      await syncUserTimezone(user, cleanData.timezone);
 
       const payload = UserServiceHelpers.createJWTPayload(user);
       const token = UserServiceHelpers.generateJWT(payload);
@@ -761,6 +769,39 @@ export class UserService {
     });
   }
 
+  /**
+   * Sincroniza la zona horaria del usuario autenticado con la del dispositivo.
+   * Una zona inválida se descarta sin error; si ambas tienen la misma clave canónica no se escribe nada.
+   * @param {string} userId
+   * @param {Object} body - { timezone }
+   * @returns {Promise<SuccessResponseModel|BadRequestResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+   *   data: { timezone, updated }
+   */
+  static async updateTimezone(userId, body) {
+    try {
+      const timezoneDto = new UpdateTimezoneDto(body || {});
+      const validation = timezoneDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
+      }
+
+      const user = await User.findById(userId).select('timezone');
+      if (!user) {
+        return new NotFoundResponseModel('Usuario no encontrado');
+      }
+
+      const updated = await syncUserTimezone(user, timezoneDto.toPlainObject().timezone);
+
+      return new SuccessResponseModel(
+        { timezone: user.timezone ?? DEFAULT_TIMEZONE, updated },
+        updated ? 'Zona horaria actualizada' : 'La zona horaria no cambió'
+      );
+    } catch (error) {
+      console.error(chalk.red('Error al actualizar la zona horaria:', error));
+      return new ErrorResponseModel('Error al actualizar la zona horaria');
+    }
+  }
+
   static async completeOnboarding(userId) {
     try {
       const user = await User.findById(userId);
@@ -780,8 +821,10 @@ export class UserService {
 
   /**
    * Verifica el email del usuario mediante token
+   * @param {string} token
+   * @param {string} [timezone] - Zona del dispositivo; opcional y leniente (inválida => se ignora)
    */
-  static async verifyEmail(token) {
+  static async verifyEmail(token, timezone) {
     try {
       const tokenDto = new TokenDto({ token });
       const validation = tokenDto.validate();
@@ -803,6 +846,8 @@ export class UserService {
       user.emailVerificationToken = null;
       user.emailVerificationExpires = null;
       await user.save();
+
+      await syncUserTimezone(user, new UpdateTimezoneDto({ timezone }).toPlainObject().timezone);
 
       const payload = UserServiceHelpers.createJWTPayload(user);
       const authToken = UserServiceHelpers.generateJWT(payload);

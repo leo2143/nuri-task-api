@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
  * @property {string} password - Contraseña hasheada del usuario (opcional para usuarios de Google)
  * @property {string} googleId - ID de Google del usuario (opcional)
  * @property {boolean} isAdmin - Indica si el usuario es administrador (default: false)
+ * @property {string} [timezone] - Zona horaria IANA del usuario, tal como la resuelve Intl (sin default: si falta se usa la zona de producto)
  */
 
 /**
@@ -38,6 +39,10 @@ const userSchema = new mongoose.Schema({
   isAdmin: {
     type: Boolean,
     default: false,
+  },
+  // Sin default a propósito: un usuario sin zona resuelve a DEFAULT_TIMEZONE al leer
+  timezone: {
+    type: String,
   },
   subscription: {
     isActive: {
@@ -90,6 +95,7 @@ const userSchema = new mongoose.Schema({
 });
 
 userSchema.index({ 'subscription.mercadoPagoId': 1 }, { sparse: true });
+userSchema.index({ timezone: 1 });
 
 /**
  * Modelo de Usuario para MongoDB
