@@ -313,8 +313,16 @@ export class TodoService {
         return new BadRequestResponseModel(CONFIRMED_TODO_MESSAGE);
       }
 
-      await this._updateGoalTaskCounters(claimedTodo.GoalId, userId, 'Goal');
-      await touchLastChildActivity(claimedTodo.GoalId, userId);
+      // Contadores y actividad de la meta son efectos secundarios: si fallan no deben saltear métricas ni eventos del reclamo
+      try {
+        await this._updateGoalTaskCounters(claimedTodo.GoalId, userId, 'Goal');
+        await touchLastChildActivity(claimedTodo.GoalId, userId);
+      } catch (sideEffectError) {
+        console.error(
+          chalk.yellow('[side-effect] Error al actualizar la meta de la tarea completada:'),
+          sideEffectError
+        );
+      }
 
       const metricsResult = await ensureSuccessWithRetry(
         await MetricsService.recordTaskCompleted(userId),
