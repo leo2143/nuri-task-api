@@ -367,6 +367,7 @@ No se usa `skip/limit` (página 3 = escanear 2 páginas). Se usa el `_id` del ú
 | POST | `/api/users/reset-password` | RL-IP | UsersController.resetPassword |
 | PUT | `/api/users/change-password` | JWT | UsersController.changePassword |
 | GET | `/api/user/profile` | JWT | UsersController.getProfile |
+| PUT | `/api/user/timezone` | JWT | UsersController.updateTimezone |
 | PUT | `/api/user/profile-image` | JWT | UsersController.updateProfileImage |
 | DELETE | `/api/user/profile-image` | JWT | UsersController.deleteProfileImage |
 | PUT | `/api/user/onboarding-complete` | JWT | UsersController.completeOnboarding |
@@ -587,6 +588,17 @@ Editar título, descripción, fecha límite y prioridad de la meta sigue permiti
 - Cualquier otra transición desde `completed` (por ejemplo a `paused`) responde 400 `Esta meta ya está completada. Si querés retomarla, reabrila desde su detalle.`
 
 **Selectores.** `GET /api/goals/catalogs` devuelve `{ id, title, status }` y acepta `excludeCompleted=true` (omite completadas) y `excludeRelatedTo=<goalId>` (omite esa meta, sus ancestros y sus descendientes; 400 si el id es inválido). Sin resultados responde `200` con lista vacía.
+
+### Fechas y zonas horarias
+
+Cada usuario tiene una zona IANA (`User.timezone`, con índice). Los usuarios sin zona resuelven a `DEFAULT_TIMEZONE` (`America/Argentina/Buenos_Aires`, "ART") hasta que la migración `s1-user-timezone` se la asigne. Toda la aritmética de fechas vive en `services/helpers/dateTime.js`.
+
+- **Dos tipos de fecha que no se mezclan.** Los *instantes* (`createdAt`, `completedAt`) se resuelven en la zona del usuario. Las *fechas flotantes* (`dueDate`, guardada como `YYYY-MM-DDT12:00:00Z`) se comparan y muestran como su Y-M-D, sin corrimiento (`toFloatingYmd`, `getFloatingDayRange`).
+- **Días como claves `YYYY-MM-DD`.** `toLocalYmd`, `addDaysToYmd` y `diffYmdDays` operan sobre claves de calendario, nunca dividen milisegundos por 24 h (un día local dura 23 o 25 horas en los cambios de horario). `getLocalDayRange(ymd, tz)` devuelve `[inicio, fin)` del día local; `zonedTimeToInstant` resuelve el desfase en el instante objetivo con dos pasadas, así soporta +05:30, +05:45, +14 y horas inexistentes por horario de verano.
+- **Captura.** El APP manda la zona del dispositivo (`Intl.DateTimeFormat().resolvedOptions().timeZone`) en login, registro, Google y verify-email (`?timezone=`), y la re-sincroniza con `PUT /api/user/timezone` cuando difiere. No hay selección manual.
+- **Validación leniente.** `isValidTimeZone` acepta solo zonas con región (letras primero y al menos una `/`), descarta `Etc/*`, `UTC`, `GMT`, `Z` y offsets (`+05:00`, `UTC+5`) y exige que `Intl` la reconozca. Un valor inválido se descarta, nunca falla la request y nunca pisa el valor guardado. `PUT /api/user/timezone` responde `{ timezone, updated }`; sin campo `timezone` devuelve 400.
+- **Grafías y clave canónica.** Lo que se guarda es la forma que devuelve `Intl` (`canonicalTimeZone`), que depende del ICU del runtime (por ejemplo Kolkata puede resolverse como `Asia/Calcutta`), por eso nunca se escribe una grafía a mano y `package.json` fija `engines.node`. La clave canónica sirve **solo** para igualdad y agrupación, nunca como valor de consulta: las consultas por zona deben matchear todas las grafías guardadas. Dos grafías de una misma zona no disparan una re-sincronización.
+- **Migración S1.** `node scripts/migrations/s1-user-timezone.js` (dry-run por defecto, `--apply` para escribir, `--restore`) asigna `DEFAULT_TIMEZONE` a los usuarios sin zona y asegura el índice; no reescribe grafías existentes y es idempotente. Orden de despliegue: API → `s1-user-timezone --apply` → APP.
 
 ### Fecha límite (`dueDate`)
 

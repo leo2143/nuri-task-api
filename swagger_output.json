@@ -720,6 +720,42 @@
         ]
       }
     },
+    "/api/user/timezone": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Sincroniza la zona horaria del usuario con la del dispositivo",
+        "description": "Una zona inválida se descarta y responde 200 sin cambios. Si la clave canónica es igual a la guardada no escribe nada. Responde { timezone, updated }.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Zona horaria IANA del dispositivo",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "timezone": {
+                  "type": "string",
+                  "example": "America/Bogota"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/user/profile-image": {
       "put": {
         "tags": [
@@ -798,12 +834,17 @@
           "Users"
         ],
         "summary": "Verifica el email del usuario mediante token",
-        "description": "",
+        "description": "Acepta ?timezone= (zona IANA del dispositivo, opcional; una inválida se descarta).",
         "parameters": [
           {
             "name": "token",
             "in": "path",
             "required": true,
+            "type": "string"
+          },
+          {
+            "name": "timezone",
+            "in": "query",
             "type": "string"
           }
         ],
