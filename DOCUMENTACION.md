@@ -243,6 +243,7 @@ Timestamps automáticos. Índice sparse en `subscription.mercadoPagoId` (el webh
 | title, description | String | |
 | comments[] | `{ text, author, date }` | |
 | completed, isLocked | Boolean | Al completar → `isLocked = true` |
+| completedAt | Date | null | Hora del servidor en que se reclamó la completación. Las tareas legacy y las pendientes tienen `null` (sin backfill) |
 | userId, GoalId | ObjectId | GoalId puede ser null |
 | priority | enum | default `medium` |
 | dueDate | Date \| null | Lo usa el cron de vencimientos |
@@ -400,6 +401,7 @@ No se usa `skip/limit` (página 3 = escanear 2 páginas). Se usa el `_id` del ú
 | GET | `/api/goals/:id/parent` | JWT | GoalController.getGoalsByParentGoalId |
 | PATCH | `/api/goals/:id/subgoals` | JWT | GoalController.addSubgoal |
 | PATCH | `/api/goals/:id/status` | JWT | GoalController.updateGoalStatus |
+| POST | `/api/goals/:id/reopen` | JWT | GoalController.reopenGoal |
 | GET | `/api/metrics` | JWT+Sub | MetricsController.getAllMetrics |
 | GET | `/api/metrics/dashboard` | JWT+Sub | MetricsController.getMetricDashboard |
 | GET | `/api/metrics/current-streak` | JWT | MetricsController.getCurrentStreak |
@@ -475,7 +477,8 @@ El servicio hace `new TodoFilterDto(filters)` → `validate()` → si falla, `Ba
 | `queryBooleanField` + `toQueryBoolean` | Query strings |
 | `priorityField`, `goalStatusField`, `sortOrderField` | Enums |
 | `titleField` / `optionalTitleField` | 3–50 chars |
-| `dueDateNotPastField` | No fechas en el pasado (día calendario) |
+| `optionalDueDateField` | Fecha límite flotante opcional/nullable, solo valida el formato |
+| `dueDateNotPastField({ todayYmd })` | Lo anterior + no fechas en el pasado (día calendario). Solo DTOs de creación |
 | `imageUrlField` / `cloudinaryImageUrlField` | Delegados a `ValidationHelpers` |
 | `validateZod` / `mergeValidations` | Adaptador y unión de errores |
 | `paginationSchema` | cursor + limit 1–100 |
@@ -564,11 +567,34 @@ Los contadores del padre (`totalSubGoals`, `completedSubGoals`) se actualizan al
 
 ### Jerarquía
 
-`parentGoalId` apunta a otra meta del mismo usuario. No se puede ser padre de sí misma. Al borrar una meta: soft delete de la meta y de sus todos; **no** se borran ni reparentan las hijas (quedan con un padre “invisible”). Si falla el `save` de la meta, se revierte el `deleted_at` de los todos.
+`parentGoalId` apunta a otra meta del mismo usuario. Ninguna vinculación puede formar un ciclo (una meta no puede colgar de sí misma ni de uno de sus descendientes): la API responde **409** `No se pueden vincular estas metas: una ya forma parte de la otra.` antes de escribir. Una meta **completada** sí puede colgarse de un padre activo; el padre nunca se autocompleta por eso. Al borrar una meta: soft delete de la meta y de sus todos; **no** se borran ni reparentan las hijas (quedan con un padre “invisible”). Si falla el `save` de la meta, se revierte el `deleted_at` de los todos.
+
+### Metas completadas (solo lectura) y reapertura
+
+Una meta `completed` es de solo lectura para su contenido: la API responde **409** (`Esta meta ya está completada. Reabrila desde su detalle para sumarle tareas o submetas. Si no ves el botón, actualizá la app.`) antes de cualquier escritura cuando se intenta:
+
+- crear una tarea en ella (`POST /api/todos` con su `GoalId`),
+- mover una tarea pendiente hacia ella (`PUT /api/todos/:id` que cambia `GoalId`; editar otros campos de una tarea que ya vive en la meta sí se permite),
+- agregarle una submeta (`POST /api/goals` con `parentGoalId`, `PATCH /api/goals/:id/subgoals`, o `PUT /api/goals/:id` que cambia el padre).
+
+Editar título, descripción, fecha límite y prioridad de la meta sigue permitido. Mover, destildar o borrar tareas de una meta completada se rige por el bloqueo de tareas de abajo; borrar una submeta no deshace la completación.
+
+**Reapertura explícita.** `POST /api/goals/:id/reopen` es la única forma de volver a `active`; `PATCH /api/goals/:id/status` y `PUT /api/goals/:id` con `status: active` sobre una meta completada delegan en la misma lógica. Reglas:
+
+- Solo la meta del usuario (404 si no existe) y solo si está `completed` (409 si no; el segundo click de un doble click recibe 409).
+- No toca métricas, racha ni logros, y completar de nuevo no vuelve a otorgarlos (`firstCompletedAt` se conserva; si era `null` en una meta legacy, se sella con la hora actual).
+- Cascada: si los ancestros contiguos también están completados se reabren de afuera hacia adentro y la meta pedida al final, con actualización condicional por meta y contadores del padre refrescados en cada paso. La cadena se recorre con set de visitados y tope de profundidad 20, así un ciclo corrupto termina. Respuesta: `{ goal, cascaded }` con los IDs de los ancestros reabiertos.
+- Cualquier otra transición desde `completed` (por ejemplo a `paused`) responde 400 `Esta meta ya está completada. Si querés retomarla, reabrila desde su detalle.`
+
+**Selectores.** `GET /api/goals/catalogs` devuelve `{ id, title, status }` y acepta `excludeCompleted=true` (omite completadas) y `excludeRelatedTo=<goalId>` (omite esa meta, sus ancestros y sus descendientes; 400 si el id es inválido). Sin resultados responde `200` con lista vacía.
+
+### Fecha límite (`dueDate`)
+
+La validación de que no sea pasada vive solo en los DTOs de creación (compara días calendario, hoy en la zona de producto mientras no exista la zona por usuario). En los updates el servicio la valida únicamente si el valor entrante cambia respecto del guardado, así editar el título de una meta o tarea ya vencida (por ejemplo una meta completada) funciona. Cambiar el estado de una meta nunca valida la fecha.
 
 ### Bloqueo de tareas
 
-Pasar de `completed: false` a `true` setea `isLocked = true`. `updateTodo` / `updateTodoState` rechazan si ya está completada o locked. El usuario no puede borrar una confirmada; el admin sí.
+Completar una tarea es un **reclamo atómico**: un `findOneAndUpdate` condicionado a `completed: false, isLocked: false` que setea `completed`, `isLocked = true` y `completedAt` (hora del servidor). Solo el request que gana dispara métricas, racha y logros; los demás reciben éxito idempotente sin efectos. Repetir `completed: true` sobre una tarea ya completada (con o sin lock, incluidas las legacy con `completed: true, isLocked: false`) responde 200 sin efectos. `completed: false` sobre una tarea completada o locked responde 400. `PUT /api/todos/:id` ya no acepta `completed`: la única vía para completar es `PATCH /api/todos/:id/state`, así el reclamo, `completedAt` y los eventos no se pueden saltear. `updateTodo` rechaza si la tarea ya está completada o locked. El usuario no puede borrar una confirmada; el admin sí. `PUT /api/goals/:id` devuelve `meta.events` igual que `PATCH /api/goals/:id/status` cuando la meta se completa.
 
 Efectos al completar: contadores de meta → `MetricsService.recordTaskCompleted` → `processEvent('task:completed')` → si sube la racha, notificación y `processEvent('streak:updated')`.
 
