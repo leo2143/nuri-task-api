@@ -15,7 +15,6 @@ export class CreateTodoDto extends BaseValidationDto {
       description: optionalDescriptionField,
       priority: priorityField.optional(),
       dueDate: dueDateNotPastField({ todayYmd }),
-      completed: z.boolean({ invalid_type_error: 'El estado completado debe ser un booleano' }).optional(),
       GoalId: z.string().nullable().optional(),
     });
   }
@@ -32,7 +31,6 @@ export class CreateTodoDto extends BaseValidationDto {
     this.todayYmd = todayYmd;
     this.description = data.description || '';
     this.priority = data.priority || 'medium';
-    this.completed = data.completed !== undefined ? data.completed : false;
     this.GoalId = data.GoalId || null;
   }
 
@@ -42,7 +40,6 @@ export class CreateTodoDto extends BaseValidationDto {
       description: this.description,
       priority: this.priority,
       dueDate: this.dueDate,
-      completed: this.completed,
       GoalId: this.GoalId,
     });
   }
@@ -52,7 +49,6 @@ export class CreateTodoDto extends BaseValidationDto {
     const result = {
       ...baseData,
       description: this.description.trim(),
-      completed: this.completed,
     };
 
     if (this.GoalId) {
