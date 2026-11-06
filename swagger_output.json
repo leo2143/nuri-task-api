@@ -707,7 +707,7 @@
           "Users"
         ],
         "summary": "Obtiene el perfil del usuario autenticado",
-        "description": "Retorna: name, email, subscription (isActive, startDate, endDate), profileImageUrl",
+        "description": "Retorna: name, email, subscription (isActive, startDate, endDate), profileImageUrl, timezone",
         "responses": {
           "default": {
             "description": ""

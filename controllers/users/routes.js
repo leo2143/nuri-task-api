@@ -131,7 +131,7 @@ export const setupUserRoutes = app => {
   app.get('/api/user/profile', validateToken, (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Obtiene el perfil del usuario autenticado'
-    // #swagger.description = 'Retorna: name, email, subscription (isActive, startDate, endDate), profileImageUrl'
+    // #swagger.description = 'Retorna: name, email, subscription (isActive, startDate, endDate), profileImageUrl, timezone'
     /* #swagger.security = [{
          "bearerAuth": []
     }] */

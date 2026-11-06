@@ -148,7 +148,7 @@ export class UserService {
   static async getProfile(userId) {
     try {
       const user = await User.findById(userId).select(
-        'name email subscription profileImageUrl googleId emailVerified isAdmin onboardingCompleted'
+        'name email subscription profileImageUrl googleId emailVerified isAdmin onboardingCompleted timezone'
       );
       
       if (!user) {
