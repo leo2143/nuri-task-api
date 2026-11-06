@@ -19,6 +19,9 @@
   },
   "author": "leonardo orellana",
   "license": "ISC",
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "@vercel/functions": "^3.9.11",
     "bcrypt": "^6.0.0",
