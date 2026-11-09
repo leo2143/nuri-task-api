@@ -9,7 +9,8 @@ import { BadRequestResponseModel, ErrorResponseModel, SuccessResponseModel } fro
 const MAX_DISPATCH_MS = 50 * 1000;
 /** Un tick más viejo que esto ya no es de "esta hora": se saltea en vez de enviar a destiempo. */
 const STALE_TICK_MS = 90 * 60 * 1000;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const MS_PER_HOUR = 60 * 60 * 1000;
+const MS_PER_DAY = 24 * MS_PER_HOUR;
 const HOUR_PARAM_PATTERN = /^\d{1,2}$/;
 // Header que Vercel documenta en cada invocación de cron: el schedule tal cual ("0 14 * * *")
 const SCHEDULE_HEADER_PATTERN = /^\s*\d{1,2}\s+(\d{1,2})\s+\*\s+\*\s+\*\s*$/;
@@ -53,9 +54,30 @@ export function getDispatchInstant(hour, now) {
 }
 
 /**
- * Unidades de trabajo que corresponden al instante del tick: un job de zona corre para un grupo solo si en esa
- * zona la hora local en `dispatchInstant` es exactamente la del job (sin rangos ni recuperación de horas
- * perdidas: una hora salteada por el horario de verano no corre ese día). Los jobs globales, si la hora UTC coincide.
+ * Si la hora local `localHour` no existe en la fecha local de `dispatchInstant` (salto de horario de verano) y
+ * `dispatchInstant` es la primera hora local que existe después del hueco. Detección exacta con la hora local
+ * del instante y la de una hora antes: la anterior cae antes de `localHour` (en la misma fecha o en la
+ * anterior) y la actual ya pasó `localHour`.
+ * @param {string} timeZone
+ * @param {number} localHour
+ * @param {Date} dispatchInstant
+ * @returns {boolean}
+ */
+function isFirstHourAfterSkippedHour(timeZone, localHour, dispatchInstant) {
+  const current = getZonedParts(dispatchInstant, timeZone);
+  if (current.hour <= localHour) return false;
+
+  const previous = getZonedParts(new Date(dispatchInstant.getTime() - MS_PER_HOUR), timeZone);
+  const isSameLocalDate =
+    previous.year === current.year && previous.month === current.month && previous.day === current.day;
+  return !isSameLocalDate || previous.hour < localHour;
+}
+
+/**
+ * Unidades de trabajo que corresponden al instante del tick: un job de zona corre para un grupo si en esa zona
+ * la hora local en `dispatchInstant` es la del job o, cuando el horario de verano salta justo esa hora (p. ej.
+ * 00:00 en America/Santiago), si es la primera hora local que existe después del hueco; no hay recuperación de
+ * otras horas perdidas. La clave única del ledger evita duplicados. Los jobs globales, si la hora UTC coincide.
  * @param {Map<string, import('./support/timezoneGroups.js').TimezoneGroup>} groups
  * @param {Date} dispatchInstant
  * @param {Date} now
@@ -73,7 +95,10 @@ export function planWorkUnits(groups, dispatchInstant, now) {
     }
 
     for (const group of groups.values()) {
-      if (getZonedParts(dispatchInstant, group.key).hour === job.localHour) {
+      const isJobHour =
+        getZonedParts(dispatchInstant, group.key).hour === job.localHour ||
+        isFirstHourAfterSkippedHour(group.key, job.localHour, dispatchInstant);
+      if (isJobHour) {
         units.push({
           jobName,
           job,
