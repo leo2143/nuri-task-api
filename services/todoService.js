@@ -190,9 +190,11 @@ export class TodoService {
    * @param {string} id - ID de la tarea
    * @param {Object} todoData - Datos a actualizar
    * @param {string} userId - ID del usuario autenticado
+   * @param {Object} [options]
+   * @param {string} [options.todayYmd] - Hoy (YYYY-MM-DD) del usuario, para validar un cambio de fecha límite
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea actualizada o error
    */
-  static async updateTodo(id, todoData, userId) {
+  static async updateTodo(id, todoData, userId, { todayYmd } = {}) {
     try {
       const updateDto = new UpdateTodoDto(todoData);
       const validation = updateDto.validate();
@@ -213,7 +215,7 @@ export class TodoService {
       const cleanData = updateDto.toPlainObject();
 
       // La fecha límite solo se valida si cambia respecto de la guardada
-      const dueDateError = getDueDateChangeError(cleanData.dueDate, currentTodo.dueDate);
+      const dueDateError = getDueDateChangeError(cleanData.dueDate, currentTodo.dueDate, todayYmd);
       if (dueDateError) {
         return new BadRequestResponseModel(dueDateError);
       }

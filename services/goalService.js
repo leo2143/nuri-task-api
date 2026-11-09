@@ -416,7 +416,7 @@ export class GoalService {
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la meta actualizada o error
    * Actualización completa - requiere title. Detecta cambios en status y parentGoalId para actualizar contadores automáticamente
    */
-  static async updateGoal(goalId, updateData, userId) {
+  static async updateGoal(goalId, updateData, userId, { todayYmd } = {}) {
     try {
       const updateDto = new UpdateGoalDto(updateData);
       const validation = updateDto.validate();
@@ -434,7 +434,7 @@ export class GoalService {
       const cleanData = updateDto.toPlainObject();
 
       // La fecha límite solo se valida si cambia: editar otros campos de una meta vencida debe funcionar
-      const dueDateError = getDueDateChangeError(cleanData.dueDate, currentGoal.dueDate);
+      const dueDateError = getDueDateChangeError(cleanData.dueDate, currentGoal.dueDate, todayYmd);
       if (dueDateError) {
         return new BadRequestResponseModel(dueDateError);
       }

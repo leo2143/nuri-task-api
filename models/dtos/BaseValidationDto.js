@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { normalizeDueDate } from '../../services/helpers/dueDateRules.js';
 import { goalStatusField, optionalDueDateField, optionalTitleField, priorityField, validateZod } from './zodHelpers.js';
 
 /**
@@ -15,7 +16,7 @@ export class BaseValidationDto {
   constructor(data = {}) {
     this.title = data.title;
     this.priority = data.priority;
-    this.dueDate = data.dueDate || null;
+    this.dueDate = normalizeDueDate(data.dueDate);
     this.status = data.status;
   }
 

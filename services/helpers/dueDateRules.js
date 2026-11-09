@@ -1,4 +1,4 @@
-import { formatDateYmdInTimeZone } from './dateTime.js';
+import { resolveTimeZone, toFloatingYmd, toLocalYmd } from './dateTime.js';
 
 export const DUE_DATE_PAST_MESSAGE = 'La fecha límite no puede ser anterior al día actual';
 export const DUE_DATE_INVALID_MESSAGE = 'Debe ser una fecha válida';
@@ -17,11 +17,25 @@ export function toDueDateYmd(dueDate) {
 }
 
 /**
- * Hoy en la zona de producto. Interino: pasa a ser el "hoy" del usuario cuando la zona horaria viaja en el request.
- * @returns {string} YYYY-MM-DD
+ * Normaliza la fecha límite entrante a su forma flotante (mediodía UTC del día de calendario que mandó el cliente).
+ * Un valor que no se puede interpretar se devuelve tal cual para que la validación lo rechace.
+ * @param {Date|string|null|undefined} dueDate
+ * @returns {Date|string|null|undefined} null cuando no hay fecha
  */
-export function getTodayYmd() {
-  return formatDateYmdInTimeZone(new Date());
+export function normalizeDueDate(dueDate) {
+  if (dueDate === undefined || dueDate === null || dueDate === '') return null;
+  if (dueDate instanceof Date && Number.isNaN(dueDate.getTime())) return dueDate;
+
+  return toFloatingYmd(dueDate) ?? dueDate;
+}
+
+/**
+ * "Hoy" (YYYY-MM-DD) del usuario. Sin zona válida (usuario sin zona guardada) usa la zona de producto.
+ * @param {string|null|undefined} [timeZone] - Zona IANA del usuario
+ * @returns {string}
+ */
+export function getTodayYmd(timeZone) {
+  return toLocalYmd(new Date(), resolveTimeZone(timeZone));
 }
 
 /**

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CreateTodoDto } from './CreateTodoDto.js';
+import { normalizeDueDate } from '../../../services/helpers/dueDateRules.js';
 import { optionalDescriptionField, optionalDueDateField, optionalTitleField, priorityField, validateZod } from '../zodHelpers.js';
 
 /**
@@ -19,7 +20,7 @@ export class UpdateTodoDto extends CreateTodoDto {
     if (data.title !== undefined) this.title = data.title;
     if (data.description !== undefined) this.description = data.description;
     if (data.priority !== undefined) this.priority = data.priority;
-    if (data.dueDate !== undefined) this.dueDate = data.dueDate;
+    if (data.dueDate !== undefined) this.dueDate = normalizeDueDate(data.dueDate);
     if (data.GoalId !== undefined) this.GoalId = data.GoalId;
   }
 
