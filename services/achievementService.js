@@ -201,24 +201,15 @@ export class AchievementService {
         return new BadRequestResponseModel(buildDisallowedConditionsMessage(resultingTrigger, disallowedKeys));
       }
 
-      // Guardado optimista: solo gana quien edita sobre la versión que leyó (`updatedAt`). Los logros importados o
-      // migrados pueden no tener `updatedAt`: en ese caso la guarda exige que siga sin existir.
-      const versionGuard = existing.updatedAt ? { updatedAt: existing.updatedAt } : { updatedAt: { $exists: false } };
-      const achievement = await Achievement.findOneAndUpdate(
-        { _id: achievementId, ...versionGuard },
-        { $set: cleanData },
-        { new: true, runValidators: true }
-      );
-      if (!achievement) {
-        const stillExists = await Achievement.exists({ _id: achievementId });
-        return stillExists
+      // Guardado y reinicio de progreso van en UNA transacción: o quedan ambos o ninguno (sin definición nueva con
+      // progreso viejo, sin reinicios a medias). Los eventos de usuario que chocan con la transacción se reintentan solos.
+      const outcome = await this.#saveAndResetProgress(achievementId, existing, cleanData);
+      if (outcome.conflict) {
+        return outcome.stillExists
           ? new ConflictResponseModel('El logro fue modificado por otra edición. Recargalo y volvé a intentar.')
           : new NotFoundResponseModel('Plantilla de logro no encontrada');
       }
-
-      // El reinicio va DESPUÉS de guardar: si la guarda pierde (409) o el guardado falla, el progreso queda intacto. Los
-      // eventos que llegan entre el guardado y el reinicio pueden contarse con las reglas nuevas y se reinician (aceptado).
-      await this.#resetProgressAfterSave(existing, cleanData, achievement);
+      const { achievement } = outcome;
 
       const pendingCompletions = await this.#completeIfTargetChanged(existing, cleanData, startedAt);
 
@@ -231,43 +222,50 @@ export class AchievementService {
   }
 
   /**
-   * Política de edición sobre el progreso de los usuarios (ambos pasos corren DESPUÉS de guardar la definición):
+   * Guarda la definición y aplica la política de edición sobre el progreso de los usuarios en una sola transacción
+   * (requiere replica set; Atlas lo es):
    * - un logro completado NUNCA se revoca
    * - si cambian el evento o las condiciones, el progreso en curso se reinicia (ya no mide lo mismo)
-   * - si solo cambia el targetCount, el progreso se conserva y se completa a quien ya alcanzó el nuevo objetivo
+   * - si solo cambia el targetCount, el progreso se conserva (la finalización va aparte, después del commit)
    * - editar título, descripción, recompensa, imagen o isActive no toca el progreso
-   * Si el reinicio falla, se revierte la definición guardada (solo si nadie la editó después) para que el admin pueda
-   * reintentar con la misma diferencia, y el error se propaga: la edición responde con error.
+   * Guardado optimista: solo gana quien edita sobre la versión que leyó (`updatedAt`). Los logros importados o migrados
+   * pueden no tener `updatedAt`: en ese caso la guarda exige que siga sin existir. Si la guarda no coincide no se
+   * escribe nada.
+   * @param {string} achievementId - ID del logro
    * @param {Object} existing - Logro antes del cambio
-   * @param {Object} cleanData - Cambios aplicados
-   * @param {Object} saved - Logro ya guardado
-   * @returns {Promise<void>}
+   * @param {Object} cleanData - Cambios validados
+   * @returns {Promise<{conflict: false, achievement: Object}|{conflict: true, stillExists: boolean}>}
    */
-  static async #resetProgressAfterSave(existing, cleanData, saved) {
-    if (!changesProgressMeaning(existing, cleanData)) return;
-
+  static async #saveAndResetProgress(achievementId, existing, cleanData) {
+    const versionGuard = existing.updatedAt ? { updatedAt: existing.updatedAt } : { updatedAt: { $exists: false } };
+    const session = await mongoose.startSession();
     try {
-      await UserAchievement.updateMany(
-        { achievement: existing._id, status: { $ne: 'completed' } },
-        { $set: { currentCount: 0, status: 'locked', window: null } }
-      );
-    } catch (error) {
-      const restoredFields = {};
-      const removedFields = {};
-      for (const key of Object.keys(cleanData)) {
-        if (existing[key] === undefined) removedFields[key] = '';
-        else restoredFields[key] = existing[key];
-      }
-      await Achievement.findOneAndUpdate(
-        { _id: existing._id, updatedAt: saved.updatedAt },
-        { $set: restoredFields, ...(Object.keys(removedFields).length > 0 && { $unset: removedFields }) }
-      ).catch(revertError =>
-        console.error(
-          '[achievements] No se pudo revertir la definición tras fallar el reinicio de progreso:',
-          revertError
-        )
-      );
-      throw error;
+      let outcome;
+      // withTransaction puede repetir el callback ante errores transitorios: el resultado se recalcula en cada intento
+      await session.withTransaction(async () => {
+        const achievement = await Achievement.findOneAndUpdate(
+          { _id: achievementId, ...versionGuard },
+          { $set: cleanData },
+          { new: true, runValidators: true, session }
+        );
+        if (!achievement) {
+          const stillExists = await Achievement.exists({ _id: achievementId }).session(session);
+          outcome = { conflict: true, stillExists: Boolean(stillExists) };
+          return;
+        }
+
+        if (changesProgressMeaning(existing, cleanData)) {
+          await UserAchievement.updateMany(
+            { achievement: existing._id, status: { $ne: 'completed' } },
+            { $set: { currentCount: 0, status: 'locked', window: null } },
+            { session }
+          );
+        }
+        outcome = { conflict: false, achievement };
+      });
+      return outcome;
+    } finally {
+      await session.endSession();
     }
   }
 
