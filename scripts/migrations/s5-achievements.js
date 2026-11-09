@@ -35,6 +35,9 @@ import { findLatestBackup, isBackupRestored, readBackup, runMigration } from './
  *
  * Cada paso es idempotente. Antes de modificar se exporta a scripts/migrations/backups/ (ignorado por git) y SIEMPRE se
  * escribe un archivo con `--apply`, aunque no haya filas (así `--restore` nunca toma el backup de una corrida anterior).
+ * Excepción: `seed` NO escribe backup cuando no hay nada que respaldar (ningún logro original ni fila de progreso por
+ * reiniciar, y la corrida anterior no está pendiente); lo avisa en el log. Así repetir `seed` tras `activate` no deja un
+ * backup vacío como el más reciente, que un `--restore` sin `--file` tomaría para no restaurar nada.
  * `--restore` de `reset` o `reset-in-progress` devuelve las filas de progreso. El backup de `seed` guarda los logros
  * ANTES de actualizarlos y las filas de progreso que reinicia, y `--restore` devuelve ambos (los logros vuelven con su
  * definición y su `isActive` previos).
@@ -263,20 +266,25 @@ await runMigration({
             : [];
         log(`Progreso en curso de esos logros: ${inProgressRows.length} filas`);
 
-        // Un solo backup, ANTES de tocar nada, y siempre con --apply (aunque no haya nada pendiente)
-        // Acumulativo mientras la corrida anterior siga pendiente: lo más antiguo gana, así `--restore` vuelve al origen
-        const backupPath = backup({
-          collection: 'achievements',
-          documents: mergeKeepingPrevious(lastSeedBackup?.originals ?? [], originals),
-          related: [
-            {
-              collection: 'userachievements',
-              documents: mergeKeepingPrevious(lastSeedBackup?.progressRows ?? [], inProgressRows, progressRowKey),
-            },
-          ],
-          meta: { pendingActivationIds: pendingIds },
-        });
-        if (backupPath) log(`Backup: ${backupPath}`);
+        // Un solo backup, ANTES de tocar nada. Acumulativo mientras la corrida anterior siga pendiente: lo más antiguo
+        // gana, así `--restore` vuelve al origen. Sin nada que respaldar no se escribe: un backup vacío sería el más
+        // reciente y un `--restore` sin `--file` lo tomaría para no restaurar nada
+        if (!lastSeedBackup && originals.length === 0 && inProgressRows.length === 0) {
+          log('Nada que respaldar: no se escribe backup');
+        } else {
+          const backupPath = backup({
+            collection: 'achievements',
+            documents: mergeKeepingPrevious(lastSeedBackup?.originals ?? [], originals),
+            related: [
+              {
+                collection: 'userachievements',
+                documents: mergeKeepingPrevious(lastSeedBackup?.progressRows ?? [], inProgressRows, progressRowKey),
+              },
+            ],
+            meta: { pendingActivationIds: pendingIds },
+          });
+          if (backupPath) log(`Backup: ${backupPath}`);
+        }
         if (!apply) return;
 
         for (const { stored, seed } of changed) {
