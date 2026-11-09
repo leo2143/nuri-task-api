@@ -46,6 +46,20 @@ function changesProgressMeaning(existing, cleanData) {
   return triggerChanged || conditionsChanged;
 }
 
+// La transacción de la edición debe caber en el PUT (`maxDuration = 60` s): no se abren intentos nuevos pasados 40 s
+// desde que empezó el PUT, y el commit tiene como máximo 10 s
+const TRANSACTION_ATTEMPT_DEADLINE_MS = 40_000;
+const TRANSACTION_COMMIT_MAX_TIME_MS = 10_000;
+
+/**
+ * Indica si el error de Mongo es "este servidor no admite transacciones" (mongod suelto, sin replica set).
+ * @param {Error} error
+ * @returns {boolean}
+ */
+function isTransactionsUnsupportedError(error) {
+  return error?.codeName === 'IllegalOperation' && /replica set|mongos|transaction numbers/i.test(error.message ?? '');
+}
+
 /**
  * Servicio para gestionar plantillas globales de logros (solo administradores)
  */
@@ -201,9 +215,9 @@ export class AchievementService {
         return new BadRequestResponseModel(buildDisallowedConditionsMessage(resultingTrigger, disallowedKeys));
       }
 
-      // Guardado y reinicio de progreso van en UNA transacción: o quedan ambos o ninguno (sin definición nueva con
-      // progreso viejo, sin reinicios a medias). Los eventos de usuario que chocan con la transacción se reintentan solos.
-      const outcome = await this.#saveAndResetProgress(achievementId, existing, cleanData);
+      // Si la edición cambia el significado del progreso, guardado y reinicio van en UNA transacción (o quedan ambos o
+      // ninguno); si no, es un único guardado con guarda optimista. Ver #saveAndResetProgress para la carrera aceptada.
+      const outcome = await this.#saveAndResetProgress(achievementId, existing, cleanData, startedAt);
       if (outcome.conflict) {
         return outcome.stillExists
           ? new ConflictResponseModel('El logro fue modificado por otra edición. Recargalo y volvé a intentar.')
@@ -222,51 +236,94 @@ export class AchievementService {
   }
 
   /**
-   * Guarda la definición y aplica la política de edición sobre el progreso de los usuarios en una sola transacción
-   * (requiere replica set; Atlas lo es):
+   * Guarda la definición y aplica la política de edición sobre el progreso de los usuarios:
    * - un logro completado NUNCA se revoca
    * - si cambian el evento o las condiciones, el progreso en curso se reinicia (ya no mide lo mismo)
-   * - si solo cambia el targetCount, el progreso se conserva (la finalización va aparte, después del commit)
+   * - si solo cambia el targetCount, el progreso se conserva (la finalización va aparte, después del guardado)
    * - editar título, descripción, recompensa, imagen o isActive no toca el progreso
+   * Solo cuando cambia el significado del progreso se abre una transacción (requiere replica set; Atlas lo es): el
+   * guardado de la definición y el reinicio de las filas sin completar quedan ambos o ninguno. Cualquier otra edición es
+   * un único guardado con la misma guarda, sin transacción.
+   * Lo que la transacción NO garantiza: `processEvent` lee la definición y evalúa las condiciones ANTES de ella y escribe
+   * el progreso fuera de toda sesión, así que un evento evaluado con la definición vieja puede sumar progreso a una fila
+   * justo después del reinicio (carrera aceptada: ese avance se cuenta con las reglas viejas). Los conflictos de escritura
+   * solo ordenan las escrituras; no hacen que el evento se reevalúe.
+   * Cota de tiempo: el PUT tiene `maxDuration = 60` s. `withTransaction` reintenta errores transitorios hasta 120 s, así que
+   * el callback no abre intentos pasados 40 s desde `startedAt` (lanza un error que no es de Mongo y corta los reintentos)
+   * y el commit tiene `maxCommitTimeMS` de 10 s. Esta fase no comparte presupuesto con `completeReachedTarget`: ese solo
+   * corre cuando NO hubo reinicio, es decir, cuando no hubo transacción.
+   * Si el servidor no admite transacciones se registra un error y se relanza (no hay alternativa sin transacción).
    * Guardado optimista: solo gana quien edita sobre la versión que leyó (`updatedAt`). Los logros importados o migrados
    * pueden no tener `updatedAt`: en ese caso la guarda exige que siga sin existir. Si la guarda no coincide no se
    * escribe nada.
    * @param {string} achievementId - ID del logro
    * @param {Object} existing - Logro antes del cambio
    * @param {Object} cleanData - Cambios validados
+   * @param {number} startedAt - Instante (ms) en que empezó el PUT, para acotar la transacción
    * @returns {Promise<{conflict: false, achievement: Object}|{conflict: true, stillExists: boolean}>}
    */
-  static async #saveAndResetProgress(achievementId, existing, cleanData) {
-    const versionGuard = existing.updatedAt ? { updatedAt: existing.updatedAt } : { updatedAt: { $exists: false } };
+  static async #saveAndResetProgress(achievementId, existing, cleanData, startedAt) {
+    if (!changesProgressMeaning(existing, cleanData)) {
+      return this.#saveGuardedDefinition(achievementId, existing, cleanData);
+    }
+
     const session = await mongoose.startSession();
     try {
       let outcome;
       // withTransaction puede repetir el callback ante errores transitorios: el resultado se recalcula en cada intento
-      await session.withTransaction(async () => {
-        const achievement = await Achievement.findOneAndUpdate(
-          { _id: achievementId, ...versionGuard },
-          { $set: cleanData },
-          { new: true, runValidators: true, session }
-        );
-        if (!achievement) {
-          const stillExists = await Achievement.exists({ _id: achievementId }).session(session);
-          outcome = { conflict: true, stillExists: Boolean(stillExists) };
-          return;
-        }
+      await session.withTransaction(
+        async () => {
+          if (Date.now() - startedAt > TRANSACTION_ATTEMPT_DEADLINE_MS) {
+            throw new Error('La edición del logro superó el tiempo disponible. Volvé a intentar.');
+          }
 
-        if (changesProgressMeaning(existing, cleanData)) {
+          outcome = await this.#saveGuardedDefinition(achievementId, existing, cleanData, session);
+          if (outcome.conflict) return;
+
           await UserAchievement.updateMany(
             { achievement: existing._id, status: { $ne: 'completed' } },
             { $set: { currentCount: 0, status: 'locked', window: null } },
             { session }
           );
-        }
-        outcome = { conflict: false, achievement };
-      });
+        },
+        { maxCommitTimeMS: TRANSACTION_COMMIT_MAX_TIME_MS }
+      );
       return outcome;
+    } catch (error) {
+      if (isTransactionsUnsupportedError(error)) {
+        console.error(
+          'La edición de logros que cambia el evento o las condiciones requiere una base con replica set (transacciones): el servidor actual no las admite.',
+          error
+        );
+      }
+      throw error;
     } finally {
       await session.endSession();
     }
+  }
+
+  /**
+   * Guarda la definición con la guarda optimista sobre `updatedAt` (con o sin sesión de transacción). Si la guarda no
+   * coincide no escribe nada y distingue "modificado por otra edición" de "ya no existe".
+   * @param {string} achievementId - ID del logro
+   * @param {Object} existing - Logro antes del cambio
+   * @param {Object} cleanData - Cambios validados
+   * @param {import('mongoose').ClientSession} [session] - Sesión de la transacción, si hay una
+   * @returns {Promise<{conflict: false, achievement: Object}|{conflict: true, stillExists: boolean}>}
+   */
+  static async #saveGuardedDefinition(achievementId, existing, cleanData, session) {
+    const versionGuard = existing.updatedAt ? { updatedAt: existing.updatedAt } : { updatedAt: { $exists: false } };
+    const sessionOptions = session ? { session } : {};
+
+    const achievement = await Achievement.findOneAndUpdate(
+      { _id: achievementId, ...versionGuard },
+      { $set: cleanData },
+      { new: true, runValidators: true, ...sessionOptions }
+    );
+    if (achievement) return { conflict: false, achievement };
+
+    const stillExists = await Achievement.exists({ _id: achievementId }).session(session ?? null);
+    return { conflict: true, stillExists: Boolean(stillExists) };
   }
 
   /**
