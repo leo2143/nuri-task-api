@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import JobRun, { JOB_RUN_RETENTION_MS } from '../../../models/jobRunModel.js';
 import User from '../../../models/userModel.js';
 import { ScheduledNotificationService } from '../../../services/scheduledNotificationService.js';
-import { getLocalDayRange } from '../../../services/helpers/dateTime.js';
 import { buildGroupUserFilter } from './timezoneGroups.js';
 
 /** Una corrida `claimed` más vieja que esto se considera abandonada (la función murió) y otra invocación la retoma. */
@@ -36,8 +35,8 @@ export const GLOBAL_TIMEZONE_KEY = 'global';
  * puede pasar es un push repetido (los push son at-least-once).
  *
  * Los jobs NO se reintentan solos: si una unidad falla queda `failed` y solo otra invocación (un duplicado del
- * mismo tick o una corrida manual) la retoma. Después de cada lote se empujan los push pendientes del tipo del
- * job, aunque el job haya terminado sin crear nada o haya fallado: así no quedan push varados.
+ * mismo tick o una corrida manual) la retoma. Después de cada lote se empujan los push pendientes y vigentes del
+ * tipo del job (incluidos los que quedaron pendientes en días anteriores), aunque el job haya terminado sin crear nada o haya fallado: así no quedan push varados.
  * @param {WorkUnit} unit
  * @param {Object} [options]
  * @param {boolean} [options.useLedger=true]
@@ -148,7 +147,7 @@ async function runBatch(job, context) {
     await ScheduledNotificationService.pushPendingNotifications({
       type: job.notificationType,
       userIds: context.userIds,
-      dayRange: getLocalDayRange(context.localDate, context.timezone),
+      now: context.now,
     });
   } catch (error) {
     if (failure) {

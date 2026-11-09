@@ -6,7 +6,7 @@ import PushSubscription from '../models/pushSubscriptionModel.js';
 import User from '../models/userModel.js';
 import Moodboard from '../models/moodboardModel.js';
 import { PushNotificationService } from './pushNotificationService.js';
-import { NotificationService } from './notificationService.js';
+import { NotificationService, RETENTION_DAYS } from './notificationService.js';
 import {
   DEFAULT_TIMEZONE,
   addDaysToYmd,
@@ -68,7 +68,7 @@ export class ScheduledNotificationService {
   /**
    * Persiste las notificaciones in-app (con el push marcado como pendiente) y empuja las pendientes
    * de esos usuarios. Si la función muere a mitad del envío, lo que quedó pendiente se empuja en la
-   * próxima corrida del mismo tipo (`pushPendingNotifications`).
+   * próxima corrida del mismo tipo (`pushPendingNotifications`), mientras la notificación siga vigente.
    * @param {Array<{userId: string, payload: Object}>} entries
    * @param {string} label - Etiqueta para el log
    * @param {string} type - Tipo de notificación
@@ -98,7 +98,7 @@ export class ScheduledNotificationService {
     const { sent } = await this.pushPendingNotifications({
       type,
       userIds: pendingEntries.map(entry => entry.userId),
-      dayRange: this._getDayRange(0, this.resolveContext(context)),
+      now: this.resolveContext(context).now,
     });
 
     console.log(chalk.green(`[Cron] ${label}: ${pendingEntries.length} persistidas, ${sent} push enviados`));
@@ -106,7 +106,10 @@ export class ScheduledNotificationService {
   }
 
   /**
-   * Empuja las notificaciones de un tipo cuyo push quedó pendiente (`pushSentAt: null`) en la ventana dada.
+   * Empuja las notificaciones de un tipo cuyo push quedó pendiente (`pushSentAt: null`) y que siguen vigentes,
+   * es decir, creadas en los últimos RETENTION_DAYS días (después `expire-notifications` las borra). Como los jobs
+   * corren una vez por día local, un push que falló o quedó sin enviar un día se recupera en el siguiente disparo
+   * del mismo tipo para ese usuario.
    * Se rearma el payload desde el documento guardado (el ícono sale de PUSH_ICONS, el modelo no lo guarda).
    *
    * Un documento se marca como enviado (`pushSentAt` = ahora) si se entregó a alguna suscripción, si el usuario
@@ -116,14 +119,15 @@ export class ScheduledNotificationService {
    * @param {Object} params
    * @param {string} params.type - Tipo de notificación
    * @param {Array|null} [params.userIds] - Lote de usuarios (null = todos)
-   * @param {{start: Date, end: Date}} params.dayRange - Ventana [start, end) de `createdAt`
+   * @param {Date} [params.now] - Instante de referencia de la ventana de vigencia
    * @returns {Promise<{pending: number, sent: number}>}
    */
-  static async pushPendingNotifications({ type, userIds = null, dayRange }) {
+  static async pushPendingNotifications({ type, userIds = null, now = new Date() }) {
+    const validSince = new Date(now.getTime() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
     const pending = await Notification.find({
       type,
       ...(userIds ? { userId: { $in: userIds } } : {}),
-      createdAt: { $gte: dayRange.start, $lt: dayRange.end },
+      createdAt: { $gte: validSince },
       // $type 'null' (no `pushSentAt: null`, que también matchea documentos sin el campo) y pega en el índice parcial
       pushSentAt: { $type: 'null' },
     }).lean();
