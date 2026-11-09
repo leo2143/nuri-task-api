@@ -121,7 +121,8 @@ export function planWorkUnits(groups, dispatchInstant, now) {
  * Unidades de reintento: las del ledger que quedaron `failed` (p. ej. cortadas por el deadline) o `claimed` con el
  * lease vencido (la función murió) en el día local vigente de su zona. Vercel no reintenta crons, así que cada tick
  * revisa el día en curso de todas las zonas con UNA consulta indexada (`localDate` + `status`). Reclamarlas es
- * atómico y retoman desde el cursor guardado; una unidad que ya agotó MAX_UNIT_ATTEMPTS intentos no se vuelve a planear; la clave única del ledger y la dedup por usuario evitan duplicados.
+ * atómico y retoman desde el cursor guardado; una unidad que ya agotó MAX_UNIT_ATTEMPTS intentos no se vuelve a
+ * planear; la clave única del ledger y la dedup por usuario evitan duplicados.
  * @param {Map<string, import('./support/timezoneGroups.js').TimezoneGroup>} groups
  * @param {Date} dispatchInstant
  * @param {Date} now
@@ -209,7 +210,8 @@ async function markExhaustedRuns(filter) {
  * los ticks siguientes del mismo día local la retoman (ver `planRetryUnits`): primero corren las unidades nuevas de
  * la hora y después los reintentos, mientras alcance el margen de MAX_DISPATCH_MS. Una unidad se reintenta hasta
  * MAX_UNIT_ATTEMPTS veces (el primer intento cuenta); agotadas se registra y no se vuelve a planear. Pasado el día
- * local una unidad incompleta se pierde. Si algo falló o quedó sin correr, responde 500 (solo se ve en los logs de cron de Vercel).
+ * local una unidad incompleta se pierde. Si algo falló o quedó sin correr, responde 500 (solo se ve en los logs de
+ * cron de Vercel).
  * Los push pendientes los recupera el runner de cada unidad.
  */
 export class CronDispatcher {

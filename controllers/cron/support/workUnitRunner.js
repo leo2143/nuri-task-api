@@ -37,8 +37,9 @@ export const GLOBAL_TIMEZONE_KEY = 'global';
  * Una unidad que falla (o se corta por el `deadline`, incluso a mitad del envío de push de un lote) queda
  * `failed` y el dispatcher la vuelve a planear en los ticks siguientes del mismo día local, hasta MAX_UNIT_ATTEMPTS
  * intentos. Al terminar cada lote se guarda en el ledger el cursor (último usuario
- * procesado), así la retomada continúa desde ahí y no desde el primer lote. Después de cada lote se empujan los push pendientes y sin leer del
- * tipo del job creados en las últimas 48 h, aunque el job haya terminado sin crear nada o haya fallado: así no quedan push varados.
+ * procesado), así la retomada continúa desde ahí y no desde el primer lote. Después de cada lote se empujan los
+ * push pendientes y sin leer del tipo del job creados en las últimas 48 h, aunque el job haya terminado sin crear
+ * nada o haya fallado: así no quedan push varados.
  * @param {WorkUnit} unit
  * @param {Object} [options]
  * @param {boolean} [options.useLedger=true]
@@ -99,7 +100,8 @@ export async function runWorkUnit(unit, { useLedger = true, deadline = Infinity 
 
 /**
  * Reclama la unidad. Primero intenta insertarla; si ya existe (clave única) intenta retomarla en UNA operación
- * atómica solo cuando quedó `failed` o su lease venció y todavía no agotó MAX_UNIT_ATTEMPTS. El dueño es quien recibe el documento de vuelta;
+ * atómica solo cuando quedó `failed` o su lease venció y todavía no agotó MAX_UNIT_ATTEMPTS. El dueño es quien
+ * recibe el documento de vuelta;
  * `done` o un reclamo reciente de otra invocación significan que hay que saltearla.
  * @param {WorkUnit} unit
  * @returns {Promise<{claimedAt: Date, cursor: import('mongoose').Types.ObjectId|null, attempts: number}|null>} el
@@ -171,8 +173,8 @@ async function finishUnit({ jobName, timezone, localDate }, claimedAt, status, d
  * Corre el job de la unidad. Los jobs globales corren una vez; los de zona, en lotes de usuarios.
  * Si se agota el `deadline` entre lotes, o a mitad del envío de push de un lote, corta con un error: la unidad
  * queda `failed` (trabajo incompleto) y el dispatcher la retoma en un tick posterior desde el cursor (un lote cuyo
- * envío quedó cortado no avanza el cursor, así la retomada lo rehace); lo ya notificado no se repite por la dedup de usuario,
- * tipo y día local.
+ * envío quedó cortado no avanza el cursor, así la retomada lo rehace); lo ya notificado no se repite por la dedup
+ * de usuario, tipo y día local.
  * @param {WorkUnit} unit
  * @param {number} deadline - Timestamp (ms) límite para empezar un lote nuevo
  * @param {Object} progress
