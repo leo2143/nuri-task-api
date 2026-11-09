@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { buildDisallowedConditionsMessage, getDisallowedConditionKeys } from '../../achievementCatalog.js';
 
+// Un año: más allá deja de ser un límite útil y un valor enorme llegaría al evaluador como Infinity
+const MAX_DURATION_HOURS_CAP = 8760;
+
 const hourMinuteField = z
   .string({ required_error: 'La hora es requerida', invalid_type_error: 'La hora debe tener formato HH:mm' })
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'La hora debe tener formato HH:mm');
@@ -23,7 +26,9 @@ export const achievementConditionsSchema = z
     sameWindow: z.boolean({ invalid_type_error: 'sameWindow debe ser true o false' }).optional(),
     maxDurationHours: z
       .number({ invalid_type_error: 'maxDurationHours debe ser un número' })
+      .finite('maxDurationHours debe ser un número finito')
       .positive('maxDurationHours debe ser mayor a 0')
+      .max(MAX_DURATION_HOURS_CAP, `maxDurationHours no puede superar ${MAX_DURATION_HOURS_CAP} horas`)
       .optional(),
   })
   .strict();
