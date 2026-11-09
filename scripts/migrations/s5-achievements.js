@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import mongoose from 'mongoose';
-import { findLatestBackup, readBackup, runMigration } from './support/cli.js';
+import { findLatestBackup, isBackupRestored, readBackup, runMigration } from './support/cli.js';
 
 /**
  * S5: pasa los cuatro logros con condiciones a su nueva semántica y reinicia, en silencio, el progreso que se
@@ -43,7 +43,12 @@ import { findLatestBackup, readBackup, runMigration } from './support/cli.js';
  * deploy: `activate` activa SOLO esos (un logro que un admin desactivó por su cuenta no se toca). Si `seed` se repite
  * (tras una falla a medias o por una corrida idempotente), esos ids se arrastran del backup anterior y el backup nuevo
  * es ACUMULATIVO: junta por _id los originales y las filas de progreso del anterior (gana el más antiguo) con los de
- * esta corrida, así `--restore` siempre vuelve al estado previo al primer `seed`.
+ * esta corrida, así `--restore` vuelve al estado previo al primer `seed` de la tanda.
+ * Solo se acumula mientras la corrida anterior sigue PENDIENTE: tiene logros pendientes de activar, siguen inactivos y
+ * el backup no se restauró. Tras `activate` o tras un `--restore` del seed, el próximo `seed` arranca un backup
+ * nuevo solo con lo de su corrida (si no, un `--restore` posterior pisaría el progreso ganado desde entonces). Las
+ * filas de progreso se deduplican por (usuario, logro) quedándose con la más antigua, para que restaurar no choque con
+ * el índice único.
  */
 const SEED_FILE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -151,19 +156,44 @@ function readLastSeedBackup() {
 
   const { documents, related = [], meta } = readBackup(filePath);
   const progressRows = related.find(set => set.collection === 'userachievements')?.documents ?? [];
-  return { filePath, originals: documents, progressRows, pendingActivationIds: meta?.pendingActivationIds ?? [] };
+  return {
+    filePath,
+    originals: documents,
+    progressRows,
+    pendingActivationIds: meta?.pendingActivationIds ?? [],
+    restored: isBackupRestored(filePath),
+  };
 }
 
 /**
- * Une documentos por _id; ante un _id repetido gana el de `previousDocuments` (el estado más antiguo). Así el backup
- * de `seed` es acumulativo: repetir el paso no pierde las definiciones originales ni el progreso que reinició el primero.
+ * El backup del último `seed` solo sirve de base para acumular mientras esa corrida siga pendiente: no se restauró y
+ * alguno de sus logros pendientes sigue inactivo (si ya se activaron, o se restauró, el estado previo dejó de ser vigente).
  */
-function mergeKeepingPrevious(previousDocuments, currentDocuments) {
-  const mergedById = new Map(previousDocuments.map(document => [String(document._id), document]));
-  for (const document of currentDocuments) {
-    if (!mergedById.has(String(document._id))) mergedById.set(String(document._id), document);
+async function isSeedBackupPending(lastSeedBackup) {
+  if (!lastSeedBackup || lastSeedBackup.restored || lastSeedBackup.pendingActivationIds.length === 0) return false;
+
+  const stillInactive = await mongoose.connection
+    .collection('achievements')
+    .countDocuments({ _id: { $in: lastSeedBackup.pendingActivationIds }, isActive: false });
+  return stillInactive > 0;
+}
+
+/**
+ * Une documentos por clave; ante una clave repetida gana el de `previousDocuments` (el estado más antiguo). Así el
+ * backup de `seed` acumula mientras la tanda siga pendiente: repetir el paso no pierde las definiciones originales ni el
+ * progreso que reinició el primero. Sin `previousDocuments` solo deduplica los actuales.
+ */
+function mergeKeepingPrevious(previousDocuments, currentDocuments, keyOf = document => String(document._id)) {
+  const mergedByKey = new Map();
+  for (const document of [...previousDocuments, ...currentDocuments]) {
+    if (!mergedByKey.has(keyOf(document))) mergedByKey.set(keyOf(document), document);
   }
-  return [...mergedById.values()];
+  return [...mergedByKey.values()];
+}
+
+/** Una fila de progreso es única por (usuario, logro): es el índice único que una restauración no debe violar. */
+function progressRowKey(row) {
+  return `${row.user}:${row.achievement}`;
 }
 
 await runMigration({
@@ -174,7 +204,11 @@ await runMigration({
         const achievements = mongoose.connection.collection('achievements');
         const startedAt = new Date();
         const storedByTitle = await findSeedAchievementsByTitle();
-        const lastSeedBackup = readLastSeedBackup();
+        // Solo se arrastra el backup anterior mientras esa corrida siga pendiente (ver cabecera)
+        const latestSeedBackup = readLastSeedBackup();
+        const lastSeedBackup = (await isSeedBackupPending(latestSeedBackup)) ? latestSeedBackup : null;
+        if (latestSeedBackup && !lastSeedBackup)
+          log('El backup de seed anterior ya no está pendiente: se escribe uno nuevo');
         const previousPendingIds = new Set((lastSeedBackup?.pendingActivationIds ?? []).map(String));
 
         // Pendientes: los que todavía no tienen la definición nueva y los que una corrida anterior ya actualizó pero
@@ -230,14 +264,14 @@ await runMigration({
         log(`Progreso en curso de esos logros: ${inProgressRows.length} filas`);
 
         // Un solo backup, ANTES de tocar nada, y siempre con --apply (aunque no haya nada pendiente)
-        // Acumulativo: lo del backup anterior (estado más antiguo) gana, así `--restore` vuelve al origen aunque el paso se repita
+        // Acumulativo mientras la corrida anterior siga pendiente: lo más antiguo gana, así `--restore` vuelve al origen
         const backupPath = backup({
           collection: 'achievements',
           documents: mergeKeepingPrevious(lastSeedBackup?.originals ?? [], originals),
           related: [
             {
               collection: 'userachievements',
-              documents: mergeKeepingPrevious(lastSeedBackup?.progressRows ?? [], inProgressRows),
+              documents: mergeKeepingPrevious(lastSeedBackup?.progressRows ?? [], inProgressRows, progressRowKey),
             },
           ],
           meta: { pendingActivationIds: pendingIds },

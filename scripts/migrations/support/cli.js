@@ -125,7 +125,22 @@ export async function restoreBackup({ filePath, apply, log }) {
       { ordered: false }
     );
   }
+  if (apply) fs.writeFileSync(restoredMarkerPath(filePath), new Date().toISOString());
   return restoredCount;
+}
+
+// Marca al lado del backup: un backup ya restaurado no debe usarse como base de otro posterior
+function restoredMarkerPath(filePath) {
+  return `${filePath}.restored`;
+}
+
+/**
+ * Indica si el backup ya se restauró con `--restore --apply`.
+ * @param {string} filePath
+ * @returns {boolean}
+ */
+export function isBackupRestored(filePath) {
+  return fs.existsSync(restoredMarkerPath(filePath));
 }
 
 /**
