@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import mongoose from 'mongoose';
-import { runMigration } from './support/cli.js';
+import { findLatestBackup, readBackup, runMigration } from './support/cli.js';
 
 /**
  * S5: pasa los cuatro logros con condiciones a su nueva semántica y reinicia, en silencio, el progreso que se
@@ -33,10 +33,15 @@ import { runMigration } from './support/cli.js';
  *   node scripts/migrations/s5-achievements.js --step=activate --apply
  *   node scripts/migrations/s5-achievements.js --step=reset --restore --apply     (restaura el último backup de ese paso)
  *
- * Cada paso es idempotente. Antes de reiniciar filas se exportan a scripts/migrations/backups/ (ignorado por git);
- * `--restore` de `seed`, `reset` o `reset-in-progress` devuelve esas filas. El backup de `seed` guarda solo filas de
- * progreso: las definiciones viejas de los logros viven en el historial de git del JSON, y revertir NO reactiva los
- * logros (siguen inactivos hasta correr `--step=activate` a propósito).
+ * Cada paso es idempotente. Antes de modificar se exporta a scripts/migrations/backups/ (ignorado por git) y SIEMPRE se
+ * escribe un archivo con `--apply`, aunque no haya filas (así `--restore` nunca toma el backup de una corrida anterior).
+ * `--restore` de `reset` o `reset-in-progress` devuelve las filas de progreso. El backup de `seed` guarda los logros
+ * ANTES de actualizarlos y las filas de progreso que reinicia, y `--restore` devuelve ambos (los logros vuelven con su
+ * definición y su `isActive` previos).
+ *
+ * `seed` también guarda en su backup, como `meta.pendingActivationIds`, los logros que dejó inactivos esperando el
+ * deploy: `activate` activa SOLO esos (un logro que un admin desactivó por su cuenta no se toca). Si `seed` se repite
+ * tras una falla a medias, esos ids se arrastran del backup anterior y los originales también.
  */
 const SEED_FILE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -47,6 +52,7 @@ const SEED_FILE = path.resolve(
   'achievements-data.json'
 );
 
+const MIGRATION_NAME = 's5-achievements';
 const SEED_TITLES = ['Canto de Gallo', 'Drácula', 'Meta Flash', 'Re-Ordenar'];
 const META_FLASH_TITLE = 'Meta Flash';
 const MS_PER_HOUR = 60 * 60 * 1000;
@@ -116,12 +122,8 @@ async function findUsersWithQualifyingGoal(userIds, maxDurationHours) {
   return new Set(qualifyingUserIds.map(String));
 }
 
-async function resetProgressRows({ rows, apply, log, backup }) {
-  log(`Filas a reiniciar: ${rows.length}`);
-  if (!apply || rows.length === 0) return;
-
-  const backupPath = backup({ collection: 'userachievements', documents: rows });
-  log(`Backup: ${backupPath}`);
+async function resetRowsById({ rows, log }) {
+  if (rows.length === 0) return;
 
   const result = await mongoose.connection
     .collection('userachievements')
@@ -129,42 +131,89 @@ async function resetProgressRows({ rows, apply, log, backup }) {
   log(`Reiniciadas: ${result.modifiedCount}`);
 }
 
+async function resetProgressRows({ rows, apply, log, backup }) {
+  log(`Filas a reiniciar: ${rows.length}`);
+
+  // Con --apply el backup se escribe siempre, aunque no haya filas: `--restore` toma el más reciente
+  const backupPath = backup({ collection: 'userachievements', documents: rows });
+  if (backupPath) log(`Backup: ${backupPath}`);
+  if (!apply) return;
+
+  await resetRowsById({ rows, log });
+}
+
+/** Lo que dejó el último `seed --apply`: los ids de los logros pendientes de activar y sus documentos originales. */
+function readLastSeedBackup() {
+  const filePath = findLatestBackup(MIGRATION_NAME, 'seed');
+  if (!filePath) return null;
+
+  const { documents, meta } = readBackup(filePath);
+  return { filePath, originals: documents, pendingActivationIds: meta?.pendingActivationIds ?? [] };
+}
+
 await runMigration({
-  name: 's5-achievements',
+  name: MIGRATION_NAME,
   handlers: {
     steps: {
       async seed({ apply, log, backup }) {
         const achievements = mongoose.connection.collection('achievements');
+        const startedAt = new Date();
         const storedByTitle = await findSeedAchievementsByTitle();
+        const lastSeedBackup = readLastSeedBackup();
+        const previousPendingIds = new Set((lastSeedBackup?.pendingActivationIds ?? []).map(String));
 
+        // Pendientes: los que todavía no tienen la definición nueva y los que una corrida anterior ya actualizó pero
+        // siguen inactivos esperando el deploy (si no, repetir el paso tras una falla los dejaría fuera)
         const changed = [];
+        const carried = [];
         for (const seed of loadSeedsByTitle()) {
           const stored = storedByTitle.get(seed.title);
           if (!stored) {
             log(`"${seed.title}" no existe en la base: se omite`);
-          } else if (hasSeedDefinition(stored, seed)) {
-            log(`"${seed.title}" ya tiene la definición nueva`);
-          } else {
+          } else if (!hasSeedDefinition(stored, seed)) {
             changed.push({ stored, seed });
+          } else if (previousPendingIds.has(String(stored._id)) && stored.isActive === false) {
+            carried.push({ stored, seed });
+            log(`"${seed.title}" ya tiene la definición nueva y sigue pendiente de activar`);
+          } else {
+            log(`"${seed.title}" ya tiene la definición nueva`);
           }
         }
         log(`Logros a actualizar (quedan inactivos): ${changed.map(({ seed }) => seed.title).join(', ') || 'ninguno'}`);
 
-        const changedIds = changed.map(({ stored }) => stored._id);
-        const inProgressFilter = {
-          achievement: { $in: changedIds },
-          status: { $ne: 'completed' },
-          ...HAS_PROGRESS_FILTER,
-        };
+        // Documentos originales: los de la base para los que se actualizan ahora, los del backup anterior para los arrastrados
+        const previousOriginalsById = new Map((lastSeedBackup?.originals ?? []).map(doc => [String(doc._id), doc]));
+        const originals = [
+          ...changed.map(({ stored }) => stored),
+          ...carried.map(({ stored }) => previousOriginalsById.get(String(stored._id)) ?? stored),
+        ];
+        const pendingIds = [...changed, ...carried].map(({ stored }) => stored._id);
+
+        // El reinicio no depende de `changed`: cubre todo el progreso en curso anterior a este paso de los pendientes
         const inProgressRows =
-          changedIds.length > 0
-            ? await mongoose.connection.collection('userachievements').find(inProgressFilter).toArray()
+          pendingIds.length > 0
+            ? await mongoose.connection
+                .collection('userachievements')
+                .find({
+                  achievement: { $in: pendingIds },
+                  status: { $ne: 'completed' },
+                  updatedAt: { $lt: startedAt },
+                  ...HAS_PROGRESS_FILTER,
+                })
+                .toArray()
             : [];
         log(`Progreso en curso de esos logros: ${inProgressRows.length} filas`);
 
-        if (!apply || changed.length === 0) return;
+        // Un solo backup, ANTES de tocar nada, y siempre con --apply (aunque no haya nada pendiente)
+        const backupPath = backup({
+          collection: 'achievements',
+          documents: originals,
+          related: [{ collection: 'userachievements', documents: inProgressRows }],
+          meta: { pendingActivationIds: pendingIds },
+        });
+        if (backupPath) log(`Backup: ${backupPath}`);
+        if (!apply) return;
 
-        // Primero las definiciones (inactivas): desde ahí nadie suma progreso nuevo y el backup de abajo es el definitivo
         for (const { stored, seed } of changed) {
           await achievements.updateOne(
             { _id: stored._id },
@@ -181,8 +230,8 @@ await runMigration({
           log(`"${seed.title}" actualizado e inactivo`);
         }
 
-        const rowsToReset = await mongoose.connection.collection('userachievements').find(inProgressFilter).toArray();
-        await resetProgressRows({ rows: rowsToReset, apply, log, backup });
+        // Las filas escritas por la API vieja entre la lectura y la desactivación las cubre `reset-in-progress`
+        await resetRowsById({ rows: inProgressRows, log });
       },
 
       async reset({ apply, log, backup, options }) {
@@ -240,7 +289,13 @@ await runMigration({
       },
 
       async activate({ apply, log }) {
-        const filter = { title: { $in: SEED_TITLES }, isActive: false };
+        const lastSeedBackup = readLastSeedBackup();
+        if (!lastSeedBackup) {
+          throw new Error('No hay backup de seed: corré --step=seed --apply antes de activar');
+        }
+
+        // Solo los logros que el seed dejó inactivos; uno que un admin desactivó por su cuenta no se reactiva
+        const filter = { _id: { $in: lastSeedBackup.pendingActivationIds }, isActive: false };
         const inactive = await mongoose.connection.collection('achievements').find(filter).toArray();
         log(`Logros inactivos a activar: ${inactive.map(achievement => achievement.title).join(', ') || 'ninguno'}`);
 

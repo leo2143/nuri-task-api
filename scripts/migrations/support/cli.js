@@ -53,10 +53,13 @@ export function parseMigrationArgs(argv = process.argv.slice(2)) {
  * @param {string|null} [params.step] - Paso dentro de la migración
  * @param {string} params.collection - Nombre de la colección de origen
  * @param {Object[]} params.documents - Documentos completos a resguardar
+ * @param {Array<{collection: string, documents: Object[]}>} [params.related] - Documentos de OTRAS colecciones que el
+ *   mismo paso modifica: van en el mismo archivo y `restoreBackup` los restaura juntos
+ * @param {Object|null} [params.meta] - Datos que el paso necesita leer después (`readBackup`); no se restauran
  * @param {boolean} params.apply - Si es false no se escribe
  * @returns {string|null} Ruta del archivo escrito
  */
-export function exportBackup({ migration, step = null, collection, documents, apply }) {
+export function exportBackup({ migration, step = null, collection, documents, related = [], meta = null, apply }) {
   if (!apply) return null;
 
   fs.mkdirSync(BACKUPS_DIR, { recursive: true });
@@ -64,7 +67,7 @@ export function exportBackup({ migration, step = null, collection, documents, ap
   const fileName = [migration, step, stamp].filter(Boolean).join('-') + '.json';
   const filePath = path.join(BACKUPS_DIR, fileName);
 
-  const payload = { migration, step, collection, exportedAt: new Date(), documents };
+  const payload = { migration, step, collection, exportedAt: new Date(), documents, related, meta };
   fs.writeFileSync(filePath, EJSON.stringify(payload, null, 2, { relaxed: false }));
   return filePath;
 }
@@ -90,7 +93,16 @@ export function findLatestBackup(migration, step = null) {
 }
 
 /**
- * Restaura los documentos de un backup con replaceOne por _id (upsert). Idempotente.
+ * Lee el contenido de un backup generado por exportBackup.
+ * @param {string} filePath
+ * @returns {{migration: string, step: string|null, collection: string, documents: Object[], related: Array<{collection: string, documents: Object[]}>, meta: Object|null}}
+ */
+export function readBackup(filePath) {
+  return EJSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+/**
+ * Restaura los documentos de un backup (colección principal y relacionadas) con replaceOne por _id (upsert). Idempotente.
  * @param {Object} params
  * @param {string} params.filePath - Backup generado por exportBackup
  * @param {boolean} params.apply - Si es false solo informa
@@ -98,19 +110,22 @@ export function findLatestBackup(migration, step = null) {
  * @returns {Promise<number>} Cantidad de documentos restaurados (o que se restaurarían)
  */
 export async function restoreBackup({ filePath, apply, log }) {
-  const payload = EJSON.parse(fs.readFileSync(filePath, 'utf8'));
-  const { collection, documents } = payload;
+  const { collection, documents, related = [] } = readBackup(filePath);
 
-  log(`Backup ${path.basename(filePath)}: ${documents.length} documentos de "${collection}"`);
-  if (!apply || documents.length === 0) return documents.length;
+  let restoredCount = 0;
+  for (const set of [{ collection, documents }, ...related]) {
+    log(`Backup ${path.basename(filePath)}: ${set.documents.length} documentos de "${set.collection}"`);
+    restoredCount += set.documents.length;
+    if (!apply || set.documents.length === 0) continue;
 
-  await mongoose.connection.collection(collection).bulkWrite(
-    documents.map(document => ({
-      replaceOne: { filter: { _id: document._id }, replacement: document, upsert: true },
-    })),
-    { ordered: false }
-  );
-  return documents.length;
+    await mongoose.connection.collection(set.collection).bulkWrite(
+      set.documents.map(document => ({
+        replaceOne: { filter: { _id: document._id }, replacement: document, upsert: true },
+      })),
+      { ordered: false }
+    );
+  }
+  return restoredCount;
 }
 
 /**
@@ -130,7 +145,7 @@ export async function restoreBackup({ filePath, apply, log }) {
  * @property {string|null} step
  * @property {Object<string, string>} options
  * @property {(message: string) => void} log
- * @property {(params: {collection: string, documents: Object[]}) => string|null} backup - Exporta antes de modificar (no-op en dry-run)
+ * @property {(params: {collection: string, documents: Object[], related?: Array<{collection: string, documents: Object[]}>, meta?: Object|null}) => string|null} backup - Exporta antes de modificar (no-op en dry-run)
  */
 export async function runMigration({ name, handlers }) {
   const args = parseMigrationArgs();
@@ -146,8 +161,8 @@ export async function runMigration({ name, handlers }) {
   const context = {
     ...args,
     log,
-    backup: ({ collection, documents }) =>
-      exportBackup({ migration: name, step: args.step, collection, documents, apply: args.apply }),
+    backup: ({ collection, documents, related, meta }) =>
+      exportBackup({ migration: name, step: args.step, collection, documents, related, meta, apply: args.apply }),
   };
 
   try {
