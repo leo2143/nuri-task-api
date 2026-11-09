@@ -170,7 +170,10 @@ export class ScheduledNotificationService {
       if (toMark.length > 0) {
         await Notification.bulkWrite(
           toMark.map(({ doc }) => ({
-            updateOne: { filter: { _id: doc._id, pushSentAt: { $type: 'null' } }, update: { $set: { pushSentAt: sentAt } } },
+            updateOne: {
+              filter: { _id: doc._id, pushSentAt: { $type: 'null' } },
+              update: { $set: { pushSentAt: sentAt } },
+            },
           }))
         );
       }
