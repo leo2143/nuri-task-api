@@ -147,7 +147,7 @@ export class ScheduledNotificationService {
       if (Date.now() > deadline) break;
 
       const chunk = pending.slice(index, index + PUSH_SEND_CONCURRENCY);
-      const outcomes = await Promise.all(
+      const settled = await Promise.allSettled(
         chunk.map(async doc => {
           const subscriptions = subscriptionsByUser.get(doc.userId.toString()) ?? [];
           if (subscriptions.length === 0) return { doc, delivered: false, shouldMark: true };
@@ -165,19 +165,27 @@ export class ScheduledNotificationService {
         })
       );
 
+      // Un envío que rechaza queda pendiente; no pierde las marcas de los que sí se resolvieron
+      const outcomes = settled.filter(entry => entry.status === 'fulfilled').map(entry => entry.value);
       sent += outcomes.filter(outcome => outcome.delivered).length;
 
       const sentAt = new Date();
       const toMark = outcomes.filter(outcome => outcome.shouldMark);
       if (toMark.length > 0) {
-        await Notification.bulkWrite(
-          toMark.map(({ doc }) => ({
-            updateOne: {
-              filter: { _id: doc._id, pushSentAt: { $type: 'null' } },
-              update: { $set: { pushSentAt: sentAt } },
-            },
-          }))
-        );
+        try {
+          await Notification.bulkWrite(
+            toMark.map(({ doc }) => ({
+              updateOne: {
+                filter: { _id: doc._id, pushSentAt: { $type: 'null' } },
+                update: { $set: { pushSentAt: sentAt } },
+              },
+            })),
+            { ordered: false }
+          );
+        } catch (error) {
+          // Las filas sin marcar se re-empujan en la próxima corrida (at-least-once); el lote sigue
+          console.error(chalk.red(`[Cron] No se pudo marcar push enviado (${type}):`), error);
+        }
       }
     }
 
