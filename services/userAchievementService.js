@@ -317,9 +317,10 @@ export class UserAchievementService {
    * Reclama (completa) filas de progreso. El reclamo es condicional por fila (`status != completed`, `currentCount`
    * todavía en el `targetCount` leído y, con `sameWindow`, la misma franja con la que se seleccionó la fila): si dos
    * llamados compiten por la misma fila solo uno la reclama, y un reinicio de progreso concurrente la deja sin completar.
-   * La guarda compara contra el `targetCount` en memoria (leído al seleccionar), así que NO detecta un objetivo subido
-   * en el medio: eso lo cubre la edición transaccional del logro, y solo se completan filas que cumplían el objetivo
-   * leído en ese momento.
+   * La guarda compara contra el `targetCount` en memoria (leído al seleccionar): NO relee el logro ni usa la sesión de la
+   * edición, así que un objetivo subido en el medio no se revalida y la fila puede completarse por debajo del nuevo
+   * objetivo (carrera aceptada, la completitud es irreversible). Solo se completan filas que cumplían el objetivo leído
+   * en ese momento.
    * @private
    * @param {Array} rows - Filas de UserAchievement que alcanzaron el objetivo
    * @param {Map<string, Object>} achievementById - Logros por id (string)
