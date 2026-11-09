@@ -429,7 +429,8 @@ No se usa `skip/limit` (página 3 = escanear 2 páginas). Se usa el `_id` del ú
 | POST | `/api/push/subscribe` | JWT | PushController.subscribe |
 | DELETE | `/api/push/unsubscribe` | JWT | PushController.unsubscribe |
 | GET | `/api/push/vapid-key` | — | PushController.getVapidKey |
-| GET | `/api/cron/:jobName` | Cron | CronController.run (jobs en `controllers/cron/cronJobs.js`) |
+| GET | `/api/cron/dispatch` | Cron | CronDispatcher.dispatch (`?h=0..23`, `dryRun=1` fuera de producción) |
+| GET | `/api/cron/:jobName` | Cron | CronController.run (corrida manual; jobs en `controllers/cron/jobRegistry.js`, `?timezone=`) |
 | GET | `/api/notifications/unread-count` | JWT | NotificationController.getUnreadCount |
 | GET | `/api/notifications` | JWT | NotificationController.getAll |
 | PATCH | `/api/notifications/read-all` | JWT | NotificationController.markAllAsRead |
@@ -601,7 +602,7 @@ Cada usuario tiene una zona IANA (`User.timezone`, con índice). Los usuarios si
 
 ### Fecha límite (`dueDate`)
 
-La validación de que no sea pasada vive solo en los DTOs de creación (compara días calendario, hoy en la zona de producto mientras no exista la zona por usuario). En los updates el servicio la valida únicamente si el valor entrante cambia respecto del guardado, así editar el título de una meta o tarea ya vencida (por ejemplo una meta completada) funciona. Cambiar el estado de una meta nunca valida la fecha.
+Es una fecha flotante: el servidor la normaliza a `YYYY-MM-DDT12:00:00Z` con el día de calendario que mandó el cliente (primeros 10 caracteres, `normalizeDueDate`), nunca con el día UTC de un instante corrido. La validación de que no sea pasada vive solo en los DTOs de creación y compara días calendario contra el "hoy" del usuario (`getRequestTodayYmd` lee la zona de `req.userDoc`; un usuario sin zona usa la de producto). En los updates el servicio la valida únicamente si el valor entrante cambia respecto del guardado, con el mismo "hoy" del usuario, así editar el título de una meta o tarea ya vencida (por ejemplo una meta completada) funciona. Cambiar el estado de una meta nunca valida la fecha. Los jobs de notificación comparan la fecha límite como Y-M-D contra el día local del usuario (`getFloatingDayRange`), sin conversión de zona.
 
 ### Bloqueo de tareas
 
@@ -623,7 +624,7 @@ Completar una meta por `PUT` o `PATCH` pasa por el mismo camino (`GoalService._h
 
 ### Rachas
 
-Un día activo es un día local en el que se completó una tarea **o** una meta (hoy los jobs usan `DEFAULT_TIMEZONE` hasta que exista el dispatcher por zona). Se compara con claves `YYYY-MM-DD` (`services/helpers/streakDays.js`), nunca con milisegundos. Primera actividad → racha 1; día siguiente consecutivo → +1 y posible `bestStreak`; hueco > 1 día → la próxima actividad reinicia en 1; mismo día, o un día anterior por cambio de huso → no cambia y `lastActivityDay` no retrocede.
+Un día activo es un día local en el que se completó una tarea **o** una meta (los jobs de recencia corren por zona desde el dispatcher y reciben el día local de cada grupo). Se compara con claves `YYYY-MM-DD` (`services/helpers/streakDays.js`), nunca con milisegundos. Primera actividad → racha 1; día siguiente consecutivo → +1 y posible `bestStreak`; hueco > 1 día → la próxima actividad reinicia en 1; mismo día, o un día anterior por cambio de huso → no cambia y `lastActivityDay` no retrocede.
 
 La escritura es **una sola operación atómica** (`findOneAndUpdate` con pipeline de agregación, `services/helpers/metricsActivityPipeline.js`): actualiza racha, contadores, `lastActivityDay` y la fila de `history` del día, tanto para tareas como para metas. Solo se reintenta si el driver nunca envió la escritura (`runWriteRetryingOnlyIfUnsent`), así un reintento no cuenta dos veces. Requiere MongoDB 4.2 o superior.
 
@@ -680,30 +681,46 @@ Verificación, reset y confirmación de cambio de clave. `FRONTEND_URL` (o `http
 
 ### Cron (Vercel)
 
-[`vercel.json`](vercel.json) tiene un cron por job (`GET /api/cron/<job>`, hora UTC). Cada job corre una vez al día para todos los usuarios; la lógica por día usa `DEFAULT_TIMEZONE` hasta que exista el dispatcher por zona.
+Vercel Hobby solo admite crons diarios, así que [`vercel.json`](vercel.json) declara **24 crons** que apuntan a un único dispatcher: `0 H * * *` → `GET /api/cron/dispatch?h=H` para H = 0..23 (hora UTC). Cada tick decide qué jobs tocan en cada zona horaria. Hobby permite 100 crons por proyecto y puede disparar cada uno en cualquier minuto de su hora.
 
-| Job | UTC |
-|-----|-----|
-| `due-tasks` | `0 3 * * *` |
-| `due-goals` | `0 4 * * *` |
-| `overdue-tasks` | `0 6 * * *` |
-| `overdue-goals` | `0 9 * * *` |
-| `empty-goals` | `0 10 * * *` |
-| `high-priority` | `0 12 * * *` |
-| `high-priority-goals` | `0 13 * * *` |
-| `inactivity` | `0 15 * * *` |
-| `day-recap` | `0 22 * * *` |
-| `streak-risk` | `0 23 * * *` |
-| `stalled-goals` | `0 11 * * *` |
-| `pause-too-long` | `0 14 * * *` |
-| `overdue-backlog` | `0 16 * * *` |
-| `moodboard-nudge` | `0 17 * * *` |
-| `premium-nag` | `0 18 * * *` |
-| `expire-notifications` | `0 2 * * *` |
+**Hora del tick.** `?h=H` del path (primaria); si falta, el header `x-vercel-cron-schedule` (`M H * * *`); si tampoco está, la hora UTC actual con un warning. Un `h` presente pero inválido responde 400 y no corre nada. El instante del tick es el último `H:00Z` anterior a `now`; un tick de más de 90 minutos se saltea (200).
 
-Las rachas no tienen cron de reinicio (se calculan al leer). Los jobs de recencia (`streak-risk`, `inactivity`, `day-recap`) leen las claves de día de `Metrics`.
+**Qué corre.** Los jobs viven en [`jobRegistry.js`](controllers/cron/jobRegistry.js) con su `localHour` (jobs por zona) o `utcHour` (global). Un job corre para una zona solo si en ese instante la hora local de la zona **es exactamente** `localHour` (sin rangos ni recuperación: una hora salteada por el horario de verano no corre ese día). Los usuarios se agrupan por zona canónica, pero se consultan por **todas** las grafías guardadas; los usuarios sin zona y los valores que `Intl` rechaza caen en el grupo de producto (ART).
 
-No se manda el mismo `type` más de una vez por usuario por día UTC. El push del cron solo sale si hay `PushSubscription`.
+| Job | Hora local | Tipo |
+|-----|-----------|------|
+| `due-tasks` | 00:00 | `due_task` |
+| `due-goals` | 01:00 | `due_goal` |
+| `overdue-tasks` | 03:00 | `overdue_task` |
+| `overdue-goals` | 06:00 | `overdue_goal` |
+| `empty-goals` | 07:00 | `empty_goal` |
+| `stalled-goals` | 08:00 | `stalled_goal` |
+| `high-priority` | 09:00 | `high_priority_upcoming` |
+| `high-priority-goals` | 10:00 | `high_priority_upcoming_goal` |
+| `pause-too-long` | 11:00 | `pause_too_long` |
+| `inactivity` | 12:00 | `inactivity` |
+| `overdue-backlog` | 13:00 | `overdue_backlog` |
+| `moodboard-nudge` | 14:00 | `moodboard_nudge` |
+| `premium-nag` | 15:00 | `premium_nag` |
+| `day-recap` | 19:00 | `day_recap` |
+| `streak-risk` | 20:00 | `streak_risk` |
+| `expire-notifications` | 02:00 UTC (global) | — |
+
+Cada job de zona recibe `{ userIds, timezone, localDate, now }`: un lote de hasta 500 usuarios, la zona del grupo, el día local del tick y el instante. Las ventanas de "n días" se calculan con días de calendario locales (`getLocalDayRange(addDaysToYmd(localDate, -n), tz)`), no con múltiplos de 24 h. Cambiar un horario es cambiar un número en el registro.
+
+**Ledger e idempotencia.** [`JobRun`](models/jobRunModel.js) tiene una fila por (`job`, `timezone`, `localDate`), única; `timezone` es la clave canónica o `global`. La unidad se reclama con un insert atómico; si ya existe, solo se retoma (una operación atómica) si quedó `failed` o su `claimed` tiene más de 90 s. `done` o un reclamo reciente se saltean. TTL de 30 días. Esto protege de entregas duplicadas del cron, no de fallos.
+
+**Sin reintentos.** Vercel no reintenta. Una unidad que falla queda `failed` y se pierde para ese día local salvo que otra invocación (un duplicado o una corrida manual) la retome; las unidades que no empiezan antes de 50 s (`MAX_DISPATCH_MS`) no se reclaman. Si algo falló o quedó sin correr el dispatcher responde 500 (solo se ve en los logs de cron). Se acepta a la escala actual: perder un push no afecta rachas ni logros.
+
+**Push pendiente (at-least-once).** Los jobs programados guardan la notificación con `pushSentAt: null` (explícito; las demás notificaciones no llevan el campo, y un índice parcial `{type, userId, createdAt}` solo cubre las pendientes). Después de cada lote el runner empuja los pendientes del tipo del job, **aunque el job no haya creado nada**: el payload se rearma desde la notificación guardada. `pushSentAt` se marca si se entregó, si el usuario no tiene suscripciones o si todos los fallos fueron permanentes (404/410); si hubo un fallo transitorio, o VAPID no está configurado, queda pendiente. Si la función muere entre el envío y la marca, el próximo intento puede repetir ese push.
+
+**Corrida manual.** `GET /api/cron/:jobName?timezone=` (Bearer `CRON_SECRET`) corre el job ahora para los usuarios de esa zona (por defecto ART), fuera del ledger y sin respetar la hora local; también empuja los pendientes. Una zona inválida responde 400. Puede coincidir con un tick de la misma unidad: la dedup por usuario, tipo y día local evita notificaciones duplicadas y, en el peor caso, se repite un push.
+
+**dryRun.** `/api/cron/dispatch?h=H&dryRun=1` (Bearer válido) solo se acepta cuando `VERCEL_ENV !== 'production'` (un preview puede apuntar a la base de producción). Resuelve la hora y las unidades y devuelve lo que correría: sin ledger, sin notificaciones, sin push.
+
+Las rachas no tienen cron de reinicio (se calculan al leer). Los jobs de recencia (`streak-risk`, `inactivity`, `day-recap`) leen las claves de día de `Metrics`. No se manda el mismo `type` más de una vez por usuario por día **local**. Los endpoints demo de administración corren los mismos jobs del registro para todos los usuarios en ART, sin ledger.
+
+**Rollout S3.** El mismo deploy lleva el dispatcher, el índice parcial de `pushSentAt` y el `vercel.json` de 24 crons. Antes de mergear: en un preview con Deployment Protection bypass, llamar `/api/cron/dispatch?h=H&dryRun=1` con el Bearer y confirmar la resolución de `?h`, la selección de unidades, que Vercel acepta el query string en el path del cron y que `maxDuration` 60 aplica con la config `builds` legada. Después del deploy, verificar el primer tick real en `JobRun`. Rollback: restaurar el `vercel.json` anterior desde git.
 
 ---
 
@@ -713,7 +730,7 @@ No se manda el mismo `type` más de una vez por usuario por día UTC. El push de
 
 - Build: `index.js` con `@vercel/node`; `public/**` estático.
 - Rewrite catch-all a `index.js`, excepto assets de Swagger/css/js.
-- Crons de arriba.
+- 24 crons horarios hacia `/api/cron/dispatch` (ver Cron).
 - Headers CORS extra en `/api/*`.
 - `maxDuration` 60 s en `index.js`.
 
