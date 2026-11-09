@@ -35,8 +35,8 @@ export const GLOBAL_TIMEZONE_KEY = 'global';
  * puede pasar es un push repetido (los push son at-least-once).
  *
  * Los jobs NO se reintentan solos: si una unidad falla queda `failed` y solo otra invocación (un duplicado del
- * mismo tick o una corrida manual) la retoma. Después de cada lote se empujan los push pendientes y vigentes del
- * tipo del job (incluidos los que quedaron pendientes en días anteriores), aunque el job haya terminado sin crear nada o haya fallado: así no quedan push varados.
+ * mismo tick o una corrida manual) la retoma. Después de cada lote se empujan los push pendientes y sin leer del
+ * tipo del job creados en las últimas 48 h, aunque el job haya terminado sin crear nada o haya fallado: así no quedan push varados.
  * @param {WorkUnit} unit
  * @param {Object} [options]
  * @param {boolean} [options.useLedger=true]

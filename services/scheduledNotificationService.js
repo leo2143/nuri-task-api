@@ -6,7 +6,7 @@ import PushSubscription from '../models/pushSubscriptionModel.js';
 import User from '../models/userModel.js';
 import Moodboard from '../models/moodboardModel.js';
 import { PushNotificationService } from './pushNotificationService.js';
-import { NotificationService, RETENTION_DAYS } from './notificationService.js';
+import { NotificationService } from './notificationService.js';
 import {
   DEFAULT_TIMEZONE,
   addDaysToYmd,
@@ -55,6 +55,8 @@ const FREE_GOALS_LIMIT = 2;
 const PUSH_SUBSCRIPTION_BATCH_SIZE = 500;
 // Push enviados en paralelo: acota el tiempo de un lote sin abrir cientos de conexiones a la vez
 const PUSH_SEND_CONCURRENCY = 20;
+// Ventana de recuperación de push pendientes: pasada esta edad el contenido ("vence hoy") ya quedó viejo y no se empuja
+const PENDING_PUSH_RECOVERY_HOURS = 48;
 
 /**
  * Servicio de notificaciones programadas. Cada método es un job diario propio.
@@ -110,10 +112,10 @@ export class ScheduledNotificationService {
   }
 
   /**
-   * Empuja las notificaciones de un tipo cuyo push quedó pendiente (`pushSentAt: null`) y que siguen vigentes,
-   * es decir, creadas en los últimos RETENTION_DAYS días (después `expire-notifications` las borra). Como los jobs
-   * corren una vez por día local, un push que falló o quedó sin enviar un día se recupera en el siguiente disparo
-   * del mismo tipo para ese usuario.
+   * Empuja las notificaciones de un tipo cuyo push quedó pendiente (`pushSentAt: null`), siguen sin leer y fueron
+   * creadas en las últimas PENDING_PUSH_RECOVERY_HOURS horas; las más nuevas van primero. Como los jobs corren una
+   * vez por día local, un push que falló o quedó sin enviar se recupera en el siguiente disparo del mismo tipo
+   * para ese usuario, pero no días después: el contenido ya estaría vencido.
    * Se rearma el payload desde el documento guardado (el ícono sale de PUSH_ICONS, el modelo no lo guarda).
    *
    * Un documento se marca como enviado (`pushSentAt` = ahora) si se entregó a alguna suscripción, si el usuario
@@ -123,20 +125,23 @@ export class ScheduledNotificationService {
    * @param {Object} params
    * @param {string} params.type - Tipo de notificación
    * @param {Array|null} [params.userIds] - Lote de usuarios (null = todos)
-   * @param {Date} [params.now] - Instante de referencia de la ventana de vigencia
+   * @param {Date} [params.now] - Instante de referencia de la ventana de recuperación
    * @param {number} [params.deadline] - Timestamp (ms) límite: no se empieza un grupo de envíos nuevo pasado ese
    *   instante y lo que falta queda pendiente para el próximo disparo
    * @returns {Promise<{pending: number, sent: number}>}
    */
   static async pushPendingNotifications({ type, userIds = null, now = new Date(), deadline = Infinity }) {
-    const validSince = new Date(now.getTime() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    const recoverySince = new Date(now.getTime() - PENDING_PUSH_RECOVERY_HOURS * 60 * 60 * 1000);
     const pending = await Notification.find({
       type,
       ...(userIds ? { userId: { $in: userIds } } : {}),
-      createdAt: { $gte: validSince },
+      createdAt: { $gte: recoverySince },
+      read: false,
       // $type 'null' (no `pushSentAt: null`, que también matchea documentos sin el campo) y pega en el índice parcial
       pushSentAt: { $type: 'null' },
-    }).lean();
+    })
+      .sort({ createdAt: -1 })
+      .lean();
 
     if (pending.length === 0) return { pending: 0, sent: 0 };
 
