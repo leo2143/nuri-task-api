@@ -42,7 +42,7 @@ El backend es el dueño de la verdad: valida, persiste, aplica reglas (por ejemp
 | **Tarea bloqueada (`isLocked`)** | Al marcarse completada, queda irreversible para el usuario. Evita “descompletar” para inflar rachas o logros. |
 | **Meta (Goal)** | Objetivo de más alcance. Estados: `active`, `paused`, `completed`. Puede tener **submetas** (`parentGoalId`). |
 | **Progreso de meta** | Porcentaje 0–100 calculado **solo con las tareas** de esa meta (`completedTasks / totalTasks`). Las submetas no entran en la fórmula. |
-| **Racha (streak)** | Días consecutivos con al menos una tarea completada. Vive en el documento `Metrics` del usuario. |
+| **Racha (streak)** | Días locales consecutivos con al menos una tarea o una meta completada. Vive en el documento `Metrics` del usuario y se mide con claves de día `YYYY-MM-DD`. |
 | **Logro (Achievement)** | Plantilla global (admin). El progreso por usuario está en `UserAchievement`. Se dispara por eventos (`task:completed`, `goal:completed`, `streak:updated`). |
 | **Tier de logro** | `basic` (todos) o `premium` (visible para free, pero no accesible). |
 | **Moodboard** | Tablero 1:1 de imágenes inspiracionales. Requiere suscripción activa (o admin). |
@@ -279,9 +279,9 @@ Progreso por usuario: `{ user, achievement }` único, `currentCount`, `status` (
 
 ### `metrics` (una fila por usuario)
 
-`currentStreak`, `bestStreak`, `totalTasksCompleted`, `totalGoalsCompleted`, `lastActivityDate`, `history[]` (tareas por día). Unique en `userId`.
+`currentStreak`, `bestStreak`, `totalTasksCompleted`, `totalGoalsCompleted`, `lastActivityDay` (clave de día local `YYYY-MM-DD`), `lastActivityDate` (instante), `history[]` (una fila por día local activo: `date`, `day`, `tasksCompleted`, `goalsCompleted`). Unique en `userId`, índice en `lastActivityDay`.
 
-La racha operativa vive **acá**, no en `streaks` (ver deuda técnica).
+La racha vive **acá**. Ya no existe un modelo `Streak` aparte.
 
 ### Otras colecciones
 
@@ -291,7 +291,7 @@ La racha operativa vive **acá**, no en `streaks` (ver deuda técnica).
 | `notifications` | Inbox in-app |
 | `pushsubscriptions` | `{ userId, endpoint, keys }` unique por par usuario+endpoint |
 | `pendingcloudinaryimages` | URL + publicId; TTL Mongo 3600 s |
-| `streaks` | Legacy. Nadie lo escribe en el flujo actual; solo se borra al eliminar usuario |
+| `streaks` | Sin modelo: es la colección legacy del `streaksModel.js` eliminado. Se borra con `s2-metrics-day-keys.js --step=drop-legacy-streaks` |
 
 `models/responseModel.js` y `models/dtos/**` **no** son colecciones: son contratos HTTP y de validación.
 
@@ -429,8 +429,7 @@ No se usa `skip/limit` (página 3 = escanear 2 páginas). Se usa el `_id` del ú
 | POST | `/api/push/subscribe` | JWT | PushController.subscribe |
 | DELETE | `/api/push/unsubscribe` | JWT | PushController.unsubscribe |
 | GET | `/api/push/vapid-key` | — | PushController.getVapidKey |
-| GET | `/api/cron/morning` | Cron | CronController.morningJob |
-| GET | `/api/cron/evening` | Cron | CronController.eveningJob |
+| GET | `/api/cron/:jobName` | Cron | CronController.run (jobs en `controllers/cron/cronJobs.js`) |
 | GET | `/api/notifications/unread-count` | JWT | NotificationController.getUnreadCount |
 | GET | `/api/notifications` | JWT | NotificationController.getAll |
 | PATCH | `/api/notifications/read-all` | JWT | NotificationController.markAllAsRead |
@@ -608,7 +607,7 @@ La validación de que no sea pasada vive solo en los DTOs de creación (compara 
 
 Completar una tarea es un **reclamo atómico**: un `findOneAndUpdate` condicionado a `completed: false, isLocked: false` que setea `completed`, `isLocked = true` y `completedAt` (hora del servidor). Solo el request que gana dispara métricas, racha y logros; los demás reciben éxito idempotente sin efectos. Repetir `completed: true` sobre una tarea ya completada (con o sin lock, incluidas las legacy con `completed: true, isLocked: false`) responde 200 sin efectos. `completed: false` sobre una tarea completada o locked responde 400. `POST /api/todos` y `PUT /api/todos/:id` ya no aceptan `completed` (las tareas nuevas nacen pendientes): la única vía para completar es `PATCH /api/todos/:id/state`, así el reclamo, `completedAt` y los eventos no se pueden saltear. `updateTodo` rechaza si la tarea ya está completada o locked. El usuario no puede borrar una confirmada; el admin sí. `PUT /api/goals/:id` devuelve `meta.events` igual que `PATCH /api/goals/:id/status` cuando la meta se completa.
 
-Efectos al completar: contadores de meta → `MetricsService.recordTaskCompleted` → `processEvent('task:completed')` → si sube la racha, notificación y `processEvent('streak:updated')`.
+Efectos al completar: contadores de meta → `MetricsService.writeTaskMetrics` (escritura atómica de métricas y racha) → `afterActivityMetrics` (notificación de racha y `processEvent('streak:updated')`) → `processEvent('task:completed')`.
 
 ### Logros
 
@@ -616,17 +615,21 @@ Efectos al completar: contadores de meta → `MetricsService.recordTaskCompleted
 |--------|--------|-------------|
 | `task:completed` | `TodoService.updateTodoState` | `$inc currentCount` |
 | `goal:completed` | `GoalService.updateGoal` y `updateGoalStatus` | `$inc` |
-| `streak:updated` | `MetricsService.recordTaskCompleted` | `$set` al valor actual de la racha |
+| `streak:updated` | `MetricsService.afterActivityMetrics` | `$set` al valor actual de la racha |
 
 `bulkWrite` upsert. Si `currentCount >= targetCount` → `completed` + notificación. En rachas, si el número baja del target, puede volver a `locked`. Los premium se listan para free con `isAccessible: false`. Un error en `processEvent` **no** tumba el request.
 
-**Inconsistencia:** `updateGoal` (PUT) al pasar a `completed` también llama `recordGoalCompleted`. `updateGoalStatus` (PATCH) dispara el logro **pero no** las métricas. Ver §12.
+Completar una meta por `PUT` o `PATCH` pasa por el mismo camino (`GoalService._handleGoalCompleted`): reclama `firstCompletedAt`, escribe las métricas con `writeGoalMetrics` y dispara el logro.
 
 ### Rachas
 
-Días calendario (medianoche del servidor). Primera actividad del día → racha 1; día siguiente consecutivo → +1 y posible `bestStreak`; hueco > 1 día → el cron o `checkStreakExpiration` pone 0.
+Un día activo es un día local en el que se completó una tarea **o** una meta (hoy los jobs usan `DEFAULT_TIMEZONE` hasta que exista el dispatcher por zona). Se compara con claves `YYYY-MM-DD` (`services/helpers/streakDays.js`), nunca con milisegundos. Primera actividad → racha 1; día siguiente consecutivo → +1 y posible `bestStreak`; hueco > 1 día → la próxima actividad reinicia en 1; mismo día, o un día anterior por cambio de huso → no cambia y `lastActivityDay` no retrocede.
 
-El cron de la mañana resetea si `lastActivityDate` es anterior al inicio de ayer (criterio batch, no idéntico al método de instancia).
+La escritura es **una sola operación atómica** (`findOneAndUpdate` con pipeline de agregación, `services/helpers/metricsActivityPipeline.js`): actualiza racha, contadores, `lastActivityDay` y la fila de `history` del día, tanto para tareas como para metas. Solo se reintenta si el driver nunca envió la escritura (`runWriteRetryingOnlyIfUnsent`), así un reintento no cuenta dos veces. Requiere MongoDB 4.2 o superior.
+
+No hay cron que reinicie rachas: la racha **efectiva** se calcula al leer (`getEffectiveStreak`: si pasó más de un día local desde `lastActivityDay`, es 0) y no escribe nada. `checkStreakExpiration` y el job `streak-reset` ya no existen.
+
+**Rollout (S2).** Antes del deploy: `mongoexport` de `metrics`. Con el deploy: `node scripts/migrations/s2-metrics-day-keys.js --apply` (completa `lastActivityDay`, `history[].day` y `goalsCompleted` en ART y crea el índice; dry-run por defecto, idempotente, `--restore` desde backup). Sin la migración, una fila de historial sin `day` falla la validación y la próxima actividad cuenta como la primera. Después de verificar las rachas: `--step=drop-legacy-streaks --apply` borra la colección `streaks` con backup previo.
 
 ### Freemium
 
@@ -640,7 +643,7 @@ Se crea en el registro (local o Google). Si falla, se borra el usuario. Imágene
 
 ### Borrado de cuenta
 
-`deleteUserOwnedDocuments` hace `deleteMany` paralelo (todos, metas, métricas, streak legacy, moodboard, notificaciones, push, userAchievements, pending images) y después `User.findByIdAndDelete`. Es hard delete.
+`deleteUserOwnedDocuments` hace `deleteMany` paralelo (todos, metas, métricas, moodboard, notificaciones, push, userAchievements, pending images) y después `User.findByIdAndDelete`. Es hard delete.
 
 ---
 
@@ -677,10 +680,28 @@ Verificación, reset y confirmación de cambio de clave. `FRONTEND_URL` (o `http
 
 ### Cron (Vercel)
 
-| Ruta | UTC | Trabajo |
-|------|-----|---------|
-| `GET /api/cron/morning` | `0 3 * * *` | Reset de rachas vencidas, tareas por vencer, usuarios inactivos |
-| `GET /api/cron/evening` | `0 23 * * *` | Riesgo de perder racha |
+[`vercel.json`](vercel.json) tiene un cron por job (`GET /api/cron/<job>`, hora UTC). Cada job corre una vez al día para todos los usuarios; la lógica por día usa `DEFAULT_TIMEZONE` hasta que exista el dispatcher por zona.
+
+| Job | UTC |
+|-----|-----|
+| `due-tasks` | `0 3 * * *` |
+| `due-goals` | `0 4 * * *` |
+| `overdue-tasks` | `0 6 * * *` |
+| `overdue-goals` | `0 9 * * *` |
+| `empty-goals` | `0 10 * * *` |
+| `high-priority` | `0 12 * * *` |
+| `high-priority-goals` | `0 13 * * *` |
+| `inactivity` | `0 15 * * *` |
+| `day-recap` | `0 22 * * *` |
+| `streak-risk` | `0 23 * * *` |
+| `stalled-goals` | `0 11 * * *` |
+| `pause-too-long` | `0 14 * * *` |
+| `overdue-backlog` | `0 16 * * *` |
+| `moodboard-nudge` | `0 17 * * *` |
+| `premium-nag` | `0 18 * * *` |
+| `expire-notifications` | `0 2 * * *` |
+
+Las rachas no tienen cron de reinicio (se calculan al leer). Los jobs de recencia (`streak-risk`, `inactivity`, `day-recap`) leen las claves de día de `Metrics`.
 
 No se manda el mismo `type` más de una vez por usuario por día UTC. El push del cron solo sale si hay `PushSubscription`.
 
@@ -718,7 +739,7 @@ Patrones de resiliencia (no son librerías, son helpers propios):
 | Helper | Qué evita |
 |--------|-----------|
 | `runWithOneRetry` | Un blip de red al actualizar contadores de meta no deja la meta desfasada |
-| `ensureSuccessWithRetry` | Idem para `ResponseModel.success === false` en métricas |
+| `runWriteRetryingOnlyIfUnsent` | Reintenta la escritura atómica de métricas solo si el driver nunca la envió: un reintento no duplica la actividad |
 | `persistAndNotify` + `waitUntil` | El push no alarga la respuesta ni se pierde en el freeze de Vercel |
 | Compensación registro | User sin moodboard no queda a medias |
 | Compensación MP | Preapproval sin `mercadoPagoId` en Mongo se cancela |
@@ -733,15 +754,13 @@ No hay `session()` de Mongo (transacciones multi-documento). Las compensaciones 
 Conviene poder explicarlas en la defensa, no esconderlas.
 
 1. **No hay tests automatizados.** `npm test` es un placeholder. La red de seguridad hoy es Sonar + prueba manual + el envelope consistente.
-2. **`streaksModel.js` está huérfano.** La racha real está en `Metrics`. `Streak` solo se borra al eliminar usuario. Quedó de un diseño anterior.
-3. **`updateGoalStatus` no llama `recordGoalCompleted`.** Completar por PATCH suma logro, no `totalGoalsCompleted`. Completar por PUT sí. Dos puertas, dos semánticas.
-4. **Login con credenciales inválidas usa `ErrorResponseModel` sin `status`.** El constructor default es **500**, no 401. El mensaje es el correcto (anti-enumeración); el código HTTP no es el idiomático.
-5. **`ValidationErrorResponseModel` existe y no se usa.** Las validaciones van a `BadRequestResponseModel` con errores concatenados.
-6. **Sin transacciones multi-documento.** Un crash entre “marcar todo” y “guardar meta” se mitiga con retry/compensación, no con snapshot isolation.
-7. **Borrar una plantilla de logro no borra `UserAchievement`.** Pueden quedar huérfanos.
-8. **Borrar una meta no reparenta submetas.** Las hijas quedan apuntando a un padre soft-deleted.
-9. **Swagger incompleto** para push, cron, notifications, subscription y webhooks.
-10. **`type: 'metric'` en logros** no tiene trigger en runtime.
+2. **Login con credenciales inválidas usa `ErrorResponseModel` sin `status`.** El constructor default es **500**, no 401. El mensaje es el correcto (anti-enumeración); el código HTTP no es el idiomático.
+3. **`ValidationErrorResponseModel` existe y no se usa.** Las validaciones van a `BadRequestResponseModel` con errores concatenados.
+4. **Sin transacciones multi-documento.** Un crash entre “marcar todo” y “guardar meta” se mitiga con retry/compensación, no con snapshot isolation.
+5. **Borrar una plantilla de logro no borra `UserAchievement`.** Pueden quedar huérfanos.
+6. **Borrar una meta no reparenta submetas.** Las hijas quedan apuntando a un padre soft-deleted.
+7. **Swagger incompleto** para push, cron, notifications, subscription y webhooks.
+8. **`type: 'metric'` en logros** no tiene trigger en runtime.
 
 Ninguna de estas rompe el Quality Gate actual de Sonar. Son deuda de diseño, no de análisis estático.
 
