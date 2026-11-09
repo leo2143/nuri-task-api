@@ -46,22 +46,33 @@ export async function runWorkUnit(unit, { useLedger = true } = {}) {
   const { jobName, timezone, localDate } = unit;
   const identity = { jobName, timezone, localDate };
 
-  if (useLedger && !(await claimUnit(unit))) {
-    return { ...identity, status: 'skipped' };
+  let claimedAt = null;
+  if (useLedger) {
+    try {
+      claimedAt = await claimUnit(unit);
+    } catch (error) {
+      console.error(chalk.red(`[Cron] No se pudo reclamar ${jobName} (${timezone} ${localDate}):`), error);
+      return { ...identity, status: 'failed', error: error.message };
+    }
+    if (!claimedAt) return { ...identity, status: 'skipped' };
   }
 
   const startedAt = Date.now();
+  let result;
   try {
-    const result = await executeUnit(unit);
-    const durationMs = Date.now() - startedAt;
-    if (useLedger) await finishUnit(unit, 'done', durationMs);
-    return { ...identity, status: 'done', durationMs, result };
+    result = await executeUnit(unit);
   } catch (error) {
     const durationMs = Date.now() - startedAt;
     console.error(chalk.red(`[Cron] Falló ${jobName} (${timezone} ${localDate}):`), error);
-    if (useLedger) await finishUnit(unit, 'failed', durationMs);
+    if (useLedger) await finishUnit(unit, claimedAt, 'failed', durationMs);
     return { ...identity, status: 'failed', durationMs, error: error.message };
   }
+
+  // La marca `done` queda fuera del try que decide si el job falló: un error del ledger no convierte un job
+  // exitoso en fallido (finishUnit registra el error y no lo propaga).
+  const durationMs = Date.now() - startedAt;
+  if (useLedger) await finishUnit(unit, claimedAt, 'done', durationMs);
+  return { ...identity, status: 'done', durationMs, result };
 }
 
 /**
@@ -69,7 +80,7 @@ export async function runWorkUnit(unit, { useLedger = true } = {}) {
  * atómica solo cuando quedó `failed` o su lease venció. El dueño es quien recibe el documento de vuelta;
  * `done` o un reclamo reciente de otra invocación significan que hay que saltearla.
  * @param {WorkUnit} unit
- * @returns {Promise<boolean>} true si esta invocación es dueña de la unidad
+ * @returns {Promise<Date|null>} el `claimedAt` de esta invocación si es dueña de la unidad, null si hay que saltearla
  */
 async function claimUnit({ jobName, timezone, localDate, now }) {
   const key = { job: jobName, timezone, localDate };
@@ -82,7 +93,7 @@ async function claimUnit({ jobName, timezone, localDate, now }) {
       claimedAt,
       expiresAt: new Date(now.getTime() + JOB_RUN_RETENTION_MS),
     });
-    return true;
+    return claimedAt;
   } catch (error) {
     if (error?.code !== DUPLICATE_KEY_ERROR_CODE) throw error;
   }
@@ -95,14 +106,23 @@ async function claimUnit({ jobName, timezone, localDate, now }) {
     { $set: { status: 'claimed', claimedAt, finishedAt: null, durationMs: null } },
     { new: true }
   );
-  return reclaimed !== null;
+  return reclaimed ? claimedAt : null;
 }
 
-async function finishUnit({ jobName, timezone, localDate }, status, durationMs) {
-  await JobRun.updateOne(
-    { job: jobName, timezone, localDate },
-    { $set: { status, finishedAt: new Date(), durationMs } }
-  );
+/**
+ * Cierra la unidad en el ledger solo si esta invocación sigue siendo la dueña (`claimedAt` es el que ella misma
+ * escribió y la unidad sigue `claimed`): si el lease venció y otra invocación la retomó, no le pisa el estado.
+ * Un fallo del ledger se registra y no se propaga: no debe abortar el resto del dispatch.
+ */
+async function finishUnit({ jobName, timezone, localDate }, claimedAt, status, durationMs) {
+  try {
+    await JobRun.updateOne(
+      { job: jobName, timezone, localDate, status: 'claimed', claimedAt },
+      { $set: { status, finishedAt: new Date(), durationMs } }
+    );
+  } catch (error) {
+    console.error(chalk.red(`[Cron] No se pudo marcar ${status} ${jobName} (${timezone} ${localDate}):`), error);
+  }
 }
 
 /**
