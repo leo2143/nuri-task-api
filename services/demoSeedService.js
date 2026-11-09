@@ -2,10 +2,7 @@ import Goal from '../models/goalsModel.js';
 import Todo from '../models/todoModel.js';
 import User from '../models/userModel.js';
 import { DemoSeedClockDto } from '../models/dtos/admin/DemoSeedClockDto.js';
-import {
-  formatDateYmdInTimeZone,
-  getDayRangeInTimeZone,
-} from './helpers/dateTime.js';
+import { addDaysToYmd, toFloatingYmd, toLocalYmd } from './helpers/dateTime.js';
 import {
   SuccessResponseModel,
   BadRequestResponseModel,
@@ -17,12 +14,10 @@ const DEMO_TITLE_PREFIX = '[Demo]';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * Fecha de vencimiento de producto: YMD ART + T12:00Z.
+ * Fecha límite flotante (YMD de la zona de producto + T12:00Z) `daysFromToday` días de calendario desde hoy.
  */
 function productDueDateFromOffset(daysFromToday) {
-  const { start } = getDayRangeInTimeZone(daysFromToday);
-  const ymd = formatDateYmdInTimeZone(start);
-  return new Date(`${ymd}T12:00:00.000Z`);
+  return toFloatingYmd(addDaysToYmd(toLocalYmd(new Date()), daysFromToday));
 }
 
 function isDemoTitle(title) {
