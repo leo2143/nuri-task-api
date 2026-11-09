@@ -57,6 +57,18 @@ function getWindowKey(timeWindow, { occurredAt, timezone }) {
 }
 
 /**
+ * Instancia de franja vigente para un usuario "ahora": la misma clave que el evaluador le asignaría a un evento
+ * de este instante. Sirve para saber si el progreso guardado (`window.key`) es de la franja actual o de una vieja.
+ * @param {Object|null|undefined} conditions - Condiciones de un logro con `sameWindow`
+ * @param {string} timezone - Zona IANA del usuario
+ * @param {Date} [now]
+ * @returns {string}
+ */
+export function getCurrentWindowKey(conditions, timezone, now = new Date()) {
+  return getWindowKey(conditions?.timeWindow, { occurredAt: now, timezone });
+}
+
+/**
  * Evalúa las condiciones de un logro contra un evento. Es pura: solo usa el instante del SERVIDOR (`occurredAt`)
  * y la zona del usuario; cualquier hora que mande el cliente no entra acá.
  * Las condiciones se combinan con AND. Un logro sin condiciones siempre pasa.

@@ -6,7 +6,7 @@ import { SuccessResponseModel } from '../models/responseModel.js';
 import { PaginationDto } from '../models/dtos/paginationDto.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { persistAndNotify } from './helpers/persistAndNotify.js';
-import { evaluateAchievementConditions, conditionsNeedTimezone } from './achievementConditions.js';
+import { evaluateAchievementConditions, conditionsNeedTimezone, getCurrentWindowKey } from './achievementConditions.js';
 import {
   buildAbsoluteProgressPipeline,
   buildIncrementProgressPipeline,
@@ -383,11 +383,84 @@ export class UserAchievementService {
   }
 
   /**
+   * Claves de la franja vigente "ahora" para las zonas que existen entre los usuarios (a lo sumo unas pocas: la
+   * misma fecha difiere un día entre zonas). Es un filtro de base de datos; la pertenencia exacta se verifica por usuario.
+   * @private
+   * @param {Object} conditions - Condiciones de un logro con `sameWindow`
+   * @param {Date} now
+   * @returns {Promise<string[]>}
+   */
+  static async _findCurrentWindowKeys(conditions, now) {
+    const storedTimezones = await User.distinct('timezone');
+    const timezones = new Set([...storedTimezones, null].map(timezone => resolveTimeZone(timezone)));
+    return [...new Set([...timezones].map(timezone => getCurrentWindowKey(conditions, timezone, now)))];
+  }
+
+  /**
+   * Se queda con las filas cuya franja guardada es la vigente según la zona de SU usuario.
+   * @private
+   * @param {Array} rows - Filas de un logro con `sameWindow`
+   * @param {Object} conditions
+   * @param {Date} now
+   * @returns {Promise<Array>}
+   */
+  static async _keepRowsInCurrentWindow(rows, conditions, now) {
+    const owners = await User.find({ _id: { $in: rows.map(row => row.user) } })
+      .select('timezone')
+      .lean();
+    const timezoneByUserId = new Map(owners.map(owner => [owner._id.toString(), owner.timezone]));
+
+    return rows.filter(
+      row =>
+        row.window?.key ===
+        getCurrentWindowKey(conditions, resolveTimeZone(timezoneByUserId.get(row.user.toString())), now)
+    );
+  }
+
+  /**
+   * Cuenta las filas con progreso sin completar de un logro. Con `sameWindow` `currentCount` guarda el conteo de la
+   * ÚLTIMA franja que tuvo eventos y no se limpia: solo cuentan las filas cuya franja es la vigente de su usuario.
+   * @param {Object} achievement - Logro (con `_id` y `conditions`)
+   * @returns {Promise<number>}
+   */
+  static async countInProgress(achievement) {
+    const inProgressFilter = { achievement: achievement._id, status: { $ne: 'completed' }, currentCount: { $gt: 0 } };
+    if (achievement.conditions?.sameWindow !== true) return UserAchievement.countDocuments(inProgressFilter);
+
+    const now = new Date();
+    const candidateKeys = await this._findCurrentWindowKeys(achievement.conditions, now);
+    const rowGroups = await UserAchievement.aggregate([
+      { $match: { ...inProgressFilter, 'window.key': { $in: candidateKeys } } },
+      {
+        $lookup: {
+          from: User.collection.name,
+          let: { userId: '$user' },
+          pipeline: [{ $match: { $expr: { $eq: ['$_id', '$$userId'] } } }, { $project: { timezone: 1 } }],
+          as: 'owner',
+        },
+      },
+      {
+        $group: {
+          _id: { windowKey: '$window.key', timezone: { $arrayElemAt: ['$owner.timezone', 0] } },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    return rowGroups.reduce((total, { _id: group, count }) => {
+      const currentKey = getCurrentWindowKey(achievement.conditions, resolveTimeZone(group.timezone), now);
+      return group.windowKey === currentKey ? total + count : total;
+    }, 0);
+  }
+
+  /**
    * Tras bajar el `targetCount` de un logro, completa las filas en curso que ya alcanzaron el nuevo objetivo,
    * por el mismo reclamo y la misma notificación que un evento. Un logro inactivo no completa a nadie.
    * Corre por tandas de `COMPLETION_BATCH_SIZE` y se corta al agotar `COMPLETION_TIME_BUDGET_MS` (el llamador es un
    * PUT con límite de 60 s). Las filas que quedan sin completar se completan con el próximo evento que le cuente
    * progreso al usuario (`_checkAndCompleteAchievements` revisa `currentCount >= targetCount` de toda fila no completada).
+   * Con `sameWindow` `currentCount` es el conteo de la ÚLTIMA franja (no se limpia): solo completan las filas cuya
+   * franja guardada es la vigente de su usuario; una franja vieja con muchos eventos no cuenta.
    * Es un efecto posterior a la edición: un fallo se registra y no deshace el cambio ya guardado.
    * @param {string} achievementId
    * @returns {Promise<{completedUsers: number, pendingCompletions: number|null}>} Usuarios completados en esta
@@ -399,24 +472,35 @@ export class UserAchievementService {
       const achievement = await Achievement.findOne({ _id: achievementId, isActive: true }).lean();
       if (!achievement) return { completedUsers: 0, pendingCompletions: 0 };
 
+      const now = new Date();
+      const isSameWindow = achievement.conditions?.sameWindow === true;
       const reachedFilter = {
         achievement: achievement._id,
         status: { $ne: 'completed' },
         currentCount: { $gte: achievement.targetCount },
+        ...(isSameWindow && { 'window.key': { $in: await this._findCurrentWindowKeys(achievement.conditions, now) } }),
       };
       const achievementById = new Map([[achievement._id.toString(), achievement]]);
       const deadline = Date.now() + COMPLETION_TIME_BUDGET_MS;
 
+      // Se avanza por _id: las filas que no se completan (franja que no es la vigente de su usuario) no se reintentan
+      let lastVisitedId = null;
       while (Date.now() < deadline) {
-        const reachedRows = await UserAchievement.find(reachedFilter).limit(COMPLETION_BATCH_SIZE).lean();
-        if (reachedRows.length === 0) break;
+        const batchFilter = lastVisitedId ? { ...reachedFilter, _id: { $gt: lastVisitedId } } : reachedFilter;
+        const batchRows = await UserAchievement.find(batchFilter).sort({ _id: 1 }).limit(COMPLETION_BATCH_SIZE).lean();
+        if (batchRows.length === 0) break;
+        lastVisitedId = batchRows[batchRows.length - 1]._id;
 
+        const reachedRows = isSameWindow
+          ? await this._keepRowsInCurrentWindow(batchRows, achievement.conditions, now)
+          : batchRows;
         const claims = await this._claimRows(reachedRows, achievementById);
         await this._notifyClaimedAchievements(claims);
         completedUsers += claims.length;
       }
 
-      return { completedUsers, pendingCompletions: await UserAchievement.countDocuments(reachedFilter) };
+      const unvisitedFilter = lastVisitedId ? { ...reachedFilter, _id: { $gt: lastVisitedId } } : reachedFilter;
+      return { completedUsers, pendingCompletions: await UserAchievement.countDocuments(unvisitedFilter) };
     } catch (error) {
       console.error(
         chalk.yellow('[side-effect] Error al completar logros que ya alcanzaron el nuevo objetivo:'),

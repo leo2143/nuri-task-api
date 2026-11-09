@@ -105,16 +105,12 @@ export class AchievementService {
         return new BadRequestResponseModel('El id del logro no es válido');
       }
 
-      const achievementExists = await Achievement.exists({ _id: achievementId });
-      if (!achievementExists) {
+      const achievement = await Achievement.findById(achievementId).select('conditions').lean();
+      if (!achievement) {
         return new NotFoundResponseModel('Plantilla de logro no encontrada');
       }
 
-      const inProgressCount = await UserAchievement.countDocuments({
-        achievement: achievementId,
-        status: { $ne: 'completed' },
-        currentCount: { $gt: 0 },
-      });
+      const inProgressCount = await UserAchievementService.countInProgress(achievement);
 
       return new SuccessResponseModel({ inProgressCount }, 'Usuarios con progreso en curso obtenidos correctamente');
     } catch (error) {
