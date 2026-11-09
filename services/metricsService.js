@@ -4,7 +4,7 @@ import Goal from '../models/goalsModel.js';
 import Achievement from '../models/achievementModel.js';
 import UserAchievement from '../models/userAchievementModel.js';
 import { UserAchievementService } from './userAchievementService.js';
-import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
+import { NotFoundResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel } from '../models/responseModel.js';
 import { MetricsDashboardDto, CreateMetricDto } from '../models/dtos/metrics/index.js';
 import { persistAndNotify } from './helpers/persistAndNotify.js';
