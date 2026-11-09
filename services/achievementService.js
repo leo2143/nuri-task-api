@@ -1,11 +1,11 @@
 import Achievement from '../models/achievementModel.js';
+import UserAchievement from '../models/userAchievementModel.js';
+import { ACHIEVEMENT_TYPES, buildAchievementCatalog } from '../models/achievementCatalog.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import { CreateAchievementDto, UpdateAchievementDto, AchievementFilterDto } from '../models/dtos/achievements/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
-import chalk from 'chalk';
-
-const VALID_ACHIEVEMENT_TYPES = ['task', 'goal', 'metric', 'streak'];
+import mongoose from 'mongoose';
 
 /**
  * Servicio para gestionar plantillas globales de logros (solo administradores)
@@ -42,6 +42,44 @@ export class AchievementService {
       return new SuccessResponseModel(results, 'Plantillas de logros obtenidas correctamente', 200, meta);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener plantillas de logros');
+    }
+  }
+
+  /**
+   * Obtiene lo que el formulario de administración puede elegir: eventos disparadores y las condiciones de cada uno
+   * @returns {SuccessResponseModel} Respuesta con `{ triggers: [{ triggerEvent, allowedConditions }], types }`
+   */
+  static getAchievementCatalog() {
+    return new SuccessResponseModel(buildAchievementCatalog(), 'Catálogo de logros obtenido correctamente');
+  }
+
+  /**
+   * Cuenta los usuarios con progreso sin completar en un logro: a ellos les afecta (se les reinicia el progreso)
+   * un cambio de evento o de condiciones. El formulario de administración lo muestra antes de guardar.
+   * @param {string} achievementId - ID del logro
+   * @returns {Promise<SuccessResponseModel|BadRequestResponseModel|NotFoundResponseModel|ErrorResponseModel>}
+   *   Respuesta con `{ inProgressCount }`
+   */
+  static async getInProgressCount(achievementId) {
+    try {
+      if (!mongoose.isValidObjectId(achievementId)) {
+        return new BadRequestResponseModel('El id del logro no es válido');
+      }
+
+      const achievementExists = await Achievement.exists({ _id: achievementId });
+      if (!achievementExists) {
+        return new NotFoundResponseModel('Plantilla de logro no encontrada');
+      }
+
+      const inProgressCount = await UserAchievement.countDocuments({
+        achievement: achievementId,
+        status: { $ne: 'completed' },
+        currentCount: { $gt: 0 },
+      });
+
+      return new SuccessResponseModel({ inProgressCount }, 'Usuarios con progreso en curso obtenidos correctamente');
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'contar usuarios con progreso en curso');
     }
   }
 
@@ -149,8 +187,8 @@ export class AchievementService {
    */
   static async getAchievementsByType(type, pagination = {}) {
     try {
-      if (!VALID_ACHIEVEMENT_TYPES.includes(type)) {
-        return new BadRequestResponseModel(`El tipo debe ser uno de: ${VALID_ACHIEVEMENT_TYPES.join(', ')}`);
+      if (!ACHIEVEMENT_TYPES.includes(type)) {
+        return new BadRequestResponseModel(`El tipo debe ser uno de: ${ACHIEVEMENT_TYPES.join(', ')}`);
       }
 
       const paginationDto = new AchievementFilterDto(pagination);

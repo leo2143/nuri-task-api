@@ -31,6 +31,16 @@ export const setupAchievementRoutes = app => {
     return AchievementController.getAchievementStats(req, res);
   });
 
+  // Registrada antes de '/api/achievements/:id' para que "catalog" no se interprete como un id
+  app.get('/api/achievements/catalog', validateAdminToken, (req, res) => {
+    // #swagger.tags = ['Achievements']
+    // #swagger.summary = 'Obtiene eventos disparadores y condiciones permitidas por evento (solo admin)'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return AchievementController.getAchievementCatalog(req, res);
+  });
+
   app.get('/api/achievements/type/:type', validateAdminToken, (req, res) => {
     // #swagger.tags = ['Achievements']
     // #swagger.summary = 'Obtiene logros filtrados por tipo (solo admin)'
@@ -60,6 +70,21 @@ export const setupAchievementRoutes = app => {
          "bearerAuth": []
     }] */
     return AchievementController.getAchievementById(req, res);
+  });
+
+  app.get('/api/achievements/:id/in-progress-count', validateAdminToken, (req, res) => {
+    // #swagger.tags = ['Achievements']
+    // #swagger.summary = 'Cuenta los usuarios con progreso en curso en un logro (solo admin)'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID del logro',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return AchievementController.getInProgressCount(req, res);
   });
 
   app.post('/api/achievements', validateAdminToken, (req, res) => {

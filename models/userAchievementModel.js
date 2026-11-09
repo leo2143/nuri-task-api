@@ -6,6 +6,8 @@ import mongoose from 'mongoose';
  * @property {mongoose.Schema.Types.ObjectId} user - Referencia al usuario (requerido)
  * @property {mongoose.Schema.Types.ObjectId} achievement - Referencia al logro (requerido)
  * @property {number} currentCount - Conteo de progreso actual (default: 0)
+ * @property {{key: string, count: number}|null} window - Instancia de franja en curso para logros con `sameWindow`
+ *   (`key` = fecha local de inicio de la franja `YYYY-MM-DD`, `count` = eventos de esa instancia)
  * @property {string} status - Estado del progreso - Valores: 'locked', 'unlocked', 'completed'
  * @property {Date} unlockedAt - Fecha en que se desbloqueó el logro
  * @property {Date} completedAt - Fecha en que se completó el logro
@@ -18,6 +20,14 @@ import mongoose from 'mongoose';
  * Define la estructura y validaciones para el progreso individual de usuarios en logros
  * @constant {mongoose.Schema} userAchievementSchema
  */
+const windowSchema = new mongoose.Schema(
+  {
+    key: { type: String, required: true },
+    count: { type: Number, default: 0, min: 0 },
+  },
+  { _id: false }
+);
+
 const userAchievementSchema = new mongoose.Schema(
   {
     user: {
@@ -40,6 +50,10 @@ const userAchievementSchema = new mongoose.Schema(
       required: true,
       enum: ['locked', 'unlocked', 'completed'],
       default: 'locked',
+    },
+    window: {
+      type: windowSchema,
+      default: null,
     },
     unlockedAt: {
       type: Date,
