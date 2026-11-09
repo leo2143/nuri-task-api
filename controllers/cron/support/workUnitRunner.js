@@ -68,7 +68,12 @@ export async function runWorkUnit(unit, { useLedger = true, deadline = Infinity 
   try {
     result = await executeUnit(unit, deadline, {
       resumeAfter,
-      saveCursor: useLedger ? lastUserId => saveCursor(unit, claimedAt, lastUserId) : null,
+      saveCursor: useLedger
+        ? async lastUserId => {
+            await saveCursor(unit, claimedAt, lastUserId);
+            attempts = 1;
+          }
+        : null,
     });
   } catch (error) {
     const durationMs = Date.now() - startedAt;
@@ -130,14 +135,15 @@ async function claimUnit({ jobName, timezone, localDate, now }) {
 }
 
 /**
- * Guarda el último usuario procesado de la unidad, con la misma guarda de dueño que `finishUnit`. Un fallo del
- * ledger se registra y no se propaga: lo peor es que la retomada repita el último lote (la dedup lo absorbe).
+ * Guarda el último usuario procesado de la unidad, con la misma guarda de dueño que `finishUnit`. Avanzar el cursor
+ * es progreso, así que `attempts` vuelve a 1: el tope MAX_UNIT_ATTEMPTS cuenta corridas seguidas sin avanzar. Un
+ * fallo del ledger se registra y no se propaga: lo peor es que la retomada repita el último lote (la dedup lo absorbe).
  */
 async function saveCursor({ jobName, timezone, localDate }, claimedAt, lastUserId) {
   try {
     await JobRun.updateOne(
       { job: jobName, timezone, localDate, status: 'claimed', claimedAt },
-      { $set: { cursor: lastUserId } }
+      { $set: { cursor: lastUserId, attempts: 1 } }
     );
   } catch (error) {
     console.error(chalk.red(`[Cron] No se pudo guardar el cursor de ${jobName} (${timezone} ${localDate}):`), error);

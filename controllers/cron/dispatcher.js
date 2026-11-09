@@ -8,6 +8,8 @@ import { BadRequestResponseModel, ErrorResponseModel, SuccessResponseModel } fro
 
 /** Margen bajo los 60 s de `maxDuration`: pasado este tiempo no se empiezan unidades nuevas. */
 const MAX_DISPATCH_MS = 50 * 1000;
+/** Margen mínimo para reclamar una unidad: con menos no alcanza para avanzar y se deja al tick siguiente. */
+const MIN_UNIT_BUDGET_MS = 10 * 1000;
 /** Un tick más viejo que esto ya no es de "esta hora": se saltea en vez de enviar a destiempo. */
 const STALE_TICK_MS = 90 * 60 * 1000;
 const MS_PER_HOUR = 60 * 60 * 1000;
@@ -264,7 +266,8 @@ export class CronDispatcher {
     const results = [];
 
     for (const unit of units) {
-      if (Date.now() - startedAt > MAX_DISPATCH_MS) break;
+      // Sin margen para avanzar, reclamar solo gastaría un intento: queda sin correr para el tick siguiente
+      if (startedAt + MAX_DISPATCH_MS - Date.now() < MIN_UNIT_BUDGET_MS) break;
       results.push(await runWorkUnit(unit, { deadline: startedAt + MAX_DISPATCH_MS }));
     }
 
