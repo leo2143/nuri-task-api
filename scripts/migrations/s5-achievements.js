@@ -41,7 +41,9 @@ import { findLatestBackup, readBackup, runMigration } from './support/cli.js';
  *
  * `seed` también guarda en su backup, como `meta.pendingActivationIds`, los logros que dejó inactivos esperando el
  * deploy: `activate` activa SOLO esos (un logro que un admin desactivó por su cuenta no se toca). Si `seed` se repite
- * tras una falla a medias, esos ids se arrastran del backup anterior y los originales también.
+ * (tras una falla a medias o por una corrida idempotente), esos ids se arrastran del backup anterior y el backup nuevo
+ * es ACUMULATIVO: junta por _id los originales y las filas de progreso del anterior (gana el más antiguo) con los de
+ * esta corrida, así `--restore` siempre vuelve al estado previo al primer `seed`.
  */
 const SEED_FILE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -147,8 +149,21 @@ function readLastSeedBackup() {
   const filePath = findLatestBackup(MIGRATION_NAME, 'seed');
   if (!filePath) return null;
 
-  const { documents, meta } = readBackup(filePath);
-  return { filePath, originals: documents, pendingActivationIds: meta?.pendingActivationIds ?? [] };
+  const { documents, related = [], meta } = readBackup(filePath);
+  const progressRows = related.find(set => set.collection === 'userachievements')?.documents ?? [];
+  return { filePath, originals: documents, progressRows, pendingActivationIds: meta?.pendingActivationIds ?? [] };
+}
+
+/**
+ * Une documentos por _id; ante un _id repetido gana el de `previousDocuments` (el estado más antiguo). Así el backup
+ * de `seed` es acumulativo: repetir el paso no pierde las definiciones originales ni el progreso que reinició el primero.
+ */
+function mergeKeepingPrevious(previousDocuments, currentDocuments) {
+  const mergedById = new Map(previousDocuments.map(document => [String(document._id), document]));
+  for (const document of currentDocuments) {
+    if (!mergedById.has(String(document._id))) mergedById.set(String(document._id), document);
+  }
+  return [...mergedById.values()];
 }
 
 await runMigration({
@@ -215,10 +230,16 @@ await runMigration({
         log(`Progreso en curso de esos logros: ${inProgressRows.length} filas`);
 
         // Un solo backup, ANTES de tocar nada, y siempre con --apply (aunque no haya nada pendiente)
+        // Acumulativo: lo del backup anterior (estado más antiguo) gana, así `--restore` vuelve al origen aunque el paso se repita
         const backupPath = backup({
           collection: 'achievements',
-          documents: originals,
-          related: [{ collection: 'userachievements', documents: inProgressRows }],
+          documents: mergeKeepingPrevious(lastSeedBackup?.originals ?? [], originals),
+          related: [
+            {
+              collection: 'userachievements',
+              documents: mergeKeepingPrevious(lastSeedBackup?.progressRows ?? [], inProgressRows),
+            },
+          ],
           meta: { pendingActivationIds: pendingIds },
         });
         if (backupPath) log(`Backup: ${backupPath}`);
