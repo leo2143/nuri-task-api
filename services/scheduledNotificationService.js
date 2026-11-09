@@ -51,6 +51,8 @@ const PREMIUM_NAG_COOLDOWN_DAYS = 14;
 const OVERDUE_BACKLOG_DAYS = 7;
 const OVERDUE_BACKLOG_COOLDOWN_DAYS = 7;
 const FREE_GOALS_LIMIT = 2;
+// Usuarios por consulta de suscripciones push: acota cada `$in` dentro de los 60 s de la función
+const PUSH_SUBSCRIPTION_BATCH_SIZE = 500;
 
 /**
  * Servicio de notificaciones programadas. Cada método es un job diario propio.
@@ -64,8 +66,9 @@ const FREE_GOALS_LIMIT = 2;
  */
 export class ScheduledNotificationService {
   /**
-   * Persiste notificaciones in-app para todos los usuarios y envía push
-   * solo a aquellos con suscripción activa.
+   * Persiste las notificaciones in-app (con el push marcado como pendiente) y empuja las pendientes
+   * de esos usuarios. Si la función muere a mitad del envío, lo que quedó pendiente se empuja en la
+   * próxima corrida del mismo tipo (`pushPendingNotifications`).
    * @param {Array<{userId: string, payload: Object}>} entries
    * @param {string} label - Etiqueta para el log
    * @param {string} type - Tipo de notificación
@@ -87,24 +90,92 @@ export class ScheduledNotificationService {
         body: payload.body,
         url: payload.url,
         type,
+        // null explícito = push pendiente (ver pushPendingNotifications)
+        pushSentAt: null,
       }))
     );
 
-    let notified = 0;
+    const { sent } = await this.pushPendingNotifications({
+      type,
+      userIds: pendingEntries.map((entry) => entry.userId),
+      dayRange: this._getDayRange(0, this.resolveContext(context)),
+    });
 
-    for (const { userId, payload } of pendingEntries) {
-      const hasSub = await PushSubscription.exists({ userId });
-      if (!hasSub) continue;
+    console.log(chalk.green(`[Cron] ${label}: ${pendingEntries.length} persistidas, ${sent} push enviados`));
+    return { notified: sent, persisted: pendingEntries.length };
+  }
 
-      await PushNotificationService.sendNotification(userId, {
-        ...payload,
-        icon: payload.icon || PUSH_ICONS[type],
-      });
-      notified++;
+  /**
+   * Empuja las notificaciones de un tipo cuyo push quedó pendiente (`pushSentAt: null`) en la ventana dada.
+   * Se rearma el payload desde el documento guardado (el ícono sale de PUSH_ICONS, el modelo no lo guarda).
+   *
+   * Un documento se marca como enviado (`pushSentAt` = ahora) si se entregó a alguna suscripción, si el usuario
+   * no tiene suscripciones o si todos los fallos fueron permanentes. Si hubo fallos transitorios (o VAPID sin
+   * configurar) queda pendiente para la próxima corrida. Es at-least-once: si la función muere entre el envío y
+   * la marca, el próximo intento puede duplicar ese push.
+   * @param {Object} params
+   * @param {string} params.type - Tipo de notificación
+   * @param {Array|null} [params.userIds] - Lote de usuarios (null = todos)
+   * @param {{start: Date, end: Date}} params.dayRange - Ventana [start, end) de `createdAt`
+   * @returns {Promise<{pending: number, sent: number}>}
+   */
+  static async pushPendingNotifications({ type, userIds = null, dayRange }) {
+    const pending = await Notification.find({
+      type,
+      ...(userIds ? { userId: { $in: userIds } } : {}),
+      createdAt: { $gte: dayRange.start, $lt: dayRange.end },
+      // $type 'null' (no `pushSentAt: null`, que también matchea documentos sin el campo) y pega en el índice parcial
+      pushSentAt: { $type: 'null' },
+    }).lean();
+
+    if (pending.length === 0) return { pending: 0, sent: 0 };
+
+    const subscriptionsByUser = await this._fetchSubscriptionsByUser(pending.map((doc) => doc.userId));
+
+    let sent = 0;
+    for (const doc of pending) {
+      const subscriptions = subscriptionsByUser.get(doc.userId.toString()) ?? [];
+
+      let shouldMark = subscriptions.length === 0;
+      if (!shouldMark) {
+        const result = await PushNotificationService.sendNotification(
+          doc.userId,
+          { title: doc.title, body: doc.body, url: doc.url, icon: PUSH_ICONS[type] },
+          subscriptions
+        );
+        if (result.delivered > 0) sent++;
+        shouldMark = result.delivered > 0 || !result.transientFailure;
+      }
+
+      if (shouldMark) {
+        await Notification.updateOne({ _id: doc._id, pushSentAt: { $type: 'null' } }, { $set: { pushSentAt: new Date() } });
+      }
     }
 
-    console.log(chalk.green(`[Cron] ${label}: ${pendingEntries.length} persistidas, ${notified} push enviados`));
-    return { notified, persisted: pendingEntries.length };
+    return { pending: pending.length, sent };
+  }
+
+  /**
+   * Suscripciones push de un conjunto de usuarios, leídas en lotes (una consulta por lote).
+   * @private
+   * @param {Array} userIds
+   * @returns {Promise<Map<string, Array>>} userId (string) -> suscripciones
+   */
+  static async _fetchSubscriptionsByUser(userIds) {
+    const uniqueUserIds = [...new Set(userIds.map((userId) => userId.toString()))];
+    const subscriptionsByUser = new Map();
+
+    for (let index = 0; index < uniqueUserIds.length; index += PUSH_SUBSCRIPTION_BATCH_SIZE) {
+      const batch = uniqueUserIds.slice(index, index + PUSH_SUBSCRIPTION_BATCH_SIZE);
+      const subscriptions = await PushSubscription.find({ userId: { $in: batch } });
+      for (const subscription of subscriptions) {
+        const key = subscription.userId.toString();
+        if (!subscriptionsByUser.has(key)) subscriptionsByUser.set(key, []);
+        subscriptionsByUser.get(key).push(subscription);
+      }
+    }
+
+    return subscriptionsByUser;
   }
 
   /**
