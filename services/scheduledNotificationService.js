@@ -10,6 +10,7 @@ import { NotificationService } from './notificationService.js';
 import {
   DEFAULT_TIMEZONE,
   addDaysToYmd,
+  getFloatingDayRange,
   getLocalDayRange,
   resolveTimeZone,
   toLocalYmd,
@@ -161,6 +162,19 @@ export class ScheduledNotificationService {
   }
 
   /**
+   * Ventana UTC [start, end) de una fecha límite (flotante, guardada a las 12:00Z) que cae `daysFromToday` días
+   * después de `ctx.localDate`. La fecha límite es un día de calendario sin zona: se compara contra el "hoy"
+   * del usuario como Y-M-D, nunca como instante.
+   * @private
+   * @param {number} daysFromToday
+   * @param {{localDate: string}} ctx
+   * @returns {{start: Date, end: Date}}
+   */
+  static _getDueDateRange(daysFromToday, ctx) {
+    return getFloatingDayRange(this._getYmd(daysFromToday, ctx));
+  }
+
+  /**
    * YYYY-MM-DD del día de calendario local `daysFromToday` días después de `ctx.localDate`.
    * @private
    */
@@ -214,7 +228,7 @@ export class ScheduledNotificationService {
    */
   static async checkDueTasks(context) {
     const ctx = this.resolveContext(context);
-    const { start, end } = this._getDayRange(0, ctx);
+    const { start, end } = this._getDueDateRange(0, ctx);
 
     const dueTasks = await Todo.find({
       ...this._userScope(ctx),
@@ -257,7 +271,7 @@ export class ScheduledNotificationService {
    */
   static async checkOverdueTasks(context) {
     const ctx = this.resolveContext(context);
-    const { start, end } = this._getDayRange(-1, ctx);
+    const { start, end } = this._getDueDateRange(-1, ctx);
 
     const overdueTasks = await Todo.find({
       ...this._userScope(ctx),
@@ -300,7 +314,7 @@ export class ScheduledNotificationService {
    */
   static async checkOverdueGoals(context) {
     const ctx = this.resolveContext(context);
-    const { start, end } = this._getDayRange(-1, ctx);
+    const { start, end } = this._getDueDateRange(-1, ctx);
 
     const overdueGoals = await Goal.find({
       ...this._userScope(ctx),
@@ -344,7 +358,7 @@ export class ScheduledNotificationService {
    */
   static async checkUpcomingHighPriorityTasks(context) {
     const ctx = this.resolveContext(context);
-    const { start, end } = this._getDayRange(4, ctx);
+    const { start, end } = this._getDueDateRange(4, ctx);
 
     const upcomingTasks = await Todo.find({
       ...this._userScope(ctx),
@@ -387,7 +401,7 @@ export class ScheduledNotificationService {
    */
   static async checkDueGoals(context) {
     const ctx = this.resolveContext(context);
-    const { start, end } = this._getDayRange(0, ctx);
+    const { start, end } = this._getDueDateRange(0, ctx);
 
     const dueGoals = await Goal.find({
       ...this._userScope(ctx),
@@ -431,8 +445,8 @@ export class ScheduledNotificationService {
    */
   static async checkEmptyGoals(context) {
     const ctx = this.resolveContext(context);
-    const today = this._getDayRange(0, ctx);
-    const inFourDays = this._getDayRange(4, ctx);
+    const today = this._getDueDateRange(0, ctx);
+    const inFourDays = this._getDueDateRange(4, ctx);
 
     const emptyGoals = await Goal.find({
       ...this._userScope(ctx),
@@ -477,7 +491,7 @@ export class ScheduledNotificationService {
    */
   static async checkUpcomingHighPriorityGoals(context) {
     const ctx = this.resolveContext(context);
-    const { start, end } = this._getDayRange(4, ctx);
+    const { start, end } = this._getDueDateRange(4, ctx);
 
     const upcomingGoals = await Goal.find({
       ...this._userScope(ctx),
@@ -758,7 +772,7 @@ export class ScheduledNotificationService {
   static async checkOverdueBacklog(context) {
     const ctx = this.resolveContext(context);
     const { start: startOfDay } = this._getDayRange(0, ctx);
-    const { start: backlogCutoff } = this._getDayRange(-(OVERDUE_BACKLOG_DAYS - 1), ctx);
+    const { start: backlogCutoff } = this._getDueDateRange(-(OVERDUE_BACKLOG_DAYS - 1), ctx);
 
     const [alreadyToday] = await Promise.all([
       Notification.find({
