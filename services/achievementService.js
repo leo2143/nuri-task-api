@@ -1,11 +1,45 @@
 import Achievement from '../models/achievementModel.js';
 import UserAchievement from '../models/userAchievementModel.js';
-import { ACHIEVEMENT_TYPES, buildAchievementCatalog } from '../models/achievementCatalog.js';
+import {
+  ACHIEVEMENT_TYPES,
+  buildAchievementCatalog,
+  buildDisallowedConditionsMessage,
+  getDisallowedConditionKeys,
+} from '../models/achievementCatalog.js';
 import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import { CreateAchievementDto, UpdateAchievementDto, AchievementFilterDto } from '../models/dtos/achievements/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
+import { UserAchievementService } from './userAchievementService.js';
 import mongoose from 'mongoose';
+
+/**
+ * Forma comparable de `conditions`: dos objetos con el mismo significado dan el mismo texto
+ * (sin `sameWindow` equivale a `sameWindow: false`).
+ * @param {Object|null|undefined} conditions
+ * @returns {string}
+ */
+function toComparableConditions(conditions) {
+  return JSON.stringify({
+    timeWindow: conditions?.timeWindow ? { start: conditions.timeWindow.start, end: conditions.timeWindow.end } : null,
+    sameWindow: conditions?.sameWindow === true,
+    maxDurationHours: conditions?.maxDurationHours ?? null,
+  });
+}
+
+/**
+ * Un cambio de evento o de condiciones cambia QUÉ cuenta como progreso: el progreso en curso deja de ser válido.
+ * @param {Object} existing - Logro guardado
+ * @param {Object} cleanData - Cambios validados
+ * @returns {boolean}
+ */
+function changesProgressMeaning(existing, cleanData) {
+  const triggerChanged = cleanData.triggerEvent !== undefined && cleanData.triggerEvent !== existing.triggerEvent;
+  const conditionsChanged =
+    cleanData.conditions !== undefined &&
+    toComparableConditions(cleanData.conditions) !== toComparableConditions(existing.conditions);
+  return triggerChanged || conditionsChanged;
+}
 
 /**
  * Servicio para gestionar plantillas globales de logros (solo administradores)
@@ -143,20 +177,63 @@ export class AchievementService {
         return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
+      if (!mongoose.isValidObjectId(achievementId)) {
+        return new BadRequestResponseModel('El id del logro no es válido');
+      }
+
+      const existing = await Achievement.findById(achievementId).lean();
+      if (!existing) {
+        return new NotFoundResponseModel('Plantilla de logro no encontrada');
+      }
+
       const cleanData = updateDto.toPlainObject();
+
+      // Las condiciones deben ser válidas para el evento resultante, aunque el cambio traiga solo una de las dos cosas
+      const resultingTrigger = cleanData.triggerEvent ?? existing.triggerEvent;
+      const resultingConditions = cleanData.conditions ?? existing.conditions;
+      const disallowedKeys = getDisallowedConditionKeys(resultingTrigger, resultingConditions);
+      if (disallowedKeys.length > 0) {
+        return new BadRequestResponseModel(buildDisallowedConditionsMessage(resultingTrigger, disallowedKeys));
+      }
+
       const achievement = await Achievement.findByIdAndUpdate(
         achievementId,
         { $set: cleanData },
         { new: true, runValidators: true }
       );
-
       if (!achievement) {
         return new NotFoundResponseModel('Plantilla de logro no encontrada');
       }
 
+      await this.#applyProgressPolicy(existing, cleanData);
+
       return new SuccessResponseModel(achievement, 'Plantilla de logro actualizada correctamente');
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar plantilla de logro');
+    }
+  }
+
+  /**
+   * Política de edición sobre el progreso de los usuarios:
+   * - un logro completado NUNCA se revoca
+   * - si cambian el evento o las condiciones, el progreso en curso se reinicia (ya no mide lo mismo)
+   * - si solo cambia el targetCount, el progreso se conserva y completa a quien ya alcanzó el nuevo objetivo
+   * - editar título, descripción, recompensa, imagen o isActive no toca el progreso
+   * @param {Object} existing - Logro antes del cambio
+   * @param {Object} cleanData - Cambios aplicados
+   * @returns {Promise<void>}
+   */
+  static async #applyProgressPolicy(existing, cleanData) {
+    if (changesProgressMeaning(existing, cleanData)) {
+      await UserAchievement.updateMany(
+        { achievement: existing._id, status: { $ne: 'completed' } },
+        { $set: { currentCount: 0, status: 'locked', window: null } }
+      );
+      return;
+    }
+
+    if (cleanData.targetCount !== undefined && cleanData.targetCount !== existing.targetCount) {
+      await UserAchievementService.completeReachedTarget(existing._id);
     }
   }
 

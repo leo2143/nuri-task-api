@@ -222,7 +222,7 @@ export class UserAchievementService {
 
       await UserAchievement.collection.bulkWrite(progressUpdateOps, { ordered: false });
 
-      return await this._checkAndCompleteAchievements(userId, eligibleAchievements, shouldSetAbsoluteValue);
+      return await this._checkAndCompleteAchievements(userId, eligibleAchievements);
     } catch (error) {
       console.error(
         chalk.red('[side-effect] Error al procesar evento de logros (el request no falla; retry en 017):'),
@@ -269,81 +269,62 @@ export class UserAchievementService {
   }
 
   /**
-   * Después del bulkWrite revisa qué logros cruzaron el targetCount y los marca como completados.
-   * En modo streak también revierte los que cayeron por debajo.
+   * Después de escribir el progreso completa los logros que alcanzaron su targetCount.
+   * Un logro completado nunca se revierte: ni una racha que cae ni una edición del admin lo deshacen.
    * @private
    * @param {string} userId
-   * @param {Array} achievements - Logros consultados (con _id y targetCount)
-   * @param {boolean} shouldSetAbsoluteValue - true cuando el evento es streak:updated (asigna el valor en lugar de incrementar)
+   * @param {Array} achievements - Logros evaluados (con _id y targetCount)
    * @returns {Promise<{notifiedAchievement: boolean, achievementsUnlocked: Array<{id: string, title: string, description: string}>}>}
    */
-  static async _checkAndCompleteAchievements(userId, achievements, shouldSetAbsoluteValue) {
-    const achievementIds = achievements.map(achievement => achievement._id);
-    const userProgressList = await UserAchievement.find({
-      user: userId,
-      achievement: { $in: achievementIds },
-    });
-
-    if (!userProgressList.length) return { notifiedAchievement: false, achievementsUnlocked: [] };
-
+  static async _checkAndCompleteAchievements(userId, achievements) {
     const achievementById = new Map(achievements.map(achievement => [achievement._id.toString(), achievement]));
-    const now = new Date();
 
-    const completionOps = [];
-    const revertOps = [];
+    const pendingRows = await UserAchievement.find({
+      user: userId,
+      achievement: { $in: achievements.map(achievement => achievement._id) },
+      status: { $ne: 'completed' },
+    }).lean();
+
+    const reachedRows = pendingRows.filter(
+      row => row.currentCount >= (achievementById.get(row.achievement.toString())?.targetCount ?? Infinity)
+    );
+
+    return this._completeRows(userId, reachedRows, achievementById);
+  }
+
+  /**
+   * Completa filas de progreso y notifica solo las que ESTE llamado reclamó. El reclamo es condicional por fila
+   * (`status != completed`): si dos eventos llegan a la vez, solo uno completa y notifica.
+   * @private
+   * @param {string} userId
+   * @param {Array} rows - Filas de UserAchievement que alcanzaron el objetivo
+   * @param {Map<string, Object>} achievementById - Logros por id (string)
+   * @returns {Promise<{notifiedAchievement: boolean, achievementsUnlocked: Array<{id: string, title: string, description: string}>}>}
+   */
+  static async _completeRows(userId, rows, achievementById) {
+    const now = new Date();
     const achievementsJustCompleted = [];
 
-    for (const userProgress of userProgressList) {
-      const achievement = achievementById.get(userProgress.achievement.toString());
+    for (const row of rows) {
+      const achievement = achievementById.get(row.achievement.toString());
       if (!achievement) continue;
 
-      const reachedTarget = userProgress.currentCount >= achievement.targetCount;
-
-      if (reachedTarget && userProgress.status !== 'completed') {
-        completionOps.push({
-          updateOne: {
-            filter: { _id: userProgress._id },
-            update: {
-              $set: {
-                status: 'completed',
-                completedAt: now,
-                unlockedAt: userProgress.unlockedAt || now,
-              },
-            },
-          },
-        });
-        achievementsJustCompleted.push(achievement);
-      } else if (shouldSetAbsoluteValue && !reachedTarget && userProgress.status === 'completed') {
-        revertOps.push({
-          updateOne: {
-            filter: { _id: userProgress._id },
-            update: { $set: { status: 'locked', completedAt: null } },
-          },
-        });
-      }
-    }
-
-    const allOps = [...completionOps, ...revertOps];
-    if (allOps.length > 0) {
-      await UserAchievement.bulkWrite(allOps);
+      const claimedRow = await UserAchievement.findOneAndUpdate(
+        { _id: row._id, status: { $ne: 'completed' } },
+        { $set: { status: 'completed', completedAt: now, unlockedAt: row.unlockedAt || now } }
+      );
+      if (claimedRow) achievementsJustCompleted.push(achievement);
     }
 
     for (const achievement of achievementsJustCompleted) {
-      const payload = {
-        title: '¡Nuevo logro desbloqueado!',
-        body: achievement.title,
-        url: '/achievements',
-        icon: '/notifications/crown.svg',
-      };
-
       try {
         await persistAndNotify({
           userId,
-          title: payload.title,
-          body: payload.body,
-          url: payload.url,
+          title: '¡Nuevo logro desbloqueado!',
+          body: achievement.title,
+          url: '/achievements',
           type: 'achievement_completed',
-          icon: payload.icon,
+          icon: '/notifications/crown.svg',
         });
       } catch (error) {
         console.error(chalk.yellow('[side-effect] Error al notificar logro desbloqueado:'), error);
@@ -358,5 +339,39 @@ export class UserAchievementService {
         description: achievement.description ?? '',
       })),
     };
+  }
+
+  /**
+   * Tras bajar el `targetCount` de un logro, completa las filas en curso que ya alcanzaron el nuevo objetivo,
+   * por el mismo reclamo y la misma notificación que un evento. Un logro inactivo no completa a nadie.
+   * Es un efecto posterior a la edición: un fallo se registra y no deshace el cambio ya guardado.
+   * @param {string} achievementId
+   * @returns {Promise<number>} Cantidad de usuarios que completaron el logro en esta llamada
+   */
+  static async completeReachedTarget(achievementId) {
+    try {
+      const achievement = await Achievement.findOne({ _id: achievementId, isActive: true }).lean();
+      if (!achievement) return 0;
+
+      const reachedRows = await UserAchievement.find({
+        achievement: achievement._id,
+        status: { $ne: 'completed' },
+        currentCount: { $gte: achievement.targetCount },
+      }).lean();
+
+      const achievementById = new Map([[achievement._id.toString(), achievement]]);
+      let completedUsers = 0;
+      for (const row of reachedRows) {
+        const { achievementsUnlocked } = await this._completeRows(row.user.toString(), [row], achievementById);
+        completedUsers += achievementsUnlocked.length;
+      }
+      return completedUsers;
+    } catch (error) {
+      console.error(
+        chalk.yellow('[side-effect] Error al completar logros que ya alcanzaron el nuevo objetivo:'),
+        error
+      );
+      return 0;
+    }
   }
 }
