@@ -200,14 +200,11 @@ export class AchievementService {
         return new BadRequestResponseModel(buildDisallowedConditionsMessage(resultingTrigger, disallowedKeys));
       }
 
-      // El reinicio va ANTES de guardar la definición: si falla, el logro conserva la definición vieja junto con su
-      // progreso viejo (coherentes) y el admin puede reintentar. Al revés quedaría la semántica nueva con progreso viejo.
-      await this.#resetProgressIfMeaningChanged(existing, cleanData);
-
-      // Guardado optimista: solo gana quien edita sobre la versión que leyó (`updatedAt`). Los eventos que llegan durante
-      // la edición pueden contarse con las reglas viejas (aceptado).
+      // Guardado optimista: solo gana quien edita sobre la versión que leyó (`updatedAt`). Los logros importados o
+      // migrados pueden no tener `updatedAt`: en ese caso la guarda exige que siga sin existir.
+      const versionGuard = existing.updatedAt ? { updatedAt: existing.updatedAt } : { updatedAt: { $exists: false } };
       const achievement = await Achievement.findOneAndUpdate(
-        { _id: achievementId, updatedAt: existing.updatedAt },
+        { _id: achievementId, ...versionGuard },
         { $set: cleanData },
         { new: true, runValidators: true }
       );
@@ -217,6 +214,10 @@ export class AchievementService {
           ? new ConflictResponseModel('El logro fue modificado por otra edición. Recargalo y volvé a intentar.')
           : new NotFoundResponseModel('Plantilla de logro no encontrada');
       }
+
+      // El reinicio va DESPUÉS de guardar: si la guarda pierde (409) o el guardado falla, el progreso queda intacto. Los
+      // eventos que llegan entre el guardado y el reinicio pueden contarse con las reglas nuevas y se reinician (aceptado).
+      await this.#resetProgressAfterSave(existing, cleanData, achievement);
 
       const pendingCompletions = await this.#completeIfTargetChanged(existing, cleanData);
 
@@ -229,23 +230,44 @@ export class AchievementService {
   }
 
   /**
-   * Política de edición sobre el progreso de los usuarios (se aplica en dos momentos alrededor del guardado):
+   * Política de edición sobre el progreso de los usuarios (ambos pasos corren DESPUÉS de guardar la definición):
    * - un logro completado NUNCA se revoca
-   * - si cambian el evento o las condiciones, el progreso en curso se reinicia ANTES de guardar (ya no mide lo mismo)
-   * - si solo cambia el targetCount, el progreso se conserva y, DESPUÉS de guardar, completa a quien ya alcanzó el
-   *   nuevo objetivo
+   * - si cambian el evento o las condiciones, el progreso en curso se reinicia (ya no mide lo mismo)
+   * - si solo cambia el targetCount, el progreso se conserva y se completa a quien ya alcanzó el nuevo objetivo
    * - editar título, descripción, recompensa, imagen o isActive no toca el progreso
+   * Si el reinicio falla, se revierte la definición guardada (solo si nadie la editó después) para que el admin pueda
+   * reintentar con la misma diferencia, y el error se propaga: la edición responde con error.
    * @param {Object} existing - Logro antes del cambio
-   * @param {Object} cleanData - Cambios a aplicar
+   * @param {Object} cleanData - Cambios aplicados
+   * @param {Object} saved - Logro ya guardado
    * @returns {Promise<void>}
    */
-  static async #resetProgressIfMeaningChanged(existing, cleanData) {
+  static async #resetProgressAfterSave(existing, cleanData, saved) {
     if (!changesProgressMeaning(existing, cleanData)) return;
 
-    await UserAchievement.updateMany(
-      { achievement: existing._id, status: { $ne: 'completed' } },
-      { $set: { currentCount: 0, status: 'locked', window: null } }
-    );
+    try {
+      await UserAchievement.updateMany(
+        { achievement: existing._id, status: { $ne: 'completed' } },
+        { $set: { currentCount: 0, status: 'locked', window: null } }
+      );
+    } catch (error) {
+      const restoredFields = {};
+      const removedFields = {};
+      for (const key of Object.keys(cleanData)) {
+        if (existing[key] === undefined) removedFields[key] = '';
+        else restoredFields[key] = existing[key];
+      }
+      await Achievement.findOneAndUpdate(
+        { _id: existing._id, updatedAt: saved.updatedAt },
+        { $set: restoredFields, ...(Object.keys(removedFields).length > 0 && { $unset: removedFields }) }
+      ).catch(revertError =>
+        console.error(
+          '[achievements] No se pudo revertir la definición tras fallar el reinicio de progreso:',
+          revertError
+        )
+      );
+      throw error;
+    }
   }
 
   /**

@@ -314,8 +314,10 @@ export class UserAchievementService {
   }
 
   /**
-   * Reclama (completa) filas de progreso. El reclamo es condicional por fila (`status != completed`): si dos
-   * llamados compiten por la misma fila solo uno la reclama.
+   * Reclama (completa) filas de progreso. El reclamo es condicional por fila (`status != completed`, `currentCount`
+   * todavía en el `targetCount` del logro aplicado y, con `sameWindow`, la misma franja con la que se seleccionó la
+   * fila): si dos llamados compiten por la misma fila solo uno la reclama, y un reinicio o cambio de objetivo
+   * concurrente la deja sin completar.
    * @private
    * @param {Array} rows - Filas de UserAchievement que alcanzaron el objetivo
    * @param {Map<string, Object>} achievementById - Logros por id (string)
@@ -328,10 +330,18 @@ export class UserAchievementService {
       const achievement = achievementById.get(row.achievement.toString());
       if (!achievement) return null;
 
-      const claimedRow = await UserAchievement.findOneAndUpdate(
-        { _id: row._id, status: { $ne: 'completed' } },
-        { $set: { status: 'completed', completedAt: now, unlockedAt: row.unlockedAt || now } }
-      );
+      // El reclamo revalida lo que justificó la selección: un PUT concurrente pudo reiniciar el progreso (conteo y
+      // franja) o subir el objetivo, y completar es irreversible.
+      const claimFilter = {
+        _id: row._id,
+        status: { $ne: 'completed' },
+        currentCount: { $gte: achievement.targetCount },
+      };
+      if (achievement.conditions?.sameWindow === true) claimFilter['window.key'] = row.window?.key ?? null;
+
+      const claimedRow = await UserAchievement.findOneAndUpdate(claimFilter, {
+        $set: { status: 'completed', completedAt: now, unlockedAt: row.unlockedAt || now },
+      });
       return claimedRow ? { userId: row.user.toString(), achievement } : null;
     });
 
