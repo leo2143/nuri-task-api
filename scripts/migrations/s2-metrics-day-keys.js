@@ -66,7 +66,7 @@ const BACKFILL_PIPELINE = [
               input: { $ifNull: ['$history', []] },
               as: 'row',
               cond: {
-                $or: [{ $eq: [{ $type: '$row.day' }, 'string'] }, { $eq: [{ $type: '$row.date' }, 'date'] }],
+                $or: [{ $eq: [{ $type: '$$row.day' }, 'string'] }, { $eq: [{ $type: '$$row.date' }, 'date'] }],
               },
             },
           },
