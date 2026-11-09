@@ -176,7 +176,7 @@ async function* iterateUserBatches(group) {
     const page = await User.find(filter).sort({ _id: 1 }).limit(USER_BATCH_SIZE).select('_id').lean();
     if (page.length === 0) return;
 
-    yield page.map((user) => user._id);
+    yield page.map(user => user._id);
     if (page.length < USER_BATCH_SIZE) return;
     lastId = page[page.length - 1]._id;
   }

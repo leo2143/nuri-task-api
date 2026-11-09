@@ -16,7 +16,7 @@ const DEMO_NOTIFY_JOBS = Object.entries(JOB_REGISTRY)
   .map(([jobName]) => jobName);
 
 /** Tipos que bloquean dedup, cooldown o skips cruzados de esos jobs. */
-const DEMO_CRON_TYPES = [...new Set(DEMO_NOTIFY_JOBS.map((jobName) => JOB_REGISTRY[jobName].notificationType))];
+const DEMO_CRON_TYPES = [...new Set(DEMO_NOTIFY_JOBS.map(jobName => JOB_REGISTRY[jobName].notificationType))];
 
 /**
  * Corre un job para todos los usuarios en la zona de producto, como hacía el cron: sin ledger ni hora local.

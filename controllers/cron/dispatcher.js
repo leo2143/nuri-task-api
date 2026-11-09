@@ -74,7 +74,14 @@ export function planWorkUnits(groups, dispatchInstant, now) {
 
     for (const group of groups.values()) {
       if (getZonedParts(dispatchInstant, group.key).hour === job.localHour) {
-        units.push({ jobName, job, timezone: group.key, localDate: toLocalYmd(dispatchInstant, group.key), now, group });
+        units.push({
+          jobName,
+          job,
+          timezone: group.key,
+          localDate: toLocalYmd(dispatchInstant, group.key),
+          now,
+          group,
+        });
       }
     }
   }
@@ -116,7 +123,10 @@ export class CronDispatcher {
     const dispatchInstant = getDispatchInstant(resolvedHour.hour, now);
     if (now.getTime() - dispatchInstant.getTime() > STALE_TICK_MS) {
       console.warn(chalk.yellow(`[Cron] Tick de las ${dispatchInstant.toISOString()} demasiado viejo: se saltea`));
-      return CronDispatcher.#send(res, new SuccessResponseModel({ skipped: 'stale', dispatchInstant }, 'Tick vencido, se saltea'));
+      return CronDispatcher.#send(
+        res,
+        new SuccessResponseModel({ skipped: 'stale', dispatchInstant }, 'Tick vencido, se saltea')
+      );
     }
 
     try {
@@ -127,15 +137,22 @@ export class CronDispatcher {
       if (isDryRun) {
         const planned = units.map(({ jobName, timezone, localDate }) => ({ jobName, timezone, localDate }));
         console.log(chalk.cyan(`[Cron] dryRun h=${resolvedHour.hour}: correrían ${units.length} unidades`), planned);
-        return CronDispatcher.#send(res, new SuccessResponseModel({ ...summary, dryRun: true, planned }, 'dryRun: no se ejecutó nada'));
+        return CronDispatcher.#send(
+          res,
+          new SuccessResponseModel({ ...summary, dryRun: true, planned }, 'dryRun: no se ejecutó nada')
+        );
       }
 
       const results = await CronDispatcher.#runUntilDeadline(units);
-      const failed = results.filter((outcome) => outcome.status === 'failed').length;
+      const failed = results.filter(outcome => outcome.status === 'failed').length;
       const unreached = units.length - results.length;
       const data = { ...summary, ran: results.length, failed, unreached, results };
 
-      console.log(chalk.cyan(`[Cron] dispatch h=${resolvedHour.hour}: ${results.length}/${units.length} unidades, ${failed} fallidas`));
+      console.log(
+        chalk.cyan(
+          `[Cron] dispatch h=${resolvedHour.hour}: ${results.length}/${units.length} unidades, ${failed} fallidas`
+        )
+      );
 
       if (failed > 0 || unreached > 0) {
         const response = new ErrorResponseModel('Dispatch incompleto: hubo unidades fallidas o sin ejecutar', 500);

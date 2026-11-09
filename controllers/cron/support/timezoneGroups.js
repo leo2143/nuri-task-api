@@ -36,7 +36,9 @@ export async function fetchTimezoneGroups() {
 
     let key = canonicalTimeZone(stored);
     if (key === null) {
-      console.warn(`[Cron] Zona horaria inválida guardada en usuarios (${JSON.stringify(stored)}): se agrupa con la zona de producto`);
+      console.warn(
+        `[Cron] Zona horaria inválida guardada en usuarios (${JSON.stringify(stored)}): se agrupa con la zona de producto`
+      );
       key = PRODUCT_TIMEZONE_KEY;
     }
 

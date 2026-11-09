@@ -97,7 +97,7 @@ export class ScheduledNotificationService {
 
     const { sent } = await this.pushPendingNotifications({
       type,
-      userIds: pendingEntries.map((entry) => entry.userId),
+      userIds: pendingEntries.map(entry => entry.userId),
       dayRange: this._getDayRange(0, this.resolveContext(context)),
     });
 
@@ -130,7 +130,7 @@ export class ScheduledNotificationService {
 
     if (pending.length === 0) return { pending: 0, sent: 0 };
 
-    const subscriptionsByUser = await this._fetchSubscriptionsByUser(pending.map((doc) => doc.userId));
+    const subscriptionsByUser = await this._fetchSubscriptionsByUser(pending.map(doc => doc.userId));
 
     let sent = 0;
     for (const doc of pending) {
@@ -162,7 +162,7 @@ export class ScheduledNotificationService {
    * @returns {Promise<Map<string, Array>>} userId (string) -> suscripciones
    */
   static async _fetchSubscriptionsByUser(userIds) {
-    const uniqueUserIds = [...new Set(userIds.map((userId) => userId.toString()))];
+    const uniqueUserIds = [...new Set(userIds.map(userId => userId.toString()))];
     const subscriptionsByUser = new Map();
 
     for (let index = 0; index < uniqueUserIds.length; index += PUSH_SUBSCRIPTION_BATCH_SIZE) {

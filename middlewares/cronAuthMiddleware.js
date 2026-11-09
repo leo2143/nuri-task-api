@@ -9,7 +9,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * @param {string|undefined} authHeader
  * @returns {boolean}
  */
-const isValidBearer = (authHeader) => {
+const isValidBearer = authHeader => {
   if (typeof authHeader !== 'string') return false;
 
   const expected = Buffer.from(`Bearer ${CRON_SECRET}`);
