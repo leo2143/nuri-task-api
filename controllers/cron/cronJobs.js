@@ -5,7 +5,6 @@ import { NotificationService } from '../../services/notificationService.js';
  * Allowlist de crons de Vercel. Un path = una responsabilidad.
  */
 export const CRON_JOBS = {
-  'streak-reset': () => ScheduledNotificationService.resetExpiredStreaks(),
   'due-tasks': () => ScheduledNotificationService.checkDueTasks(),
   'due-goals': () => ScheduledNotificationService.checkDueGoals(),
   'overdue-tasks': () => ScheduledNotificationService.checkOverdueTasks(),

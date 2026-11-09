@@ -8,9 +8,11 @@ import Moodboard from '../models/moodboardModel.js';
 import { PushNotificationService } from './pushNotificationService.js';
 import { NotificationService } from './notificationService.js';
 import {
+  DEFAULT_TIMEZONE,
+  addDaysToYmd,
   formatDateYmdInTimeZone,
   getDayRangeInTimeZone,
-  getStartOfDayInTimeZone,
+  toLocalYmd,
 } from './helpers/dateTime.js';
 import chalk from 'chalk';
 
@@ -47,7 +49,6 @@ const MOODBOARD_STALE_DAYS = 21;
 const PREMIUM_NAG_COOLDOWN_DAYS = 14;
 const OVERDUE_BACKLOG_DAYS = 7;
 const OVERDUE_BACKLOG_COOLDOWN_DAYS = 7;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const FREE_GOALS_LIMIT = 2;
 
 /**
@@ -101,8 +102,7 @@ export class ScheduledNotificationService {
    * days = 0 equivale a “ya notificado hoy”.
    */
   static async _excludeNotifiedSince(entries, type, days = 0) {
-    const start = getStartOfDayInTimeZone();
-    start.setTime(start.getTime() - days * MS_PER_DAY);
+    const { start } = this._getDayRange(-days);
 
     const userIds = entries.map((entry) => entry.userId);
     const existing = await Notification.find({
@@ -118,11 +118,12 @@ export class ScheduledNotificationService {
   }
 
   /**
-   * Ventana [start, end) del día calendario ART corrido `daysFromToday` (0 = hoy).
+   * Ventana [start, end) del día calendario corrido `daysFromToday` (0 = hoy) en `timeZone` (ART por defecto).
+   * Se cuentan días de calendario, no múltiplos de 24 h: un día local dura 23 o 25 h en los cambios de horario.
    * @private
    */
-  static _getDayRange(daysFromToday) {
-    return getDayRangeInTimeZone(daysFromToday);
+  static _getDayRange(daysFromToday, timeZone = DEFAULT_TIMEZONE) {
+    return getDayRangeInTimeZone(daysFromToday, timeZone);
   }
 
   /**
@@ -173,24 +174,6 @@ export class ScheduledNotificationService {
       tasksByUser.get(userId).push(task);
     }
     return tasksByUser;
-  }
-
-  /**
-   * Resetea a 0 las rachas de usuarios cuya última actividad fue hace 2+ días.
-   */
-  static async resetExpiredStreaks() {
-    const { start: yesterday } = this._getDayRange(-1);
-
-    const result = await Metrics.updateMany(
-      { currentStreak: { $gt: 0 }, lastActivityDate: { $lt: yesterday } },
-      { $set: { currentStreak: 0 } }
-    );
-
-    if (result.modifiedCount > 0) {
-      console.log(chalk.yellow(`[Cron] Rachas expiradas reseteadas: ${result.modifiedCount}`));
-    }
-
-    return { modifiedCount: result.modifiedCount };
   }
 
   /**
@@ -490,34 +473,30 @@ export class ScheduledNotificationService {
   /**
    * Recap positivo de la noche: usuarios que completaron al menos una tarea hoy.
    */
-  static async checkDayRecap() {
-    const { start, end } = this._getDayRange(0);
+  static async checkDayRecap({ timezone = DEFAULT_TIMEZONE } = {}) {
+    const today = toLocalYmd(new Date(), timezone);
 
     const metricsWithActivity = await Metrics.find({
       history: {
         $elemMatch: {
-          date: { $gte: start, $lt: end },
-          tasksCompleted: { $gt: 0 },
+          day: today,
+          $or: [{ tasksCompleted: { $gt: 0 } }, { goalsCompleted: { $gt: 0 } }],
         },
       },
     }).lean();
 
     if (metricsWithActivity.length === 0) {
-      console.log(chalk.blue('[Cron] Nadie completó tareas hoy para el recap'));
+      console.log(chalk.blue('[Cron] Nadie completó tareas ni metas hoy para el recap'));
       return { notified: 0, persisted: 0 };
     }
 
     const entries = metricsWithActivity.map((metric) => {
-      const todayRecord = (metric.history || []).find(
-        (entry) => entry.date >= start && entry.date < end && entry.tasksCompleted > 0
-      );
-      const count = todayRecord?.tasksCompleted ?? 1;
-      const taskWord = count === 1 ? 'tarea' : 'tareas';
+      const todayRecord = metric.history.find((entry) => entry.day === today);
       return {
         userId: metric.userId.toString(),
         payload: {
           title: 'Qué día',
-          body: `Hoy cerraste ${count} ${taskWord}. Eso suma. Mañana seguimos.`,
+          body: `Hoy cerraste ${this._describeDayActivity(todayRecord)}. Eso suma. Mañana seguimos.`,
           url: '/',
         },
       };
@@ -527,16 +506,33 @@ export class ScheduledNotificationService {
   }
 
   /**
+   * Arma las partes del recap: "3 tareas", "1 meta" o "3 tareas y 1 meta".
+   * @private
+   * @param {{tasksCompleted?: number, goalsCompleted?: number}} dayRecord
+   * @returns {string}
+   */
+  static _describeDayActivity({ tasksCompleted = 0, goalsCompleted = 0 }) {
+    const parts = [];
+    if (tasksCompleted > 0) {
+      parts.push(`${tasksCompleted} ${tasksCompleted === 1 ? 'tarea' : 'tareas'}`);
+    }
+    if (goalsCompleted > 0) {
+      parts.push(`${goalsCompleted} ${goalsCompleted === 1 ? 'meta' : 'metas'}`);
+    }
+    return parts.join(' y ');
+  }
+
+  /**
    * Notifica a usuarios con racha activa cuya última actividad fue ayer
    * (aún no completaron tarea hoy). Se ejecuta por la noche.
    */
-  static async checkStreaksAtRisk() {
-    const { start: today } = this._getDayRange(0);
-    const { start: yesterday } = this._getDayRange(-1);
+  static async checkStreaksAtRisk({ timezone = DEFAULT_TIMEZONE } = {}) {
+    const yesterday = addDaysToYmd(toLocalYmd(new Date(), timezone), -1);
 
+    // Última actividad ayer: la racha guardada sigue vigente (es la efectiva) y hoy todavía no hubo actividad
     const metricsAtRisk = await Metrics.find({
       currentStreak: { $gt: 0 },
-      lastActivityDate: { $gte: yesterday, $lt: today },
+      lastActivityDay: yesterday,
     }).lean();
 
     if (metricsAtRisk.length === 0) {
@@ -561,11 +557,12 @@ export class ScheduledNotificationService {
    * Omite quien nunca tuvo actividad, quien ya recibió due/overdue hoy,
    * y quien ya tiene inactivity en los últimos INACTIVITY_COOLDOWN_DAYS días.
    */
-  static async checkInactiveUsers() {
-    const { start: twoDaysAgo } = this._getDayRange(-2);
+  static async checkInactiveUsers({ timezone = DEFAULT_TIMEZONE } = {}) {
+    const twoDaysAgo = addDaysToYmd(toLocalYmd(new Date(), timezone), -2);
 
+    // Las claves YYYY-MM-DD ordenan igual que las fechas, así que $lte compara bien
     const inactiveMetrics = await Metrics.find({
-      lastActivityDate: { $ne: null, $lte: twoDaysAgo },
+      lastActivityDay: { $ne: null, $lte: twoDaysAgo },
     }).lean();
 
     if (inactiveMetrics.length === 0) {
@@ -574,9 +571,8 @@ export class ScheduledNotificationService {
     }
 
     const userIds = inactiveMetrics.map((metric) => metric.userId);
-    const { start: startOfDay } = this._getDayRange(0);
-    const cooldownStart = getStartOfDayInTimeZone();
-    cooldownStart.setTime(cooldownStart.getTime() - INACTIVITY_COOLDOWN_DAYS * MS_PER_DAY);
+    const { start: startOfDay } = this._getDayRange(0, timezone);
+    const { start: cooldownStart } = this._getDayRange(-INACTIVITY_COOLDOWN_DAYS, timezone);
 
     const [calendarNotified, recentInactivity] = await Promise.all([
       Notification.find({
@@ -624,7 +620,7 @@ export class ScheduledNotificationService {
    * Meta activa con hijos, sin movimiento en STALLED_DAYS.
    */
   static async checkStalledGoals() {
-    const cutoff = new Date(getStartOfDayInTimeZone().getTime() - STALLED_DAYS * MS_PER_DAY);
+    const { start: cutoff } = this._getDayRange(-STALLED_DAYS);
 
     const stalledGoals = await Goal.find({
       status: 'active',
@@ -666,7 +662,7 @@ export class ScheduledNotificationService {
    * Meta en pausa hace PAUSE_TOO_LONG_DAYS o más.
    */
   static async checkPausedTooLong() {
-    const cutoff = new Date(getStartOfDayInTimeZone().getTime() - PAUSE_TOO_LONG_DAYS * MS_PER_DAY);
+    const { start: cutoff } = this._getDayRange(-PAUSE_TOO_LONG_DAYS);
 
     const pausedGoals = await Goal.find({
       status: 'paused',
@@ -803,8 +799,8 @@ export class ScheduledNotificationService {
     }).lean();
     const boardByUser = new Map(boards.map((board) => [board.userId.toString(), board]));
 
-    const emptyCutoff = new Date(getStartOfDayInTimeZone().getTime() - MOODBOARD_EMPTY_DAYS * MS_PER_DAY);
-    const staleCutoff = new Date(getStartOfDayInTimeZone().getTime() - MOODBOARD_STALE_DAYS * MS_PER_DAY);
+    const { start: emptyCutoff } = this._getDayRange(-MOODBOARD_EMPTY_DAYS);
+    const { start: staleCutoff } = this._getDayRange(-MOODBOARD_STALE_DAYS);
 
     const entries = [];
     for (const user of premiumUsers) {
@@ -851,9 +847,7 @@ export class ScheduledNotificationService {
    * Nag suave a free users que ya chocaron el techo de metas.
    */
   static async checkPremiumNag() {
-    const cooldownStart = new Date(
-      getStartOfDayInTimeZone().getTime() - PREMIUM_NAG_COOLDOWN_DAYS * MS_PER_DAY
-    );
+    const { start: cooldownStart } = this._getDayRange(-PREMIUM_NAG_COOLDOWN_DAYS);
     const recentCancelCutoff = cooldownStart;
 
     const freeUsers = await User.find({
@@ -871,7 +865,7 @@ export class ScheduledNotificationService {
     const moodboardToday = await Notification.find({
       userId: { $in: freeUsers.map((user) => user._id) },
       type: 'moodboard_nudge',
-      createdAt: { $gte: getStartOfDayInTimeZone() },
+      createdAt: { $gte: this._getDayRange(0).start },
     })
       .select('userId')
       .lean();

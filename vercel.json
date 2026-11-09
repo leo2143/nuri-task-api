@@ -2,10 +2,6 @@
   "version": 2,
   "crons": [
     {
-      "path": "/api/cron/streak-reset",
-      "schedule": "0 3 * * *"
-    },
-    {
       "path": "/api/cron/due-tasks",
       "schedule": "0 3 * * *"
     },
