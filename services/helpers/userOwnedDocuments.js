@@ -6,7 +6,6 @@ import Metrics from '../../models/metricsModel.js';
 import PushSubscription from '../../models/pushSubscriptionModel.js';
 import UserAchievement from '../../models/userAchievementModel.js';
 import PendingCloudinaryImage from '../../models/pendingCloudinaryImageModel.js';
-import Streak from '../../models/streaksModel.js';
 
 /**
  * Borra documentos hijos del usuario. Idempotente: se puede reintentar.
@@ -22,6 +21,5 @@ export async function deleteUserOwnedDocuments(userId) {
     PushSubscription.deleteMany({ userId }),
     UserAchievement.deleteMany({ user: userId }),
     PendingCloudinaryImage.deleteMany({ userId }),
-    Streak.deleteMany({ userId }),
   ]);
 }
