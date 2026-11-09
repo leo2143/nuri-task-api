@@ -6,6 +6,14 @@ import { SuccessResponseModel } from '../models/responseModel.js';
 import { PaginationDto } from '../models/dtos/paginationDto.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { persistAndNotify } from './helpers/persistAndNotify.js';
+import { evaluateAchievementConditions, conditionsNeedTimezone } from './achievementConditions.js';
+import {
+  buildAbsoluteProgressPipeline,
+  buildIncrementProgressPipeline,
+  buildWindowProgressPipeline,
+} from './helpers/achievementProgressPipeline.js';
+import { resolveTimeZone } from './helpers/dateTime.js';
+import mongoose from 'mongoose';
 import chalk from 'chalk';
 
 const POPULATE_USER_FIELDS = 'name email avatar';
@@ -171,32 +179,50 @@ export class UserAchievementService {
    * Procesa un evento de usuario y actualiza el progreso en todos los logros que lo escuchan.
    * Se llama desde otros servicios (todoService, goalService, metricsService) sin interrumpir
    * el flujo principal: los errores aquí nunca rompen la respuesta al usuario (side-effect; 017).
-   * @param {string} triggerEvent - Evento disparado ('task:completed', 'goal:completed', 'streak:updated')
+   * @param {string} triggerEvent - Evento disparado ('task:completed', 'goal:completed', 'task:goal-changed', 'streak:updated')
    * @param {string} userId - ID del usuario que disparó el evento
    * @param {number|null} value - Solo para 'streak:updated': valor absoluto del streak actual
+   * @param {Object} [context] - Datos del evento que el servidor ya conoce; el cliente nunca los aporta
+   * @param {Date} [context.occurredAt] - Instante real del evento (`completedAt` de la tarea, `firstCompletedAt` de la meta).
+   *   Si falta se usa el momento actual. NO es el momento en que se procesa un evento atrasado
+   * @param {Date} [context.startedAt] - Inicio del ciclo medido (`createdAt` de la meta), para `maxDurationHours`
+   * @param {string} [context.timezone] - Zona del usuario; si falta y alguna condición la necesita se lee del usuario
    * @returns {Promise<{notifiedAchievement: boolean, achievementsUnlocked: Array<{id: string, title: string, description: string}>}>}
    *   Si este evento desbloqueó y notificó un logro, y cuáles se completaron en esta llamada
    */
-  static async processEvent(triggerEvent, userId, value = null) {
+  static async processEvent(triggerEvent, userId, value = null, context = {}) {
     try {
       const shouldSetAbsoluteValue = triggerEvent === 'streak:updated';
 
       const matchingAchievements = await Achievement.find({ triggerEvent, isActive: true }).lean();
       if (!matchingAchievements.length) return { notifiedAchievement: false, achievementsUnlocked: [] };
 
-      const progressUpdateOps = matchingAchievements.map(achievement => ({
-        updateOne: {
-          filter: { user: userId, achievement: achievement._id },
-          update: shouldSetAbsoluteValue
-            ? { $set: { currentCount: value } }
-            : { $inc: { currentCount: 1 } },
-          upsert: true,
-        },
-      }));
+      const evaluationContext = {
+        occurredAt: context.occurredAt ?? new Date(),
+        startedAt: context.startedAt ?? null,
+        timezone: await this._resolveEventTimezone(userId, context.timezone, matchingAchievements),
+      };
 
-      await UserAchievement.bulkWrite(progressUpdateOps);
+      const eligibleAchievements = [];
+      const progressUpdateOps = [];
+      for (const achievement of matchingAchievements) {
+        const { passes, windowKey } = evaluateAchievementConditions(achievement.conditions, evaluationContext);
+        if (!passes) continue;
 
-      return await this._checkAndCompleteAchievements(userId, matchingAchievements, shouldSetAbsoluteValue);
+        eligibleAchievements.push(achievement);
+        progressUpdateOps.push({
+          updateOne: {
+            filter: { user: new mongoose.Types.ObjectId(userId), achievement: achievement._id },
+            update: this._buildProgressPipeline({ achievement, shouldSetAbsoluteValue, value, windowKey }),
+            upsert: true,
+          },
+        });
+      }
+      if (!progressUpdateOps.length) return { notifiedAchievement: false, achievementsUnlocked: [] };
+
+      await UserAchievement.collection.bulkWrite(progressUpdateOps, { ordered: false });
+
+      return await this._checkAndCompleteAchievements(userId, eligibleAchievements, shouldSetAbsoluteValue);
     } catch (error) {
       console.error(
         chalk.red('[side-effect] Error al procesar evento de logros (el request no falla; retry en 017):'),
@@ -204,6 +230,42 @@ export class UserAchievementService {
       );
       return { notifiedAchievement: false, achievementsUnlocked: [] };
     }
+  }
+
+  /**
+   * Zona con la que se evalúan las condiciones: la del contexto, o la del usuario solo si algún logro la necesita.
+   * @private
+   * @param {string} userId
+   * @param {string|undefined} contextTimezone
+   * @param {Array} achievements - Logros que escuchan el evento
+   * @returns {Promise<string>}
+   */
+  static async _resolveEventTimezone(userId, contextTimezone, achievements) {
+    if (contextTimezone) return resolveTimeZone(contextTimezone);
+    if (!achievements.some(achievement => conditionsNeedTimezone(achievement.conditions))) {
+      return resolveTimeZone(null);
+    }
+
+    const user = await User.findById(userId).select('timezone').lean();
+    return resolveTimeZone(user?.timezone);
+  }
+
+  /**
+   * Pipeline de escritura del progreso según cómo cuenta el logro.
+   * Con `sameWindow` y más de un evento requerido el progreso es el de la instancia de franja vigente; en otro caso
+   * es acumulado (o el valor absoluto de la racha).
+   * @private
+   * @param {Object} params
+   * @param {Object} params.achievement
+   * @param {boolean} params.shouldSetAbsoluteValue
+   * @param {number|null} params.value
+   * @param {string|null} params.windowKey
+   * @returns {Object[]}
+   */
+  static _buildProgressPipeline({ achievement, shouldSetAbsoluteValue, value, windowKey }) {
+    if (shouldSetAbsoluteValue) return buildAbsoluteProgressPipeline(value);
+    if (windowKey && achievement.targetCount > 1) return buildWindowProgressPipeline(windowKey);
+    return buildIncrementProgressPipeline();
   }
 
   /**

@@ -47,7 +47,7 @@ export function buildDisallowedConditionsMessage(triggerEvent, disallowedKeys) {
 
 /**
  * Respuesta de `GET /api/achievements/catalog`: lo que el formulario de administración puede elegir.
- * @returns {{ triggers: Array<{ triggerEvent: string, allowedConditions: string[] }>, types: string[] }}
+ * @returns {{ triggers: Array<{ triggerEvent: string, allowedConditions: string[] }>, types: string[], conditionKeys: string[] }}
  */
 export function buildAchievementCatalog() {
   return {
@@ -56,5 +56,6 @@ export function buildAchievementCatalog() {
       allowedConditions: [...ALLOWED_CONDITIONS_BY_TRIGGER[triggerEvent]],
     })),
     types: [...ACHIEVEMENT_TYPES],
+    conditionKeys: [...CONDITION_KEYS],
   };
 }

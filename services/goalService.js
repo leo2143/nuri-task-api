@@ -253,7 +253,11 @@ export class GoalService {
     }
     const streakResult = await MetricsService.afterActivityMetrics(userId, metricsResult.data);
 
-    const achievementResult = await UserAchievementService.processEvent('goal:completed', userId);
+    // occurredAt y startedAt son del servidor: Meta Flash mide el primer cierre contra la creación de la meta
+    const achievementResult = await UserAchievementService.processEvent('goal:completed', userId, null, {
+      occurredAt: claimed.firstCompletedAt,
+      startedAt: claimed.createdAt,
+    });
     const { streakIncreased, currentStreak } = metricsResult.data;
     const events = buildCompletionEvents({
       goalCompleted: { id: claimed._id.toString(), title: claimed.title },
