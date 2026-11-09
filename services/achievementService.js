@@ -6,7 +6,12 @@ import {
   buildDisallowedConditionsMessage,
   getDisallowedConditionKeys,
 } from '../models/achievementCatalog.js';
-import { NotFoundResponseModel, ErrorResponseModel, BadRequestResponseModel } from '../models/responseModel.js';
+import {
+  NotFoundResponseModel,
+  ErrorResponseModel,
+  BadRequestResponseModel,
+  ConflictResponseModel,
+} from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import { CreateAchievementDto, UpdateAchievementDto, AchievementFilterDto } from '../models/dtos/achievements/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
@@ -166,7 +171,8 @@ export class AchievementService {
    * Actualiza una plantilla de logro existente (solo administradores)
    * @param {string} achievementId - ID del logro
    * @param {Object} updateData - Datos a actualizar
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la plantilla actualizada o error
+   * @returns {Promise<SuccessResponseModel|BadRequestResponseModel|NotFoundResponseModel|ConflictResponseModel|ErrorResponseModel>}
+   *   Respuesta con la plantilla actualizada o error. 409 si otra edición modificó el logro mientras tanto
    */
   static async updateAchievement(achievementId, updateData) {
     try {
@@ -196,16 +202,25 @@ export class AchievementService {
         return new BadRequestResponseModel(buildDisallowedConditionsMessage(resultingTrigger, disallowedKeys));
       }
 
-      const achievement = await Achievement.findByIdAndUpdate(
-        achievementId,
+      // El reinicio va ANTES de guardar la definición: si falla, el logro conserva la definición vieja junto con su
+      // progreso viejo (coherentes) y el admin puede reintentar. Al revés quedaría la semántica nueva con progreso viejo.
+      await this.#resetProgressIfMeaningChanged(existing, cleanData);
+
+      // Guardado optimista: solo gana quien edita sobre la versión que leyó (`updatedAt`). Los eventos que llegan durante
+      // la edición pueden contarse con las reglas viejas (aceptado).
+      const achievement = await Achievement.findOneAndUpdate(
+        { _id: achievementId, updatedAt: existing.updatedAt },
         { $set: cleanData },
         { new: true, runValidators: true }
       );
       if (!achievement) {
-        return new NotFoundResponseModel('Plantilla de logro no encontrada');
+        const stillExists = await Achievement.exists({ _id: achievementId });
+        return stillExists
+          ? new ConflictResponseModel('El logro fue modificado por otra edición. Recargalo y volvé a intentar.')
+          : new NotFoundResponseModel('Plantilla de logro no encontrada');
       }
 
-      await this.#applyProgressPolicy(existing, cleanData);
+      await this.#completeIfTargetChanged(existing, cleanData);
 
       return new SuccessResponseModel(achievement, 'Plantilla de logro actualizada correctamente');
     } catch (error) {
@@ -214,23 +229,34 @@ export class AchievementService {
   }
 
   /**
-   * Política de edición sobre el progreso de los usuarios:
+   * Política de edición sobre el progreso de los usuarios (se aplica en dos momentos alrededor del guardado):
    * - un logro completado NUNCA se revoca
-   * - si cambian el evento o las condiciones, el progreso en curso se reinicia (ya no mide lo mismo)
-   * - si solo cambia el targetCount, el progreso se conserva y completa a quien ya alcanzó el nuevo objetivo
+   * - si cambian el evento o las condiciones, el progreso en curso se reinicia ANTES de guardar (ya no mide lo mismo)
+   * - si solo cambia el targetCount, el progreso se conserva y, DESPUÉS de guardar, completa a quien ya alcanzó el
+   *   nuevo objetivo
    * - editar título, descripción, recompensa, imagen o isActive no toca el progreso
+   * @param {Object} existing - Logro antes del cambio
+   * @param {Object} cleanData - Cambios a aplicar
+   * @returns {Promise<void>}
+   */
+  static async #resetProgressIfMeaningChanged(existing, cleanData) {
+    if (!changesProgressMeaning(existing, cleanData)) return;
+
+    await UserAchievement.updateMany(
+      { achievement: existing._id, status: { $ne: 'completed' } },
+      { $set: { currentCount: 0, status: 'locked', window: null } }
+    );
+  }
+
+  /**
+   * Si solo cambió el targetCount, completa a quien ya alcanzó el nuevo objetivo. Corre con la definición ya guardada
+   * porque lee el objetivo vigente de la base.
    * @param {Object} existing - Logro antes del cambio
    * @param {Object} cleanData - Cambios aplicados
    * @returns {Promise<void>}
    */
-  static async #applyProgressPolicy(existing, cleanData) {
-    if (changesProgressMeaning(existing, cleanData)) {
-      await UserAchievement.updateMany(
-        { achievement: existing._id, status: { $ne: 'completed' } },
-        { $set: { currentCount: 0, status: 'locked', window: null } }
-      );
-      return;
-    }
+  static async #completeIfTargetChanged(existing, cleanData) {
+    if (changesProgressMeaning(existing, cleanData)) return;
 
     if (cleanData.targetCount !== undefined && cleanData.targetCount !== existing.targetCount) {
       await UserAchievementService.completeReachedTarget(existing._id);
