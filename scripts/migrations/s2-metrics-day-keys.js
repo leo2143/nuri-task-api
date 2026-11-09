@@ -8,6 +8,8 @@ import { DEFAULT_TIMEZONE } from '../../services/helpers/dateTime.js';
  *   - `lastActivityDay`: día de `lastActivityDate` en DEFAULT_TIMEZONE.
  *   - `history[].day`: día de `history[].date` en DEFAULT_TIMEZONE.
  *   - `history[].goalsCompleted`: 0 donde falta (las metas no se contaban por día).
+ *   - Una fila de `history` sin `date` ni `day` no se puede ubicar en ningún día: se descarta (queda en el backup)
+ *     para que todas las filas terminen con `day` y nunca con `day: null`.
  *   - Índice { lastActivityDay: 1 }.
  *
  * Se usa DEFAULT_TIMEZONE (no la zona actual del usuario) porque los instantes guardados
@@ -59,7 +61,15 @@ const BACKFILL_PIPELINE = [
       },
       history: {
         $map: {
-          input: { $ifNull: ['$history', []] },
+          input: {
+            $filter: {
+              input: { $ifNull: ['$history', []] },
+              as: 'row',
+              cond: {
+                $or: [{ $eq: [{ $type: '$row.day' }, 'string'] }, { $eq: [{ $type: '$row.date' }, 'date'] }],
+              },
+            },
+          },
           as: 'entry',
           in: {
             $cond: [
