@@ -59,19 +59,23 @@ export class PushNotificationService {
    * Envía una notificación push a todas las suscripciones de un usuario
    * @param {string} userId - ID del usuario
    * @param {Object} payload - { title, body, icon?, url? }
+   * @param {Array} [prefetchedSubscriptions] - Suscripciones ya leídas del usuario (evita una consulta por envío)
+   * @returns {Promise<{delivered: number, total: number, transientFailure: boolean}>}
+   *   `transientFailure` es true si algún envío falló por algo distinto de 404/410 (un reintento podría funcionar).
+   *   VAPID sin configurar cuenta como transitorio: nada se pudo entregar, pero la configuración se puede arreglar.
    */
-  static async sendNotification(userId, payload) {
+  static async sendNotification(userId, payload, prefetchedSubscriptions) {
     if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
       console.warn(chalk.yellow('[Push] VAPID keys no configuradas, notificación push omitida.'));
-      return;
+      return { delivered: 0, total: 0, transientFailure: true };
     }
 
     try {
-      const subscriptions = await PushSubscription.find({ userId });
+      const subscriptions = prefetchedSubscriptions ?? (await PushSubscription.find({ userId }));
 
       if (subscriptions.length === 0) {
         console.warn(chalk.yellow(`[Push] No hay suscripciones registradas para el usuario ${userId}. El usuario debe habilitar notificaciones desde la app.`));
-        return;
+        return { delivered: 0, total: 0, transientFailure: false };
       }
 
       const notificationPayload = JSON.stringify({
@@ -93,7 +97,8 @@ export class PushNotificationService {
       const successful = results.filter(r => r.status === 'fulfilled').length;
       console.log(chalk.green(`[Push] Notificación enviada a ${successful}/${subscriptions.length} suscripciones del usuario ${userId}`));
 
-      // Limpiar suscripciones inválidas (410 Gone o 404)
+      // Limpiar suscripciones inválidas (410 Gone o 404); cualquier otro rechazo puede ser transitorio
+      let transientFailure = false;
       for (let i = 0; i < results.length; i++) {
         if (results[i].status === 'rejected') {
           const statusCode = results[i].reason?.statusCode;
@@ -101,12 +106,16 @@ export class PushNotificationService {
             await PushSubscription.findByIdAndDelete(subscriptions[i]._id);
             console.log(chalk.yellow(`[Push] Suscripción expirada eliminada para usuario ${userId}`));
           } else {
+            transientFailure = true;
             console.error(chalk.red(`[Push] Error enviando a suscripción ${i}:`), results[i].reason);
           }
         }
       }
+
+      return { delivered: successful, total: subscriptions.length, transientFailure };
     } catch (error) {
       console.error(chalk.red('[Push] Error enviando notificación push:'), error);
+      return { delivered: 0, total: 0, transientFailure: true };
     }
   }
 

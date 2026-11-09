@@ -31,6 +31,11 @@ const notificationSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Solo los jobs programados lo escriben, con null explícito mientras el push está pendiente.
+    // Sin default a propósito: las demás notificaciones no llevan el campo y quedan fuera del índice parcial.
+    pushSentAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
@@ -40,6 +45,11 @@ const notificationSchema = new mongoose.Schema(
 notificationSchema.index({ userId: 1, read: 1, createdAt: -1 });
 notificationSchema.index({ userId: 1, type: 1, createdAt: -1 });
 notificationSchema.index({ createdAt: 1 });
+// Push pendiente de los jobs programados ({ pushSentAt: { $type: 'null' } }, no `pushSentAt: null`, que también matchea ausentes)
+notificationSchema.index(
+  { type: 1, userId: 1, createdAt: 1 },
+  { partialFilterExpression: { pushSentAt: { $type: 'null' } } }
+);
 
 const Notification = mongoose.model('Notification', notificationSchema);
 export default Notification;
