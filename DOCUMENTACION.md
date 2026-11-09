@@ -43,7 +43,7 @@ El backend es el dueño de la verdad: valida, persiste, aplica reglas (por ejemp
 | **Meta (Goal)** | Objetivo de más alcance. Estados: `active`, `paused`, `completed`. Puede tener **submetas** (`parentGoalId`). |
 | **Progreso de meta** | Porcentaje 0–100 calculado **solo con las tareas** de esa meta (`completedTasks / totalTasks`). Las submetas no entran en la fórmula. |
 | **Racha (streak)** | Días locales consecutivos con al menos una tarea o una meta completada. Vive en el documento `Metrics` del usuario y se mide con claves de día `YYYY-MM-DD`. |
-| **Logro (Achievement)** | Plantilla global (admin). El progreso por usuario está en `UserAchievement`. Se dispara por eventos (`task:completed`, `goal:completed`, `streak:updated`). |
+| **Logro (Achievement)** | Plantilla global (admin). El progreso por usuario está en `UserAchievement`. Se dispara por eventos (`task:completed`, `goal:completed`, `task:goal-changed`, `streak:updated`) y puede exigir condiciones configurables por el admin. |
 | **Tier de logro** | `basic` (todos) o `premium` (visible para free, pero no accesible). |
 | **Moodboard** | Tablero 1:1 de imágenes inspiracionales. Requiere suscripción activa (o admin). |
 | **Premium** | `subscription.isActive === true` (vía MercadoPago o seteo admin). Desbloquea moodboard, dashboard de métricas y metas ilimitadas. El plan free permite **2 metas**. |
@@ -271,11 +271,11 @@ Métodos de instancia: `updateTaskCount()`, `updateSubGoalCount()`. Virtual `cal
 
 ### `achievements` y `userachievements`
 
-Plantilla global (admin): `title`, `description`, `targetCount`, `type` (`task|goal|metric|streak`), `triggerEvent` (`task:completed|goal:completed|streak:updated`), `tier` (`basic|premium`), `isActive`, `imageUrl`.
+Plantilla global (admin): `title`, `description`, `targetCount`, `type`, `triggerEvent`, `conditions`, `reward`, `tier` (`basic|premium`), `isActive`, `imageUrl`. Los tipos, los eventos y las condiciones que admite cada evento están en un solo lugar: `models/achievementCatalog.js` (lo consumen el modelo, los DTOs, el servicio y `GET /api/achievements/catalog`).
 
-Progreso por usuario: `{ user, achievement }` único, `currentCount`, `status` (`locked|unlocked|completed`), fechas. Índice `{ triggerEvent, isActive }` en plantillas para el `processEvent`.
+Progreso por usuario: `{ user, achievement }` único, `currentCount`, `window { key, count }` (solo logros con `sameWindow`), `status` (`locked|unlocked|completed`), fechas. Índice `{ triggerEvent, isActive }` en plantillas para el `processEvent`.
 
-`type: 'metric'` existe en el schema pero **no hay** `triggerEvent` de métricas en runtime. Solo corren los tres eventos listados.
+`type: 'metric'` existe en el schema pero **no hay** `triggerEvent` de métricas en runtime. Solo corren los cuatro eventos del catálogo.
 
 ### `metrics` (una fila por usuario)
 
@@ -415,8 +415,10 @@ No se usa `skip/limit` (página 3 = escanear 2 páginas). Se usa el `_id` del ú
 | PUT | `/api/moodboard/images/:imageId` | JWT+Sub | MoodboardController.updateImage |
 | GET | `/api/achievements` | Admin | AchievementController.getAllAchievements |
 | GET | `/api/achievements/stats` | Admin | AchievementController.getAchievementStats |
+| GET | `/api/achievements/catalog` | Admin | AchievementController.getAchievementCatalog |
 | GET | `/api/achievements/type/:type` | Admin | AchievementController.getAchievementsByType |
 | GET | `/api/achievements/:id` | Admin | AchievementController.getAchievementById |
+| GET | `/api/achievements/:id/in-progress-count` | Admin | AchievementController.getInProgressCount |
 | POST | `/api/achievements` | Admin | AchievementController.createAchievement |
 | PUT | `/api/achievements/:id` | Admin | AchievementController.updateAchievement |
 | DELETE | `/api/achievements/:id` | Admin | AchievementController.deleteAchievement |
@@ -614,11 +616,26 @@ Efectos al completar: contadores de meta → `MetricsService.writeTaskMetrics` (
 
 | Evento | Origen | Cómo cuenta |
 |--------|--------|-------------|
-| `task:completed` | `TodoService.updateTodoState` | `$inc currentCount` |
-| `goal:completed` | `GoalService.updateGoal` y `updateGoalStatus` | `$inc` |
-| `streak:updated` | `MetricsService.afterActivityMetrics` | `$set` al valor actual de la racha |
+| `task:completed` | `TodoService.updateTodoState` | suma 1 a `currentCount` |
+| `goal:completed` | `GoalService.updateGoal` y `updateGoalStatus` | suma 1 |
+| `task:goal-changed` | `TodoService.updateTodo` | suma 1, solo si la tarea pasa de una meta a OTRA (ambas no nulas y distintas); asignar o quitar la meta no cuenta. La respuesta lleva `meta.events` |
+| `streak:updated` | `MetricsService.afterActivityMetrics` | asigna el valor actual de la racha |
 
-`bulkWrite` upsert. Si `currentCount >= targetCount` → `completed` + notificación. En rachas, si el número baja del target, puede volver a `locked`. Los premium se listan para free con `isAccessible: false`. Un error en `processEvent` **no** tumba el request.
+`processEvent(trigger, userId, value, { occurredAt, startedAt, timezone })` evalúa las condiciones de cada logro activo con funciones puras (`services/achievementConditions.js`) y escribe el progreso con un pipeline de actualización atómico y upsert por `{ user, achievement }` (`services/helpers/achievementProgressPipeline.js`, driver nativo, MongoDB 4.2+). Solo cuenta el instante del SERVIDOR: `occurredAt` es el `completedAt` del reclamo de la tarea o el `firstCompletedAt` de la meta, nunca la hora de procesamiento ni una hora enviada por el cliente. La zona es la del usuario (se lee solo si alguna condición la necesita).
+
+Condiciones (`conditions`, combinadas con AND; cada evento admite solo algunas, otras responden 400):
+
+| Condición | Eventos | Significado |
+|-----------|---------|-------------|
+| `timeWindow { start, end }` | `task:completed`, `goal:completed`, `task:goal-changed` | Hora local `HH:mm` del instante del evento. El inicio se incluye y el fin NO; `start > end` cruza la medianoche (22:00-04:00); `start == end` se rechaza |
+| `sameWindow` | `task:completed` | Booleano explícito. Con `targetCount > 1` el progreso cuenta solo eventos de la misma instancia de franja (clave = fecha local en que EMPEZÓ la franja; sin `timeWindow`, el día calendario local); otra instancia reinicia en 1. `currentCount` es el conteo de la instancia vigente |
+| `maxDurationHours` | `goal:completed` | `firstCompletedAt - createdAt` en horas reales; reabrir y volver a cerrar no cambia la medida porque se usa el primer cierre |
+
+Si `currentCount >= targetCount` → `completed` + notificación. La completada es un reclamo condicional por fila (`status != completed`): si dos eventos llegan a la vez solo uno completa y notifica. **Un logro completado nunca se revierte**: una racha que cae no lo baja, el pipeline congela las filas completadas (conservan `currentCount` y `window`) y un evento con clave de franja MÁS VIEJA que la guardada (evento tardío o fuera de orden) se ignora. El filtro del upsert nunca incluye `status`: con `status != completed` una fila completada no coincidiría y el insert chocaría con el índice único (E11000). Los premium se listan para free con `isAccessible: false`. Un error en `processEvent` **no** tumba el request.
+
+**Edición por el admin** (`AchievementService.updateAchievement`): `PUT /api/achievements/:id` acepta `reward` y `conditions` (las condiciones se validan contra el evento resultante); el `tier` es **inmutable** (cualquier `tier` responde 400 "El tier de un logro no se puede cambiar. Desactivalo y creá uno nuevo."; `POST` sí lo acepta) y la actualización solo escribe los campos enviados. Los logros completados nunca se revocan. Si cambian el evento o las condiciones, el progreso en curso se reinicia (`currentCount 0`, `locked`, `window null`); si solo cambia `targetCount`, el progreso se conserva y completa (con notificación) a quien ya lo alcanzó; editar título, descripción, recompensa o imagen no toca el progreso. `GET /api/achievements/:id/in-progress-count` devuelve `{ inProgressCount }` (usuarios con progreso sin completar) para avisar al admin antes de guardar un cambio que reinicia. `isActive: false` saca el logro del catálogo del usuario y del evaluador; lo ganado se conserva y reactivar no otorga nada retroactivamente. `GET /api/achievements/catalog` devuelve `{ triggers: [{ triggerEvent, allowedConditions }], types, conditionKeys }`.
+
+**Semillas y rollout (S5).** Canto de Gallo (tarea completada entre 05:00 y 08:00), Drácula (2 tareas en la misma franja 22:00-04:00), Meta Flash (meta cerrada dentro de 24 h) y Re-Ordenar (`task:goal-changed`) salen de `resources/moongo-scripts/achievements-data.json`. Orden: `mongoexport` de `userachievements` → `s5-achievements --step=seed --apply` (definiciones nuevas con `isActive: false`, así la API vieja no las otorga con la semántica vieja; reinicia el progreso en curso con backup) → deploy de la API (anotar la hora) → `--step=reset --cutoff=<hora del deploy> --apply` (reinicia en silencio los completados anteriores; Meta Flash se conserva solo si hay una meta real cerrada dentro del límite) → `--step=reset-in-progress --cutoff=<hora del deploy> --apply` → `--step=activate --apply` → deploy del APP. Todos los pasos son idempotentes, dry-run por defecto y con `--restore` desde el backup; ninguno crea notificaciones.
 
 Completar una meta por `PUT` o `PATCH` pasa por el mismo camino (`GoalService._handleGoalCompleted`): reclama `firstCompletedAt`, escribe las métricas con `writeGoalMetrics` y dispara el logro.
 
