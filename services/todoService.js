@@ -19,7 +19,7 @@ import {
 } from '../models/dtos/todo/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { findOwnedGoal } from './helpers/goalOwnership.js';
-import { runWithOneRetry, ensureSuccessWithRetry } from './helpers/runWithOneRetry.js';
+import { runWithOneRetry } from './helpers/runWithOneRetry.js';
 import { assertGoalOpen } from './helpers/goalOpenGuard.js';
 import { getDueDateChangeError } from './helpers/dueDateRules.js';
 import { touchLastChildActivity } from './helpers/goalActivity.js';
@@ -324,14 +324,12 @@ export class TodoService {
         );
       }
 
-      const metricsResult = await ensureSuccessWithRetry(
-        await MetricsService.recordTaskCompleted(userId),
-        () => MetricsService.recordTaskCompleted(userId),
-        'registrar métricas de tarea'
-      );
+      // La escritura atómica de métricas es lo único que se reintenta; sus efectos posteriores no (ver MetricsService)
+      const metricsResult = await MetricsService.writeTaskMetrics(userId, { occurredAt: claimedTodo.completedAt });
       if (!metricsResult.success) {
         return metricsResult;
       }
+      const streakResult = await MetricsService.afterActivityMetrics(userId, metricsResult.data);
 
       // occurredAt es el reloj del servidor del reclamo; los logros con condiciones lo consumen (S5)
       const taskEvent = await UserAchievementService.processEvent('task:completed', userId, null, {
@@ -340,17 +338,11 @@ export class TodoService {
 
       let events = emptyCompletionEvents();
       try {
-        const streakMeta = metricsResult.meta ?? {};
+        const { streakIncreased, currentStreak } = metricsResult.data;
         events = buildCompletionEvents({
           taskCompleted: { id: claimedTodo._id.toString(), title: claimedTodo.title },
-          streak:
-            typeof streakMeta.currentStreak === 'number'
-              ? { increased: Boolean(streakMeta.streakIncreased), current: streakMeta.currentStreak }
-              : null,
-          achievementsUnlocked: [
-            ...(streakMeta.achievementsUnlocked ?? []),
-            ...(taskEvent?.achievementsUnlocked ?? []),
-          ],
+          streak: { increased: streakIncreased, current: currentStreak },
+          achievementsUnlocked: [...streakResult.achievementsUnlocked, ...(taskEvent?.achievementsUnlocked ?? [])],
         });
       } catch (eventError) {
         console.error(chalk.yellow('[side-effect] Error al armar eventos de tarea completada:'), eventError);

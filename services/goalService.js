@@ -23,7 +23,7 @@ import { findOwnedGoal } from './helpers/goalOwnership.js';
 import { UserAchievementService } from './userAchievementService.js';
 import { MetricsService } from './metricsService.js';
 import { persistAndNotify } from './helpers/persistAndNotify.js';
-import { runWithOneRetry, ensureSuccessWithRetry } from './helpers/runWithOneRetry.js';
+import { runWithOneRetry } from './helpers/runWithOneRetry.js';
 import {
   getStatusTransitionError,
   getCompleteEligibilityError,
@@ -246,19 +246,19 @@ export class GoalService {
       return { error: null, events: emptyCompletionEvents() };
     }
 
-    const metricsResult = await ensureSuccessWithRetry(
-      await MetricsService.recordGoalCompleted(userId),
-      () => MetricsService.recordGoalCompleted(userId),
-      'registrar métricas de meta'
-    );
+    // Una meta completada es un día activo igual que una tarea: comparte escritura atómica, racha y evento
+    const metricsResult = await MetricsService.writeGoalMetrics(userId, { occurredAt: claimed.firstCompletedAt });
     if (!metricsResult.success) {
       return { error: metricsResult, events: emptyCompletionEvents() };
     }
+    const streakResult = await MetricsService.afterActivityMetrics(userId, metricsResult.data);
 
     const achievementResult = await UserAchievementService.processEvent('goal:completed', userId);
+    const { streakIncreased, currentStreak } = metricsResult.data;
     const events = buildCompletionEvents({
       goalCompleted: { id: claimed._id.toString(), title: claimed.title },
-      achievementsUnlocked: achievementResult?.achievementsUnlocked ?? [],
+      streak: { increased: streakIncreased, current: currentStreak },
+      achievementsUnlocked: [...streakResult.achievementsUnlocked, ...(achievementResult?.achievementsUnlocked ?? [])],
     });
     if (achievementResult?.notifiedAchievement) {
       return { error: null, events };
