@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import JobRun, { JOB_RUN_RETENTION_MS } from '../../../models/jobRunModel.js';
+import JobRun, { JOB_RUN_RETENTION_MS, MAX_UNIT_ATTEMPTS } from '../../../models/jobRunModel.js';
 import User from '../../../models/userModel.js';
 import { ScheduledNotificationService } from '../../../services/scheduledNotificationService.js';
 import { buildGroupUserFilter } from './timezoneGroups.js';
@@ -34,8 +34,9 @@ export const GLOBAL_TIMEZONE_KEY = 'global';
  * el ledger). La dedup por usuario, tipo y día local evita notificaciones duplicadas en la bandeja; lo peor que
  * puede pasar es un push repetido (los push son at-least-once).
  *
- * Una unidad que falla (o se corta por el `deadline`) queda `failed` y el dispatcher la vuelve a planear en los
- * ticks siguientes del mismo día local. Al terminar cada lote se guarda en el ledger el cursor (último usuario
+ * Una unidad que falla (o se corta por el `deadline`, incluso a mitad del envío de push de un lote) queda
+ * `failed` y el dispatcher la vuelve a planear en los ticks siguientes del mismo día local, hasta MAX_UNIT_ATTEMPTS
+ * intentos. Al terminar cada lote se guarda en el ledger el cursor (último usuario
  * procesado), así la retomada continúa desde ahí y no desde el primer lote. Después de cada lote se empujan los push pendientes y sin leer del
  * tipo del job creados en las últimas 48 h, aunque el job haya terminado sin crear nada o haya fallado: así no quedan push varados.
  * @param {WorkUnit} unit
@@ -50,11 +51,12 @@ export async function runWorkUnit(unit, { useLedger = true, deadline = Infinity 
 
   let claimedAt = null;
   let resumeAfter = null;
+  let attempts = 1;
   if (useLedger) {
     try {
       const claim = await claimUnit(unit);
       if (!claim) return { ...identity, status: 'skipped' };
-      ({ claimedAt, cursor: resumeAfter } = claim);
+      ({ claimedAt, cursor: resumeAfter, attempts } = claim);
     } catch (error) {
       console.error(chalk.red(`[Cron] No se pudo reclamar ${jobName} (${timezone} ${localDate}):`), error);
       return { ...identity, status: 'failed', error: error.message };
@@ -71,6 +73,13 @@ export async function runWorkUnit(unit, { useLedger = true, deadline = Infinity 
   } catch (error) {
     const durationMs = Date.now() - startedAt;
     console.error(chalk.red(`[Cron] Falló ${jobName} (${timezone} ${localDate}):`), error);
+    if (useLedger && attempts >= MAX_UNIT_ATTEMPTS) {
+      console.error(
+        chalk.red(
+          `[Cron] Unidad agotada tras ${attempts} intentos, no se vuelve a planear: ${jobName} (${timezone} ${localDate})`
+        )
+      );
+    }
     if (useLedger) await finishUnit(unit, claimedAt, 'failed', durationMs);
     return { ...identity, status: 'failed', durationMs, error: error.message };
   }
@@ -84,11 +93,12 @@ export async function runWorkUnit(unit, { useLedger = true, deadline = Infinity 
 
 /**
  * Reclama la unidad. Primero intenta insertarla; si ya existe (clave única) intenta retomarla en UNA operación
- * atómica solo cuando quedó `failed` o su lease venció. El dueño es quien recibe el documento de vuelta;
+ * atómica solo cuando quedó `failed` o su lease venció y todavía no agotó MAX_UNIT_ATTEMPTS. El dueño es quien recibe el documento de vuelta;
  * `done` o un reclamo reciente de otra invocación significan que hay que saltearla.
  * @param {WorkUnit} unit
- * @returns {Promise<{claimedAt: Date, cursor: import('mongoose').Types.ObjectId|null}|null>} el `claimedAt` de esta
- *   invocación y el cursor desde el que continuar (null = desde el primer usuario) si es dueña de la unidad;
+ * @returns {Promise<{claimedAt: Date, cursor: import('mongoose').Types.ObjectId|null, attempts: number}|null>} el
+ *   `claimedAt` de esta invocación, el cursor desde el que continuar (null = desde el primer usuario) y el número de
+ *   intento si es dueña de la unidad;
  *   null si hay que saltearla
  */
 async function claimUnit({ jobName, timezone, localDate, now }) {
@@ -102,7 +112,7 @@ async function claimUnit({ jobName, timezone, localDate, now }) {
       claimedAt,
       expiresAt: new Date(now.getTime() + JOB_RUN_RETENTION_MS),
     });
-    return { claimedAt, cursor: null };
+    return { claimedAt, cursor: null, attempts: 1 };
   } catch (error) {
     if (error?.code !== DUPLICATE_KEY_ERROR_CODE) throw error;
   }
@@ -110,12 +120,13 @@ async function claimUnit({ jobName, timezone, localDate, now }) {
   const reclaimed = await JobRun.findOneAndUpdate(
     {
       ...key,
+      attempts: { $lt: MAX_UNIT_ATTEMPTS },
       $or: [{ status: 'failed' }, { status: 'claimed', claimedAt: { $lt: new Date(claimedAt.getTime() - LEASE_MS) } }],
     },
-    { $set: { status: 'claimed', claimedAt, finishedAt: null, durationMs: null } },
+    { $set: { status: 'claimed', claimedAt, finishedAt: null, durationMs: null }, $inc: { attempts: 1 } },
     { new: true }
   );
-  return reclaimed ? { claimedAt, cursor: reclaimed.cursor ?? null } : null;
+  return reclaimed ? { claimedAt, cursor: reclaimed.cursor ?? null, attempts: reclaimed.attempts } : null;
 }
 
 /**

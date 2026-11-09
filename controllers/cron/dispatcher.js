@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { JOB_REGISTRY } from './jobRegistry.js';
-import JobRun from '../../models/jobRunModel.js';
+import JobRun, { MAX_UNIT_ATTEMPTS } from '../../models/jobRunModel.js';
 import { GLOBAL_TIMEZONE_KEY, LEASE_MS, runWorkUnit } from './support/workUnitRunner.js';
 import { fetchTimezoneGroups } from './support/timezoneGroups.js';
 import { getZonedParts, toLocalYmd } from '../../services/helpers/dateTime.js';
@@ -119,7 +119,7 @@ export function planWorkUnits(groups, dispatchInstant, now) {
  * Unidades de reintento: las del ledger que quedaron `failed` (p. ej. cortadas por el deadline) o `claimed` con el
  * lease vencido (la función murió) en el día local vigente de su zona. Vercel no reintenta crons, así que cada tick
  * revisa el día en curso de todas las zonas con UNA consulta indexada (`localDate` + `status`). Reclamarlas es
- * atómico y retoman desde el cursor guardado; la clave única del ledger y la dedup por usuario evitan duplicados.
+ * atómico y retoman desde el cursor guardado; una unidad que ya agotó MAX_UNIT_ATTEMPTS intentos no se vuelve a planear; la clave única del ledger y la dedup por usuario evitan duplicados.
  * @param {Map<string, import('./support/timezoneGroups.js').TimezoneGroup>} groups
  * @param {Date} dispatchInstant
  * @param {Date} now
@@ -135,6 +135,7 @@ export async function planRetryUnits(groups, dispatchInstant, now, plannedUnits)
   const leaseExpiredBefore = new Date(now.getTime() - LEASE_MS);
   const incompleteRuns = await JobRun.find({
     localDate: { $in: [...new Set(currentDateByZone.values())] },
+    attempts: { $lt: MAX_UNIT_ATTEMPTS },
     $or: [{ status: 'failed' }, { status: 'claimed', claimedAt: { $lt: leaseExpiredBefore } }],
   })
     .select('job timezone localDate')
@@ -170,8 +171,9 @@ export async function planRetryUnits(groups, dispatchInstant, now, plannedUnits)
  *
  * Contrato de fallos: una unidad que falla o se corta por el deadline queda `failed` en el ledger con su cursor, y
  * los ticks siguientes del mismo día local la retoman (ver `planRetryUnits`): primero corren las unidades nuevas de
- * la hora y después los reintentos, mientras alcance el margen de MAX_DISPATCH_MS. Pasado el día local una unidad
- * incompleta se pierde. Si algo falló o quedó sin correr, responde 500 (solo se ve en los logs de cron de Vercel).
+ * la hora y después los reintentos, mientras alcance el margen de MAX_DISPATCH_MS. Una unidad se reintenta hasta
+ * MAX_UNIT_ATTEMPTS veces (el primer intento cuenta); agotadas se registra y no se vuelve a planear. Pasado el día
+ * local una unidad incompleta se pierde. Si algo falló o quedó sin correr, responde 500 (solo se ve en los logs de cron de Vercel).
  * Los push pendientes los recupera el runner de cada unidad.
  */
 export class CronDispatcher {
