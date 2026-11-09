@@ -97,10 +97,12 @@ export class ScheduledNotificationService {
       }))
     );
 
+    const { now, deadline } = this.resolveContext(context);
     const { sent } = await this.pushPendingNotifications({
       type,
       userIds: pendingEntries.map(entry => entry.userId),
-      now: this.resolveContext(context).now,
+      now,
+      deadline,
     });
 
     console.log(chalk.green(`[Cron] ${label}: ${pendingEntries.length} persistidas, ${sent} push enviados`));
@@ -208,12 +210,19 @@ export class ScheduledNotificationService {
   /**
    * Completa el contexto de un job con sus valores por defecto: todos los usuarios, zona de producto,
    * "hoy" calculado a partir de `now`. Una zona inválida cae a la de producto.
-   * @param {{userIds?: Array|null, timezone?: string, localDate?: string, now?: Date}} [context]
-   * @returns {{userIds: Array|null, timezone: string, localDate: string, now: Date}}
+   * `deadline` (ms) es el límite de tiempo del dispatch para los envíos push; sin él (corridas manuales) no hay límite.
+   * @param {{userIds?: Array|null, timezone?: string, localDate?: string, now?: Date, deadline?: number}} [context]
+   * @returns {{userIds: Array|null, timezone: string, localDate: string, now: Date, deadline: number}}
    */
-  static resolveContext({ userIds = null, timezone = DEFAULT_TIMEZONE, localDate, now = new Date() } = {}) {
+  static resolveContext({
+    userIds = null,
+    timezone = DEFAULT_TIMEZONE,
+    localDate,
+    now = new Date(),
+    deadline = Infinity,
+  } = {}) {
     const zone = resolveTimeZone(timezone);
-    return { userIds, timezone: zone, localDate: localDate ?? toLocalYmd(now, zone), now };
+    return { userIds, timezone: zone, localDate: localDate ?? toLocalYmd(now, zone), now, deadline };
   }
 
   /**

@@ -158,7 +158,8 @@ async function executeUnit({ job, group, timezone, localDate, now }, deadline) {
  * Si el job falla, igual se empuja lo pendiente y recién después se propaga el error original.
  * @param {Object} job
  * @param {{userIds: Array, timezone: string, localDate: string, now: Date}} context
- * @param {number} deadline - Timestamp (ms) límite: el envío de push se corta ahí y deja el resto pendiente
+ * @param {number} deadline - Timestamp (ms) límite: se pasa al job y al envío de push pendientes, que cortan ahí y
+ *   dejan el resto pendiente
  * @returns {Promise<Object>}
  */
 async function runBatch(job, context, deadline) {
@@ -166,7 +167,7 @@ async function runBatch(job, context, deadline) {
   let failure = null;
 
   try {
-    result = await job.run(context);
+    result = await job.run({ ...context, deadline });
   } catch (error) {
     failure = error;
   }

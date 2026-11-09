@@ -12,6 +12,10 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   console.warn(chalk.yellow('VAPID keys no configuradas. Las notificaciones push no funcionarán.'));
 }
 
+// Tope por envío web-push: un endpoint colgado no frena el lote; el timeout cuenta como fallo transitorio
+const WEB_PUSH_TIMEOUT_MS = 8000;
+const WEB_PUSH_OPTIONS = { timeout: WEB_PUSH_TIMEOUT_MS };
+
 export class PushNotificationService {
   /**
    * Guarda una suscripción push para un usuario
@@ -89,7 +93,8 @@ export class PushNotificationService {
         subscriptions.map(sub =>
           webpush.sendNotification(
             { endpoint: sub.endpoint, keys: sub.keys },
-            notificationPayload
+            notificationPayload,
+            WEB_PUSH_OPTIONS
           )
         )
       );
@@ -141,7 +146,8 @@ export class PushNotificationService {
         subscriptions.map(sub =>
           webpush.sendNotification(
             { endpoint: sub.endpoint, keys: sub.keys },
-            notificationPayload
+            notificationPayload,
+            WEB_PUSH_OPTIONS
           )
         )
       );
