@@ -40,9 +40,10 @@ export const GLOBAL_TIMEZONE_KEY = 'global';
  * @param {WorkUnit} unit
  * @param {Object} [options]
  * @param {boolean} [options.useLedger=true]
+ * @param {number} [options.deadline=Infinity] - Timestamp (ms) pasado el cual la unidad no empieza lotes nuevos
  * @returns {Promise<{jobName: string, timezone: string, localDate: string, status: 'done'|'failed'|'skipped', durationMs?: number, result?: Object, error?: string}>}
  */
-export async function runWorkUnit(unit, { useLedger = true } = {}) {
+export async function runWorkUnit(unit, { useLedger = true, deadline = Infinity } = {}) {
   const { jobName, timezone, localDate } = unit;
   const identity = { jobName, timezone, localDate };
 
@@ -60,7 +61,7 @@ export async function runWorkUnit(unit, { useLedger = true } = {}) {
   const startedAt = Date.now();
   let result;
   try {
-    result = await executeUnit(unit);
+    result = await executeUnit(unit, deadline);
   } catch (error) {
     const durationMs = Date.now() - startedAt;
     console.error(chalk.red(`[Cron] Falló ${jobName} (${timezone} ${localDate}):`), error);
@@ -127,19 +128,25 @@ async function finishUnit({ jobName, timezone, localDate }, claimedAt, status, d
 
 /**
  * Corre el job de la unidad. Los jobs globales corren una vez; los de zona, en lotes de usuarios.
+ * Si se agota el `deadline` entre lotes, corta con un error: la unidad queda `failed` (trabajo incompleto) y otra
+ * invocación puede retomarla; lo ya notificado no se repite por la dedup de usuario, tipo y día local.
  * @param {WorkUnit} unit
+ * @param {number} deadline - Timestamp (ms) límite para empezar un lote nuevo
  * @returns {Promise<Object>} Resultado agregado de la unidad
  */
-async function executeUnit({ job, group, timezone, localDate, now }) {
+async function executeUnit({ job, group, timezone, localDate, now }, deadline) {
   if (job.scope === 'global') {
     return job.run();
   }
 
   const totals = { users: 0, notified: 0, persisted: 0 };
   for await (const userIds of iterateUserBatches(group)) {
+    if (Date.now() > deadline) {
+      throw new Error(`Se agotó el tiempo del dispatch con la unidad incompleta (${totals.users} usuarios procesados)`);
+    }
     totals.users += userIds.length;
 
-    const result = await runBatch(job, { userIds, timezone, localDate, now });
+    const result = await runBatch(job, { userIds, timezone, localDate, now }, deadline);
     totals.notified += result?.notified ?? 0;
     totals.persisted += result?.persisted ?? 0;
   }
@@ -151,9 +158,10 @@ async function executeUnit({ job, group, timezone, localDate, now }) {
  * Si el job falla, igual se empuja lo pendiente y recién después se propaga el error original.
  * @param {Object} job
  * @param {{userIds: Array, timezone: string, localDate: string, now: Date}} context
+ * @param {number} deadline - Timestamp (ms) límite: el envío de push se corta ahí y deja el resto pendiente
  * @returns {Promise<Object>}
  */
-async function runBatch(job, context) {
+async function runBatch(job, context, deadline) {
   let result;
   let failure = null;
 
@@ -168,6 +176,7 @@ async function runBatch(job, context) {
       type: job.notificationType,
       userIds: context.userIds,
       now: context.now,
+      deadline,
     });
   } catch (error) {
     if (failure) {

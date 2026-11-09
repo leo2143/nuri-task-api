@@ -53,6 +53,8 @@ const OVERDUE_BACKLOG_COOLDOWN_DAYS = 7;
 const FREE_GOALS_LIMIT = 2;
 // Usuarios por consulta de suscripciones push: acota cada `$in` dentro de los 60 s de la función
 const PUSH_SUBSCRIPTION_BATCH_SIZE = 500;
+// Push enviados en paralelo: acota el tiempo de un lote sin abrir cientos de conexiones a la vez
+const PUSH_SEND_CONCURRENCY = 20;
 
 /**
  * Servicio de notificaciones programadas. Cada método es un job diario propio.
@@ -120,9 +122,11 @@ export class ScheduledNotificationService {
    * @param {string} params.type - Tipo de notificación
    * @param {Array|null} [params.userIds] - Lote de usuarios (null = todos)
    * @param {Date} [params.now] - Instante de referencia de la ventana de vigencia
+   * @param {number} [params.deadline] - Timestamp (ms) límite: no se empieza un grupo de envíos nuevo pasado ese
+   *   instante y lo que falta queda pendiente para el próximo disparo
    * @returns {Promise<{pending: number, sent: number}>}
    */
-  static async pushPendingNotifications({ type, userIds = null, now = new Date() }) {
+  static async pushPendingNotifications({ type, userIds = null, now = new Date(), deadline = Infinity }) {
     const validSince = new Date(now.getTime() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
     const pending = await Notification.find({
       type,
@@ -137,22 +141,38 @@ export class ScheduledNotificationService {
     const subscriptionsByUser = await this._fetchSubscriptionsByUser(pending.map(doc => doc.userId));
 
     let sent = 0;
-    for (const doc of pending) {
-      const subscriptions = subscriptionsByUser.get(doc.userId.toString()) ?? [];
+    for (let index = 0; index < pending.length; index += PUSH_SEND_CONCURRENCY) {
+      if (Date.now() > deadline) break;
 
-      let shouldMark = subscriptions.length === 0;
-      if (!shouldMark) {
-        const result = await PushNotificationService.sendNotification(
-          doc.userId,
-          { title: doc.title, body: doc.body, url: doc.url, icon: PUSH_ICONS[type] },
-          subscriptions
+      const chunk = pending.slice(index, index + PUSH_SEND_CONCURRENCY);
+      const outcomes = await Promise.all(
+        chunk.map(async doc => {
+          const subscriptions = subscriptionsByUser.get(doc.userId.toString()) ?? [];
+          if (subscriptions.length === 0) return { doc, delivered: false, shouldMark: true };
+
+          const result = await PushNotificationService.sendNotification(
+            doc.userId,
+            { title: doc.title, body: doc.body, url: doc.url, icon: PUSH_ICONS[type] },
+            subscriptions
+          );
+          return {
+            doc,
+            delivered: result.delivered > 0,
+            shouldMark: result.delivered > 0 || !result.transientFailure,
+          };
+        })
+      );
+
+      sent += outcomes.filter(outcome => outcome.delivered).length;
+
+      const sentAt = new Date();
+      const toMark = outcomes.filter(outcome => outcome.shouldMark);
+      if (toMark.length > 0) {
+        await Notification.bulkWrite(
+          toMark.map(({ doc }) => ({
+            updateOne: { filter: { _id: doc._id, pushSentAt: { $type: 'null' } }, update: { $set: { pushSentAt: sentAt } } },
+          }))
         );
-        if (result.delivered > 0) sent++;
-        shouldMark = result.delivered > 0 || !result.transientFailure;
-      }
-
-      if (shouldMark) {
-        await Notification.updateOne({ _id: doc._id, pushSentAt: { $type: 'null' } }, { $set: { pushSentAt: new Date() } });
       }
     }
 

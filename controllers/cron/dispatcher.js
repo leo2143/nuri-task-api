@@ -167,7 +167,8 @@ export class CronDispatcher {
   }
 
   /**
-   * Corre las unidades en orden hasta agotar el margen de tiempo. Las que no empiezan a tiempo no se reclaman.
+   * Corre las unidades en orden hasta agotar el margen de tiempo. Las que no empiezan a tiempo no se reclaman, y
+   * una unidad en curso corta entre lotes al llegar al mismo límite (queda `failed`, reclamable).
    * @param {import('./support/workUnitRunner.js').WorkUnit[]} units
    */
   static async #runUntilDeadline(units) {
@@ -176,7 +177,7 @@ export class CronDispatcher {
 
     for (const unit of units) {
       if (Date.now() - startedAt > MAX_DISPATCH_MS) break;
-      results.push(await runWorkUnit(unit));
+      results.push(await runWorkUnit(unit, { deadline: startedAt + MAX_DISPATCH_MS }));
     }
 
     return results;
