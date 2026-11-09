@@ -151,8 +151,9 @@ async function finishUnit({ jobName, timezone, localDate }, claimedAt, status, d
 
 /**
  * Corre el job de la unidad. Los jobs globales corren una vez; los de zona, en lotes de usuarios.
- * Si se agota el `deadline` entre lotes, corta con un error: la unidad queda `failed` (trabajo incompleto) y el
- * dispatcher la retoma en un tick posterior desde el cursor; lo ya notificado no se repite por la dedup de usuario,
+ * Si se agota el `deadline` entre lotes, o a mitad del envío de push de un lote, corta con un error: la unidad
+ * queda `failed` (trabajo incompleto) y el dispatcher la retoma en un tick posterior desde el cursor (un lote cuyo
+ * envío quedó cortado no avanza el cursor, así la retomada lo rehace); lo ya notificado no se repite por la dedup de usuario,
  * tipo y día local.
  * @param {WorkUnit} unit
  * @param {number} deadline - Timestamp (ms) límite para empezar un lote nuevo
@@ -184,7 +185,9 @@ async function executeUnit({ job, group, timezone, localDate, now }, deadline, {
 
 /**
  * Corre el job sobre un lote y empuja los push pendientes del tipo, haya o no creado algo.
- * Si el job falla, igual se empuja lo pendiente y recién después se propaga el error original.
+ * Si el job falla, igual se empuja lo pendiente y recién después se propaga el error original. Si el deadline cortó
+ * el envío (en el job o en este empuje), falla con el error del deadline: el lote no puede darse por terminado
+ * porque quedaron push pendientes de usuarios que el cursor dejaría atrás.
  * @param {Object} job
  * @param {{userIds: Array, timezone: string, localDate: string, now: Date}} context
  * @param {number} deadline - Timestamp (ms) límite: se pasa al job y al envío de push pendientes, que cortan ahí y
@@ -201,13 +204,15 @@ async function runBatch(job, context, deadline) {
     failure = error;
   }
 
+  let wasPushTruncated = result?.truncated === true;
   try {
-    await ScheduledNotificationService.pushPendingNotifications({
+    const pushOutcome = await ScheduledNotificationService.pushPendingNotifications({
       type: job.notificationType,
       userIds: context.userIds,
       now: context.now,
       deadline,
     });
+    wasPushTruncated ||= pushOutcome.truncated;
   } catch (error) {
     if (failure) {
       console.error(chalk.red('[Cron] Falló también el envío de push pendientes:'), error);
@@ -217,6 +222,9 @@ async function runBatch(job, context, deadline) {
   }
 
   if (failure) throw failure;
+  if (wasPushTruncated) {
+    throw new Error('Se agotó el tiempo del dispatch con push pendientes en el lote');
+  }
   return result;
 }
 

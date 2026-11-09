@@ -78,13 +78,14 @@ export class ScheduledNotificationService {
    * @param {string} type - Tipo de notificación
    * @param {number} [cooldownDays] - Días de calendario sin repetir el tipo
    * @param {Object} [context] - Contexto del job (ver la doc de la clase)
-   * @returns {Promise<{notified: number, persisted: number}>}
+   * @returns {Promise<{notified: number, persisted: number, truncated: boolean}>} `truncated`: el deadline cortó el
+   *   envío y quedaron push pendientes (el runner no debe dar el lote por terminado)
    */
   static async _sendToSubscribedUsers(entries, label, type, cooldownDays = 0, context) {
     const pendingEntries = await this._excludeNotifiedSince(entries, type, cooldownDays, context);
     if (pendingEntries.length === 0) {
       console.log(chalk.blue(`[Cron] ${label}: ya notificados`));
-      return { notified: 0, persisted: 0 };
+      return { notified: 0, persisted: 0, truncated: false };
     }
 
     await NotificationService.createMany(
@@ -100,7 +101,7 @@ export class ScheduledNotificationService {
     );
 
     const { now, deadline } = this.resolveContext(context);
-    const { sent } = await this.pushPendingNotifications({
+    const { sent, truncated } = await this.pushPendingNotifications({
       type,
       userIds: pendingEntries.map(entry => entry.userId),
       now,
@@ -108,7 +109,7 @@ export class ScheduledNotificationService {
     });
 
     console.log(chalk.green(`[Cron] ${label}: ${pendingEntries.length} persistidas, ${sent} push enviados`));
-    return { notified: sent, persisted: pendingEntries.length };
+    return { notified: sent, persisted: pendingEntries.length, truncated };
   }
 
   /**
@@ -128,7 +129,8 @@ export class ScheduledNotificationService {
    * @param {Date} [params.now] - Instante de referencia de la ventana de recuperación
    * @param {number} [params.deadline] - Timestamp (ms) límite: no se empieza un grupo de envíos nuevo pasado ese
    *   instante y lo que falta queda pendiente para el próximo disparo
-   * @returns {Promise<{pending: number, sent: number}>}
+   * @returns {Promise<{pending: number, sent: number, truncated: boolean}>} `truncated`: el deadline cortó el envío con
+   *   notificaciones todavía sin procesar
    */
   static async pushPendingNotifications({ type, userIds = null, now = new Date(), deadline = Infinity }) {
     const recoverySince = new Date(now.getTime() - PENDING_PUSH_RECOVERY_HOURS * 60 * 60 * 1000);
@@ -143,13 +145,17 @@ export class ScheduledNotificationService {
       .sort({ createdAt: -1 })
       .lean();
 
-    if (pending.length === 0) return { pending: 0, sent: 0 };
+    if (pending.length === 0) return { pending: 0, sent: 0, truncated: false };
 
     const subscriptionsByUser = await this._fetchSubscriptionsByUser(pending.map(doc => doc.userId));
 
     let sent = 0;
+    let truncated = false;
     for (let index = 0; index < pending.length; index += PUSH_SEND_CONCURRENCY) {
-      if (Date.now() > deadline) break;
+      if (Date.now() > deadline) {
+        truncated = true;
+        break;
+      }
 
       const chunk = pending.slice(index, index + PUSH_SEND_CONCURRENCY);
       const settled = await Promise.allSettled(
@@ -194,7 +200,7 @@ export class ScheduledNotificationService {
       }
     }
 
-    return { pending: pending.length, sent };
+    return { pending: pending.length, sent, truncated };
   }
 
   /**
