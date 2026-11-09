@@ -166,11 +166,17 @@ await runMigration({
         // siguen inactivos esperando el deploy (si no, repetir el paso tras una falla los dejaría fuera)
         const changed = [];
         const carried = [];
+        const outdatedDescriptions = [];
         for (const seed of loadSeedsByTitle()) {
           const stored = storedByTitle.get(seed.title);
           if (!stored) {
             log(`"${seed.title}" no existe en la base: se omite`);
-          } else if (!hasSeedDefinition(stored, seed)) {
+            continue;
+          }
+          // La descripción no cambia qué cuenta como progreso: se corrige aparte, sin desactivar ni reiniciar
+          if (stored.description !== seed.description) outdatedDescriptions.push({ stored, seed });
+
+          if (!hasSeedDefinition(stored, seed)) {
             changed.push({ stored, seed });
           } else if (previousPendingIds.has(String(stored._id)) && stored.isActive === false) {
             carried.push({ stored, seed });
@@ -187,7 +193,11 @@ await runMigration({
           ...changed.map(({ stored }) => stored),
           ...carried.map(({ stored }) => previousOriginalsById.get(String(stored._id)) ?? stored),
         ];
-        const pendingIds = [...changed, ...carried].map(({ stored }) => stored._id);
+        const pendingIds = originals.map(original => original._id);
+        for (const { stored } of outdatedDescriptions) {
+          if (!pendingIds.some(pendingId => pendingId.equals(stored._id))) originals.push(stored);
+        }
+        log(`Descripciones a corregir: ${outdatedDescriptions.map(({ seed }) => seed.title).join(', ') || 'ninguna'}`);
 
         // El reinicio no depende de `changed`: cubre todo el progreso en curso anterior a este paso de los pendientes
         const inProgressRows =
@@ -223,11 +233,19 @@ await runMigration({
                 triggerEvent: seed.triggerEvent,
                 targetCount: seed.targetCount,
                 conditions: seed.conditions ?? {},
+                description: seed.description,
                 isActive: false,
               },
             }
           );
           log(`"${seed.title}" actualizado e inactivo`);
+        }
+
+        const changedIds = new Set(changed.map(({ stored }) => String(stored._id)));
+        for (const { stored, seed } of outdatedDescriptions) {
+          if (changedIds.has(String(stored._id))) continue;
+          await achievements.updateOne({ _id: stored._id }, { $set: { description: seed.description } });
+          log(`"${seed.title}" con la descripción corregida`);
         }
 
         // Las filas escritas por la API vieja entre la lectura y la desactivación las cubre `reset-in-progress`

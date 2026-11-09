@@ -37,7 +37,7 @@
   },
   {
     "title": "Canto de Gallo",
-    "description": "Completaste una meta antes de las 8am",
+    "description": "Completaste una tarea antes de las 8am",
     "targetCount": 1,
     "type": "task",
     "triggerEvent": "task:completed",
