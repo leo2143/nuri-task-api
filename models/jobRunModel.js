@@ -3,7 +3,10 @@ import mongoose from 'mongoose';
 /** Cuánto se conserva el registro de una corrida (el TTL borra el documento pasado este plazo). */
 export const JOB_RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** Intentos máximos de una unidad por día local: pasado este tope el dispatcher deja de reintentarla. */
+/**
+ * Corridas seguidas sin avanzar el cursor que tolera una unidad: al llegar al tope queda `exhausted` (terminal)
+ * y el dispatcher deja de reintentarla. Cada lote completado reinicia la cuenta.
+ */
 export const MAX_UNIT_ATTEMPTS = 3;
 
 /**
@@ -42,7 +45,7 @@ const jobRunSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
-    // Veces que se reclamó la unidad (el insert inicial cuenta 1); tope: MAX_UNIT_ATTEMPTS
+    // Corridas seguidas sin avanzar el cursor (el claim inicial cuenta 1; vuelve a 1 al guardar cursor); tope: MAX_UNIT_ATTEMPTS
     attempts: {
       type: Number,
       default: 1,

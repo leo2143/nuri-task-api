@@ -8,7 +8,10 @@ import { BadRequestResponseModel, ErrorResponseModel, SuccessResponseModel } fro
 
 /** Margen bajo los 60 s de `maxDuration`: pasado este tiempo no se empiezan unidades nuevas. */
 const MAX_DISPATCH_MS = 50 * 1000;
-/** Margen mínimo para reclamar una unidad: con menos no alcanza para avanzar y se deja al tick siguiente. */
+/**
+ * Margen mínimo para reclamar una unidad: con menos no alcanza para avanzar. Un reintento queda para el tick
+ * siguiente sin gastar intento; una unidad nueva sin reclamar no tiene registro en el ledger y se pierde ese día.
+ */
 const MIN_UNIT_BUDGET_MS = 10 * 1000;
 /** Un tick más viejo que esto ya no es de "esta hora": se saltea en vez de enviar a destiempo. */
 const STALE_TICK_MS = 90 * 60 * 1000;
@@ -209,7 +212,8 @@ async function markExhaustedRuns(filter) {
  * Contrato de fallos: una unidad que falla o se corta por el deadline queda `failed` en el ledger con su cursor, y
  * los ticks siguientes del mismo día local la retoman (ver `planRetryUnits`): primero corren las unidades nuevas de
  * la hora y después los reintentos, mientras alcance el margen de MAX_DISPATCH_MS. Una unidad se reintenta hasta
- * MAX_UNIT_ATTEMPTS veces (el primer intento cuenta); agotadas se registra y no se vuelve a planear. Pasado el día
+ * acumular MAX_UNIT_ATTEMPTS corridas seguidas sin avanzar el cursor; agotada queda `exhausted` y no se vuelve a
+ * planear. Una unidad nueva que no llegó a reclamarse por falta de margen no se replanea. Pasado el día
  * local una unidad incompleta se pierde. Si algo falló o quedó sin correr, responde 500 (solo se ve en los logs de
  * cron de Vercel).
  * Los push pendientes los recupera el runner de cada unidad.
@@ -302,7 +306,7 @@ export class CronDispatcher {
     const results = [];
 
     for (const unit of units) {
-      // Sin margen para avanzar, reclamar solo gastaría un intento: queda sin correr para el tick siguiente
+      // Sin margen para avanzar, reclamar solo gastaría un intento: queda sin correr (ver MIN_UNIT_BUDGET_MS)
       if (startedAt + MAX_DISPATCH_MS - Date.now() < MIN_UNIT_BUDGET_MS) break;
       results.push(await runWorkUnit(unit, { deadline: startedAt + MAX_DISPATCH_MS }));
     }

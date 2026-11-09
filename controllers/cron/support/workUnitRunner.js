@@ -36,7 +36,7 @@ export const GLOBAL_TIMEZONE_KEY = 'global';
  *
  * Una unidad que falla (o se corta por el `deadline`, incluso a mitad del envío de push de un lote) queda
  * `failed` y el dispatcher la vuelve a planear en los ticks siguientes del mismo día local, hasta MAX_UNIT_ATTEMPTS
- * intentos. Al terminar cada lote se guarda en el ledger el cursor (último usuario
+ * corridas seguidas sin avanzar el cursor. Al terminar cada lote se guarda en el ledger el cursor (último usuario
  * procesado), así la retomada continúa desde ahí y no desde el primer lote. Después de cada lote se empujan los
  * push pendientes y sin leer del tipo del job creados en las últimas 48 h, aunque el job haya terminado sin crear
  * nada o haya fallado: así no quedan push varados.
