@@ -250,7 +250,16 @@ export class TodoService {
         await touchLastChildActivity(newGoalId, userId);
       }
 
-      return new SuccessResponseModel(todo, 'Tarea actualizada correctamente');
+      // Pasar una tarea de una meta a otra es progreso para "Re-Ordenar"; asignar o quitar la meta no lo es
+      const events = emptyCompletionEvents();
+      if (oldGoalId && newGoalId && oldGoalId !== newGoalId) {
+        const goalChangedEvent = await UserAchievementService.processEvent('task:goal-changed', userId, null, {
+          occurredAt: new Date(),
+        });
+        events.achievementsUnlocked = goalChangedEvent?.achievementsUnlocked ?? [];
+      }
+
+      return new SuccessResponseModel(todo, 'Tarea actualizada correctamente', 200, { events });
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar tarea');
     }
