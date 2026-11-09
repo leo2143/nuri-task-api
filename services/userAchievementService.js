@@ -17,12 +17,33 @@ import mongoose from 'mongoose';
 import chalk from 'chalk';
 
 const POPULATE_USER_FIELDS = 'name email avatar';
+// Completar a todos los usuarios tras bajar un objetivo corre dentro del PUT del admin (Vercel: maxDuration = 60 s):
+// se hace por tandas y con un presupuesto de tiempo; lo que no alcanza se completa con el próximo evento del usuario.
+const COMPLETION_BATCH_SIZE = 200;
+const COMPLETION_TIME_BUDGET_MS = 40_000;
+const COMPLETION_CONCURRENCY = 10;
 const DEFAULT_PROGRESS = {
   currentCount: 0,
   status: 'locked',
   unlockedAt: null,
   completedAt: null,
 };
+
+/**
+ * Corre `task` sobre cada elemento con a lo sumo `limit` ejecuciones en paralelo (sin dependencias nuevas).
+ * @template T, R
+ * @param {T[]} items
+ * @param {number} limit
+ * @param {(item: T) => Promise<R>} task
+ * @returns {Promise<R[]>} Resultados en el mismo orden que `items`
+ */
+async function mapWithConcurrency(items, limit, task) {
+  const results = [];
+  for (let start = 0; start < items.length; start += limit) {
+    results.push(...(await Promise.all(items.slice(start, start + limit).map(task))));
+  }
+  return results;
+}
 
 /**
  * Servicio para gestionar el progreso del usuario en logros
@@ -289,34 +310,42 @@ export class UserAchievementService {
       row => row.currentCount >= (achievementById.get(row.achievement.toString())?.targetCount ?? Infinity)
     );
 
-    return this._completeRows(userId, reachedRows, achievementById);
+    return this._completeRows(reachedRows, achievementById);
   }
 
   /**
-   * Completa filas de progreso y notifica solo las que ESTE llamado reclamó. El reclamo es condicional por fila
-   * (`status != completed`): si dos eventos llegan a la vez, solo uno completa y notifica.
+   * Reclama (completa) filas de progreso. El reclamo es condicional por fila (`status != completed`): si dos
+   * llamados compiten por la misma fila solo uno la reclama.
    * @private
-   * @param {string} userId
    * @param {Array} rows - Filas de UserAchievement que alcanzaron el objetivo
    * @param {Map<string, Object>} achievementById - Logros por id (string)
-   * @returns {Promise<{notifiedAchievement: boolean, achievementsUnlocked: Array<{id: string, title: string, description: string}>}>}
+   * @returns {Promise<Array<{userId: string, achievement: Object}>>} Solo las filas que ESTE llamado reclamó
    */
-  static async _completeRows(userId, rows, achievementById) {
+  static async _claimRows(rows, achievementById) {
     const now = new Date();
-    const achievementsJustCompleted = [];
 
-    for (const row of rows) {
+    const claims = await mapWithConcurrency(rows, COMPLETION_CONCURRENCY, async row => {
       const achievement = achievementById.get(row.achievement.toString());
-      if (!achievement) continue;
+      if (!achievement) return null;
 
       const claimedRow = await UserAchievement.findOneAndUpdate(
         { _id: row._id, status: { $ne: 'completed' } },
         { $set: { status: 'completed', completedAt: now, unlockedAt: row.unlockedAt || now } }
       );
-      if (claimedRow) achievementsJustCompleted.push(achievement);
-    }
+      return claimedRow ? { userId: row.user.toString(), achievement } : null;
+    });
 
-    for (const achievement of achievementsJustCompleted) {
+    return claims.filter(Boolean);
+  }
+
+  /**
+   * Notifica los logros recién reclamados, con concurrencia acotada. Un fallo de notificación se registra y no corta.
+   * @private
+   * @param {Array<{userId: string, achievement: Object}>} claims
+   * @returns {Promise<void>}
+   */
+  static async _notifyClaimedAchievements(claims) {
+    await mapWithConcurrency(claims, COMPLETION_CONCURRENCY, async ({ userId, achievement }) => {
       try {
         await persistAndNotify({
           userId,
@@ -329,11 +358,23 @@ export class UserAchievementService {
       } catch (error) {
         console.error(chalk.yellow('[side-effect] Error al notificar logro desbloqueado:'), error);
       }
-    }
+    });
+  }
+
+  /**
+   * Completa filas de progreso y notifica solo las que ESTE llamado reclamó.
+   * @private
+   * @param {Array} rows - Filas de UserAchievement que alcanzaron el objetivo
+   * @param {Map<string, Object>} achievementById - Logros por id (string)
+   * @returns {Promise<{notifiedAchievement: boolean, achievementsUnlocked: Array<{id: string, title: string, description: string}>}>}
+   */
+  static async _completeRows(rows, achievementById) {
+    const claims = await this._claimRows(rows, achievementById);
+    await this._notifyClaimedAchievements(claims);
 
     return {
-      notifiedAchievement: achievementsJustCompleted.length > 0,
-      achievementsUnlocked: achievementsJustCompleted.map(achievement => ({
+      notifiedAchievement: claims.length > 0,
+      achievementsUnlocked: claims.map(({ achievement }) => ({
         id: achievement._id.toString(),
         title: achievement.title,
         description: achievement.description ?? '',
@@ -344,34 +385,44 @@ export class UserAchievementService {
   /**
    * Tras bajar el `targetCount` de un logro, completa las filas en curso que ya alcanzaron el nuevo objetivo,
    * por el mismo reclamo y la misma notificación que un evento. Un logro inactivo no completa a nadie.
+   * Corre por tandas de `COMPLETION_BATCH_SIZE` y se corta al agotar `COMPLETION_TIME_BUDGET_MS` (el llamador es un
+   * PUT con límite de 60 s). Las filas que quedan sin completar se completan con el próximo evento que le cuente
+   * progreso al usuario (`_checkAndCompleteAchievements` revisa `currentCount >= targetCount` de toda fila no completada).
    * Es un efecto posterior a la edición: un fallo se registra y no deshace el cambio ya guardado.
    * @param {string} achievementId
-   * @returns {Promise<number>} Cantidad de usuarios que completaron el logro en esta llamada
+   * @returns {Promise<{completedUsers: number, pendingCompletions: number|null}>} Usuarios completados en esta
+   *   llamada y filas que quedaron pendientes (`null` si un fallo impidió contarlas)
    */
   static async completeReachedTarget(achievementId) {
+    let completedUsers = 0;
     try {
       const achievement = await Achievement.findOne({ _id: achievementId, isActive: true }).lean();
-      if (!achievement) return 0;
+      if (!achievement) return { completedUsers: 0, pendingCompletions: 0 };
 
-      const reachedRows = await UserAchievement.find({
+      const reachedFilter = {
         achievement: achievement._id,
         status: { $ne: 'completed' },
         currentCount: { $gte: achievement.targetCount },
-      }).lean();
-
+      };
       const achievementById = new Map([[achievement._id.toString(), achievement]]);
-      let completedUsers = 0;
-      for (const row of reachedRows) {
-        const { achievementsUnlocked } = await this._completeRows(row.user.toString(), [row], achievementById);
-        completedUsers += achievementsUnlocked.length;
+      const deadline = Date.now() + COMPLETION_TIME_BUDGET_MS;
+
+      while (Date.now() < deadline) {
+        const reachedRows = await UserAchievement.find(reachedFilter).limit(COMPLETION_BATCH_SIZE).lean();
+        if (reachedRows.length === 0) break;
+
+        const claims = await this._claimRows(reachedRows, achievementById);
+        await this._notifyClaimedAchievements(claims);
+        completedUsers += claims.length;
       }
-      return completedUsers;
+
+      return { completedUsers, pendingCompletions: await UserAchievement.countDocuments(reachedFilter) };
     } catch (error) {
       console.error(
         chalk.yellow('[side-effect] Error al completar logros que ya alcanzaron el nuevo objetivo:'),
         error
       );
-      return 0;
+      return { completedUsers, pendingCompletions: null };
     }
   }
 }

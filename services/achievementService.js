@@ -172,7 +172,9 @@ export class AchievementService {
    * @param {string} achievementId - ID del logro
    * @param {Object} updateData - Datos a actualizar
    * @returns {Promise<SuccessResponseModel|BadRequestResponseModel|NotFoundResponseModel|ConflictResponseModel|ErrorResponseModel>}
-   *   Respuesta con la plantilla actualizada o error. 409 si otra edición modificó el logro mientras tanto
+   *   Respuesta con la plantilla actualizada y `meta.pendingCompletions` (usuarios que alcanzaron el nuevo objetivo y
+   *   todavía no se completaron; 0 si no hubo cambio de objetivo; null si no se pudo contar), o error.
+   *   409 si otra edición modificó el logro mientras tanto
    */
   static async updateAchievement(achievementId, updateData) {
     try {
@@ -220,9 +222,11 @@ export class AchievementService {
           : new NotFoundResponseModel('Plantilla de logro no encontrada');
       }
 
-      await this.#completeIfTargetChanged(existing, cleanData);
+      const pendingCompletions = await this.#completeIfTargetChanged(existing, cleanData);
 
-      return new SuccessResponseModel(achievement, 'Plantilla de logro actualizada correctamente');
+      return new SuccessResponseModel(achievement, 'Plantilla de logro actualizada correctamente', 200, {
+        pendingCompletions,
+      });
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar plantilla de logro');
     }
@@ -250,17 +254,18 @@ export class AchievementService {
 
   /**
    * Si solo cambió el targetCount, completa a quien ya alcanzó el nuevo objetivo. Corre con la definición ya guardada
-   * porque lee el objetivo vigente de la base.
+   * porque lee el objetivo vigente de la base. Es por tandas con presupuesto de tiempo: lo que no alcanza queda pendiente
+   * y se completa con el próximo evento del usuario.
    * @param {Object} existing - Logro antes del cambio
    * @param {Object} cleanData - Cambios aplicados
-   * @returns {Promise<void>}
+   * @returns {Promise<number|null>} Filas que quedaron pendientes de completar (null si no se pudo contar)
    */
   static async #completeIfTargetChanged(existing, cleanData) {
-    if (changesProgressMeaning(existing, cleanData)) return;
+    const targetChanged = cleanData.targetCount !== undefined && cleanData.targetCount !== existing.targetCount;
+    if (changesProgressMeaning(existing, cleanData) || !targetChanged) return 0;
 
-    if (cleanData.targetCount !== undefined && cleanData.targetCount !== existing.targetCount) {
-      await UserAchievementService.completeReachedTarget(existing._id);
-    }
+    const { pendingCompletions } = await UserAchievementService.completeReachedTarget(existing._id);
+    return pendingCompletions;
   }
 
   /**
