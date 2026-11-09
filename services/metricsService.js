@@ -316,11 +316,9 @@ export class MetricsService {
       const dayStart = getLocalDayRange(day, timeZone).start;
 
       const writeActivity = () =>
-        Metrics.findOneAndUpdate(
-          { userId },
-          buildActivityDayPipeline({ kind, day, dayStart, occurredAt }),
-          { new: false }
-        ).lean();
+        Metrics.findOneAndUpdate({ userId }, buildActivityDayPipeline({ kind, day, dayStart, occurredAt }), {
+          new: false,
+        }).lean();
 
       let previous = await runWriteRetryingOnlyIfUnsent(writeActivity);
       if (!previous) {
