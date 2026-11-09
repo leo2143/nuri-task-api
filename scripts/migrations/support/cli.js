@@ -8,6 +8,9 @@ const { EJSON } = mongoose.mongo.BSON;
 
 const BACKUPS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'backups');
 
+// Sello que escribe exportBackup: ISO con ":" y "." reemplazados por "-" (2026-11-05T12-00-00-000Z.json)
+const BACKUP_STAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T[\d-]+Z\.json$/;
+
 /**
  * Interpreta los flags de una migración.
  *   --dry-run            (por defecto) solo informa lo que cambiaría
@@ -75,10 +78,12 @@ export function exportBackup({ migration, step = null, collection, documents, ap
 export function findLatestBackup(migration, step = null) {
   if (!fs.existsSync(BACKUPS_DIR)) return null;
 
+  // El sello de fecha debe seguir al prefijo de inmediato: así "s2-metrics-day-keys" no toma los backups
+  // del paso "s2-metrics-day-keys-drop-legacy-streaks" (otra colección)
   const prefix = [migration, step].filter(Boolean).join('-') + '-';
   const candidates = fs
     .readdirSync(BACKUPS_DIR)
-    .filter(fileName => fileName.startsWith(prefix) && fileName.endsWith('.json'))
+    .filter(fileName => fileName.startsWith(prefix) && BACKUP_STAMP_PATTERN.test(fileName.slice(prefix.length)))
     .sort();
 
   return candidates.length > 0 ? path.join(BACKUPS_DIR, candidates[candidates.length - 1]) : null;
