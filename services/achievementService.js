@@ -173,6 +173,7 @@ export class AchievementService {
    *   409 si otra edición modificó el logro mientras tanto
    */
   static async updateAchievement(achievementId, updateData) {
+    const startedAt = Date.now();
     try {
       const updateDto = new UpdateAchievementDto(updateData);
       const validation = updateDto.validate();
@@ -219,7 +220,7 @@ export class AchievementService {
       // eventos que llegan entre el guardado y el reinicio pueden contarse con las reglas nuevas y se reinician (aceptado).
       await this.#resetProgressAfterSave(existing, cleanData, achievement);
 
-      const pendingCompletions = await this.#completeIfTargetChanged(existing, cleanData);
+      const pendingCompletions = await this.#completeIfTargetChanged(existing, cleanData, startedAt);
 
       return new SuccessResponseModel(achievement, 'Plantilla de logro actualizada correctamente', 200, {
         pendingCompletions,
@@ -276,13 +277,14 @@ export class AchievementService {
    * y se completa con el próximo evento del usuario.
    * @param {Object} existing - Logro antes del cambio
    * @param {Object} cleanData - Cambios aplicados
+   * @param {number} startedAt - Instante (ms) en que empezó el PUT, para el presupuesto de tiempo
    * @returns {Promise<number|null>} Filas que quedaron pendientes de completar (null si no se pudo contar)
    */
-  static async #completeIfTargetChanged(existing, cleanData) {
+  static async #completeIfTargetChanged(existing, cleanData, startedAt) {
     const targetChanged = cleanData.targetCount !== undefined && cleanData.targetCount !== existing.targetCount;
     if (changesProgressMeaning(existing, cleanData) || !targetChanged) return 0;
 
-    const { pendingCompletions } = await UserAchievementService.completeReachedTarget(existing._id);
+    const { pendingCompletions } = await UserAchievementService.completeReachedTarget(existing._id, startedAt);
     return pendingCompletions;
   }
 

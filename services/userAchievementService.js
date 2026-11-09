@@ -466,17 +466,18 @@ export class UserAchievementService {
   /**
    * Tras bajar el `targetCount` de un logro, completa las filas en curso que ya alcanzaron el nuevo objetivo,
    * por el mismo reclamo y la misma notificación que un evento. Un logro inactivo no completa a nadie.
-   * Corre por tandas de `COMPLETION_BATCH_SIZE` y se corta al agotar `COMPLETION_TIME_BUDGET_MS` (el llamador es un
-   * PUT con límite de 60 s). Las filas que quedan sin completar se completan con el próximo evento que le cuente
-   * progreso al usuario (`_checkAndCompleteAchievements` revisa `currentCount >= targetCount` de toda fila no completada).
+   * Corre por tandas de `COMPLETION_BATCH_SIZE`, en rondas de `COMPLETION_CONCURRENCY` filas (reclamo + notificación), y
+   * se corta al agotar `COMPLETION_TIME_BUDGET_MS` contado desde el inicio del PUT (límite de 60 s).
+   * Las filas que quedan sin completar se completan con el próximo evento que le cuente progreso al usuario (`_checkAndCompleteAchievements` revisa `currentCount >= targetCount` de toda fila no completada).
    * Con `sameWindow` `currentCount` es el conteo de la ÚLTIMA franja (no se limpia): solo completan las filas cuya
    * franja guardada es la vigente de su usuario; una franja vieja con muchos eventos no cuenta.
    * Es un efecto posterior a la edición: un fallo se registra y no deshace el cambio ya guardado.
    * @param {string} achievementId
+   * @param {number} [startedAt] - Instante (ms) en que empezó el PUT; el presupuesto de tiempo corre desde ahí
    * @returns {Promise<{completedUsers: number, pendingCompletions: number|null}>} Usuarios completados en esta
    *   llamada y filas que quedaron pendientes (`null` si un fallo impidió contarlas)
    */
-  static async completeReachedTarget(achievementId) {
+  static async completeReachedTarget(achievementId, startedAt = Date.now()) {
     let completedUsers = 0;
     try {
       const achievement = await Achievement.findOne({ _id: achievementId, isActive: true }).lean();
@@ -491,22 +492,38 @@ export class UserAchievementService {
         ...(isSameWindow && { 'window.key': { $in: await this._findCurrentWindowKeys(achievement.conditions, now) } }),
       };
       const achievementById = new Map([[achievement._id.toString(), achievement]]);
-      const deadline = Date.now() + COMPLETION_TIME_BUDGET_MS;
+      const deadline = startedAt + COMPLETION_TIME_BUDGET_MS;
 
-      // Se avanza por _id: las filas que no se completan (franja que no es la vigente de su usuario) no se reintentan
+      // Se avanza por _id: las filas que no se completan (franja que no es la vigente de su usuario) no se reintentan.
+      // El presupuesto se revisa por ronda de concurrencia: cada ronda reclama y notifica sus filas antes de la
+      // siguiente, así nunca quedan filas reclamadas sin notificar y el exceso sobre el límite es una sola ronda.
       let lastVisitedId = null;
-      while (Date.now() < deadline) {
+      let budgetExhausted = false;
+      while (!budgetExhausted) {
+        if (Date.now() >= deadline) break;
         const batchFilter = lastVisitedId ? { ...reachedFilter, _id: { $gt: lastVisitedId } } : reachedFilter;
         const batchRows = await UserAchievement.find(batchFilter).sort({ _id: 1 }).limit(COMPLETION_BATCH_SIZE).lean();
         if (batchRows.length === 0) break;
-        lastVisitedId = batchRows[batchRows.length - 1]._id;
 
         const reachedRows = isSameWindow
           ? await this._keepRowsInCurrentWindow(batchRows, achievement.conditions, now)
           : batchRows;
-        const claims = await this._claimRows(reachedRows, achievementById);
-        await this._notifyClaimedAchievements(claims);
-        completedUsers += claims.length;
+        for (let start = 0; start < reachedRows.length; start += COMPLETION_CONCURRENCY) {
+          if (Date.now() >= deadline) {
+            budgetExhausted = true;
+            break;
+          }
+          const claims = await this._claimRows(
+            reachedRows.slice(start, start + COMPLETION_CONCURRENCY),
+            achievementById
+          );
+          await this._notifyClaimedAchievements(claims);
+          completedUsers += claims.length;
+        }
+
+        // Una tanda cortada a la mitad no avanza el cursor: sus filas sin reclamar siguen contando como pendientes
+        // (las ya reclamadas quedan completadas y fuera del filtro).
+        if (!budgetExhausted) lastVisitedId = batchRows[batchRows.length - 1]._id;
       }
 
       const unvisitedFilter = lastVisitedId ? { ...reachedFilter, _id: { $gt: lastVisitedId } } : reachedFilter;
