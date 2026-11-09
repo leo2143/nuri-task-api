@@ -19,6 +19,7 @@ export class CreateMetricDto {
     bestStreak: nonNegative('bestStreak').optional(),
     totalTasksCompleted: nonNegative('totalTasksCompleted').optional(),
     totalGoalsCompleted: nonNegative('totalGoalsCompleted').optional(),
+    lastActivityDay: z.string().nullable().optional(),
     lastActivityDate: z.union([z.date(), z.string(), z.null()]).optional(),
     history: z
       .array(
@@ -38,6 +39,7 @@ export class CreateMetricDto {
     this.bestStreak = data.bestStreak !== undefined ? data.bestStreak : 0;
     this.totalTasksCompleted = data.totalTasksCompleted !== undefined ? data.totalTasksCompleted : 0;
     this.totalGoalsCompleted = data.totalGoalsCompleted !== undefined ? data.totalGoalsCompleted : 0;
+    this.lastActivityDay = data.lastActivityDay || null;
     this.lastActivityDate = data.lastActivityDate || null;
     this.history = data.history || [];
   }
@@ -49,6 +51,7 @@ export class CreateMetricDto {
       bestStreak: this.bestStreak,
       totalTasksCompleted: this.totalTasksCompleted,
       totalGoalsCompleted: this.totalGoalsCompleted,
+      lastActivityDay: this.lastActivityDay,
       lastActivityDate: this.lastActivityDate,
       history: this.history,
     });
@@ -61,6 +64,7 @@ export class CreateMetricDto {
       bestStreak: this.bestStreak,
       totalTasksCompleted: this.totalTasksCompleted,
       totalGoalsCompleted: this.totalGoalsCompleted,
+      lastActivityDay: this.lastActivityDay,
       lastActivityDate: this.lastActivityDate,
       history: this.history,
     };
