@@ -222,7 +222,13 @@ export class CronDispatcher {
       }
 
       // Unidades nuevas de la hora primero; los reintentos del día van después con el margen que quede
-      const retryUnits = await planRetryUnits(groups, dispatchInstant, now, units);
+      let retryUnits = [];
+      try {
+        retryUnits = await planRetryUnits(groups, dispatchInstant, now, units);
+      } catch (error) {
+        // Sin reintentos igual corren las unidades nuevas de la hora
+        console.error(chalk.red('[Cron] No se pudieron planear los reintentos:'), error);
+      }
       const allUnits = [...units, ...retryUnits];
       const results = await CronDispatcher.#runUntilDeadline(allUnits);
       const failed = results.filter(outcome => outcome.status === 'failed').length;

@@ -177,6 +177,11 @@ export class ScheduledNotificationService {
       );
 
       // Un envío que rechaza queda pendiente; no pierde las marcas de los que sí se resolvieron
+      settled.forEach((entry, position) => {
+        if (entry.status === 'rejected') {
+          console.error(chalk.red(`[Cron] Falló el envío push de ${chunk[position]._id} (${type}):`), entry.reason);
+        }
+      });
       const outcomes = settled.filter(entry => entry.status === 'fulfilled').map(entry => entry.value);
       sent += outcomes.filter(outcome => outcome.delivered).length;
 
