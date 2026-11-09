@@ -135,10 +135,21 @@ export async function planRetryUnits(groups, dispatchInstant, now, plannedUnits)
   }
 
   const leaseExpiredBefore = new Date(now.getTime() - LEASE_MS);
-  const incompleteRuns = await JobRun.find({
-    localDate: { $in: [...new Set(currentDateByZone.values())] },
-    attempts: { $lt: MAX_UNIT_ATTEMPTS },
+  const currentDates = [...new Set(currentDateByZone.values())];
+  const incompleteStatus = {
     $or: [{ status: 'failed' }, { status: 'claimed', claimedAt: { $lt: leaseExpiredBefore } }],
+  };
+
+  await markExhaustedRuns({
+    localDate: { $in: currentDates },
+    attempts: { $gte: MAX_UNIT_ATTEMPTS },
+    ...incompleteStatus,
+  });
+
+  const incompleteRuns = await JobRun.find({
+    localDate: { $in: currentDates },
+    attempts: { $lt: MAX_UNIT_ATTEMPTS },
+    ...incompleteStatus,
   })
     .select('job timezone localDate')
     .lean();
@@ -165,6 +176,29 @@ export async function planRetryUnits(groups, dispatchInstant, now, plannedUnits)
   }
 
   return units;
+}
+
+/**
+ * Unidades que llegaron al tope de intentos y quedaron incompletas sin que su dueño lo registrara (la función murió
+ * en el último intento, así que sigue `claimed` con el lease vencido). Se registran en error una sola vez y se
+ * marcan `exhausted` para que no se vuelvan a loguear.
+ * @param {Object} filter - Filtro del ledger con las unidades agotadas e incompletas
+ */
+async function markExhaustedRuns(filter) {
+  const exhaustedRuns = await JobRun.find(filter).select('job timezone localDate attempts').lean();
+  if (exhaustedRuns.length === 0) return;
+
+  await JobRun.updateMany(
+    { ...filter, _id: { $in: exhaustedRuns.map(run => run._id) } },
+    { $set: { status: 'exhausted' } }
+  );
+  for (const run of exhaustedRuns) {
+    console.error(
+      chalk.red(
+        `[Cron] Unidad agotada tras ${run.attempts} intentos, no se vuelve a planear: ${run.job} (${run.timezone} ${run.localDate})`
+      )
+    );
+  }
 }
 
 /**

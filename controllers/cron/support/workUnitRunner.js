@@ -78,14 +78,15 @@ export async function runWorkUnit(unit, { useLedger = true, deadline = Infinity 
   } catch (error) {
     const durationMs = Date.now() - startedAt;
     console.error(chalk.red(`[Cron] Falló ${jobName} (${timezone} ${localDate}):`), error);
-    if (useLedger && attempts >= MAX_UNIT_ATTEMPTS) {
+    const isExhausted = useLedger && attempts >= MAX_UNIT_ATTEMPTS;
+    if (isExhausted) {
       console.error(
         chalk.red(
           `[Cron] Unidad agotada tras ${attempts} intentos, no se vuelve a planear: ${jobName} (${timezone} ${localDate})`
         )
       );
     }
-    if (useLedger) await finishUnit(unit, claimedAt, 'failed', durationMs);
+    if (useLedger) await finishUnit(unit, claimedAt, isExhausted ? 'exhausted' : 'failed', durationMs);
     return { ...identity, status: 'failed', durationMs, error: error.message };
   }
 

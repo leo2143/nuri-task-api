@@ -28,7 +28,7 @@ const jobRunSchema = new mongoose.Schema(
     status: {
       type: String,
       required: true,
-      enum: ['claimed', 'done', 'failed'],
+      enum: ['claimed', 'done', 'failed', 'exhausted'],
     },
     claimedAt: {
       type: Date,
