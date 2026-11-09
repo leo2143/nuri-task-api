@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { JOB_REGISTRY } from './jobRegistry.js';
-import { GLOBAL_TIMEZONE_KEY, runWorkUnit } from './support/workUnitRunner.js';
+import JobRun from '../../models/jobRunModel.js';
+import { GLOBAL_TIMEZONE_KEY, LEASE_MS, runWorkUnit } from './support/workUnitRunner.js';
 import { fetchTimezoneGroups } from './support/timezoneGroups.js';
 import { getZonedParts, toLocalYmd } from '../../services/helpers/dateTime.js';
 import { BadRequestResponseModel, ErrorResponseModel, SuccessResponseModel } from '../../models/responseModel.js';
@@ -115,13 +116,63 @@ export function planWorkUnits(groups, dispatchInstant, now) {
 }
 
 /**
+ * Unidades de reintento: las del ledger que quedaron `failed` (p. ej. cortadas por el deadline) o `claimed` con el
+ * lease vencido (la función murió) en el día local vigente de su zona. Vercel no reintenta crons, así que cada tick
+ * revisa el día en curso de todas las zonas con UNA consulta indexada (`localDate` + `status`). Reclamarlas es
+ * atómico y retoman desde el cursor guardado; la clave única del ledger y la dedup por usuario evitan duplicados.
+ * @param {Map<string, import('./support/timezoneGroups.js').TimezoneGroup>} groups
+ * @param {Date} dispatchInstant
+ * @param {Date} now
+ * @param {import('./support/workUnitRunner.js').WorkUnit[]} plannedUnits - Unidades nuevas de este tick (no se repiten)
+ * @returns {Promise<import('./support/workUnitRunner.js').WorkUnit[]>}
+ */
+export async function planRetryUnits(groups, dispatchInstant, now, plannedUnits) {
+  const currentDateByZone = new Map([[GLOBAL_TIMEZONE_KEY, toLocalYmd(dispatchInstant, 'UTC')]]);
+  for (const group of groups.values()) {
+    currentDateByZone.set(group.key, toLocalYmd(dispatchInstant, group.key));
+  }
+
+  const leaseExpiredBefore = new Date(now.getTime() - LEASE_MS);
+  const incompleteRuns = await JobRun.find({
+    localDate: { $in: [...new Set(currentDateByZone.values())] },
+    $or: [{ status: 'failed' }, { status: 'claimed', claimedAt: { $lt: leaseExpiredBefore } }],
+  })
+    .select('job timezone localDate')
+    .lean();
+
+  const plannedKeys = new Set(plannedUnits.map(unit => `${unit.jobName}|${unit.timezone}|${unit.localDate}`));
+  const units = [];
+
+  for (const run of incompleteRuns) {
+    const job = JOB_REGISTRY[run.job];
+    const isCurrentDay = currentDateByZone.get(run.timezone) === run.localDate;
+    if (!job || !isCurrentDay || plannedKeys.has(`${run.job}|${run.timezone}|${run.localDate}`)) continue;
+
+    const isGlobalRun = run.timezone === GLOBAL_TIMEZONE_KEY;
+    if (isGlobalRun !== (job.scope === 'global')) continue;
+
+    units.push({
+      jobName: run.job,
+      job,
+      timezone: run.timezone,
+      localDate: run.localDate,
+      now,
+      ...(isGlobalRun ? {} : { group: groups.get(run.timezone) }),
+    });
+  }
+
+  return units;
+}
+
+/**
  * Dispatcher horario. Vercel Hobby solo admite crons diarios, así que vercel.json declara 24 entradas
  * (`0 H * * *` -> `/api/cron/dispatch?h=H`), una por hora UTC, y cada tick decide qué jobs tocan en cada zona.
  *
- * Contrato de fallos: no hay reintentos automáticos. Una unidad que falla queda `failed` en el ledger y se
- * pierde para ese día local salvo que otra invocación (duplicada o manual) la retome; las unidades que no
- * alcanzan a empezar antes de MAX_DISPATCH_MS tampoco se reclaman. Si algo falló o quedó sin correr, responde
- * 500 (solo se ve en los logs de cron de Vercel). Los push pendientes los recupera el runner de cada unidad.
+ * Contrato de fallos: una unidad que falla o se corta por el deadline queda `failed` en el ledger con su cursor, y
+ * los ticks siguientes del mismo día local la retoman (ver `planRetryUnits`): primero corren las unidades nuevas de
+ * la hora y después los reintentos, mientras alcance el margen de MAX_DISPATCH_MS. Pasado el día local una unidad
+ * incompleta se pierde. Si algo falló o quedó sin correr, responde 500 (solo se ve en los logs de cron de Vercel).
+ * Los push pendientes los recupera el runner de cada unidad.
  */
 export class CronDispatcher {
   /**
@@ -168,14 +219,17 @@ export class CronDispatcher {
         );
       }
 
-      const results = await CronDispatcher.#runUntilDeadline(units);
+      // Unidades nuevas de la hora primero; los reintentos del día van después con el margen que quede
+      const retryUnits = await planRetryUnits(groups, dispatchInstant, now, units);
+      const allUnits = [...units, ...retryUnits];
+      const results = await CronDispatcher.#runUntilDeadline(allUnits);
       const failed = results.filter(outcome => outcome.status === 'failed').length;
-      const unreached = units.length - results.length;
-      const data = { ...summary, ran: results.length, failed, unreached, results };
+      const unreached = allUnits.length - results.length;
+      const data = { ...summary, retries: retryUnits.length, ran: results.length, failed, unreached, results };
 
       console.log(
         chalk.cyan(
-          `[Cron] dispatch h=${resolvedHour.hour}: ${results.length}/${units.length} unidades, ${failed} fallidas`
+          `[Cron] dispatch h=${resolvedHour.hour}: ${results.length}/${allUnits.length} unidades (${retryUnits.length} reintentos), ${failed} fallidas`
         )
       );
 
@@ -193,7 +247,8 @@ export class CronDispatcher {
 
   /**
    * Corre las unidades en orden hasta agotar el margen de tiempo. Las que no empiezan a tiempo no se reclaman, y
-   * una unidad en curso corta entre lotes al llegar al mismo límite (queda `failed`, reclamable).
+   * una unidad en curso corta entre lotes al llegar al mismo límite (queda `failed` con su cursor, y un tick
+   * posterior del mismo día local la retoma).
    * @param {import('./support/workUnitRunner.js').WorkUnit[]} units
    */
   static async #runUntilDeadline(units) {

@@ -39,6 +39,11 @@ const jobRunSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    // Último usuario cuyo lote terminó: una retomada de la unidad continúa después de este `_id`
+    cursor: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
     expiresAt: {
       type: Date,
       required: true,
@@ -50,6 +55,8 @@ const jobRunSchema = new mongoose.Schema(
 );
 
 jobRunSchema.index({ job: 1, timezone: 1, localDate: 1 }, { unique: true });
+// Reintentos del dispatcher: unidades `failed`/`claimed` de los días locales vigentes
+jobRunSchema.index({ localDate: 1, status: 1 });
 jobRunSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const JobRun = mongoose.model('JobRun', jobRunSchema);

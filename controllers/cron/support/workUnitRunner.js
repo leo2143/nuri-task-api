@@ -5,7 +5,7 @@ import { ScheduledNotificationService } from '../../../services/scheduledNotific
 import { buildGroupUserFilter } from './timezoneGroups.js';
 
 /** Una corrida `claimed` más vieja que esto se considera abandonada (la función murió) y otra invocación la retoma. */
-const LEASE_MS = 90 * 1000;
+export const LEASE_MS = 90 * 1000;
 /** Usuarios por lote: cada consulta y cada corrida del job quedan acotadas dentro de los 60 s de la función. */
 const USER_BATCH_SIZE = 500;
 const DUPLICATE_KEY_ERROR_CODE = 11000;
@@ -34,8 +34,9 @@ export const GLOBAL_TIMEZONE_KEY = 'global';
  * el ledger). La dedup por usuario, tipo y día local evita notificaciones duplicadas en la bandeja; lo peor que
  * puede pasar es un push repetido (los push son at-least-once).
  *
- * Los jobs NO se reintentan solos: si una unidad falla queda `failed` y solo otra invocación (un duplicado del
- * mismo tick o una corrida manual) la retoma. Después de cada lote se empujan los push pendientes y sin leer del
+ * Una unidad que falla (o se corta por el `deadline`) queda `failed` y el dispatcher la vuelve a planear en los
+ * ticks siguientes del mismo día local. Al terminar cada lote se guarda en el ledger el cursor (último usuario
+ * procesado), así la retomada continúa desde ahí y no desde el primer lote. Después de cada lote se empujan los push pendientes y sin leer del
  * tipo del job creados en las últimas 48 h, aunque el job haya terminado sin crear nada o haya fallado: así no quedan push varados.
  * @param {WorkUnit} unit
  * @param {Object} [options]
@@ -48,20 +49,25 @@ export async function runWorkUnit(unit, { useLedger = true, deadline = Infinity 
   const identity = { jobName, timezone, localDate };
 
   let claimedAt = null;
+  let resumeAfter = null;
   if (useLedger) {
     try {
-      claimedAt = await claimUnit(unit);
+      const claim = await claimUnit(unit);
+      if (!claim) return { ...identity, status: 'skipped' };
+      ({ claimedAt, cursor: resumeAfter } = claim);
     } catch (error) {
       console.error(chalk.red(`[Cron] No se pudo reclamar ${jobName} (${timezone} ${localDate}):`), error);
       return { ...identity, status: 'failed', error: error.message };
     }
-    if (!claimedAt) return { ...identity, status: 'skipped' };
   }
 
   const startedAt = Date.now();
   let result;
   try {
-    result = await executeUnit(unit, deadline);
+    result = await executeUnit(unit, deadline, {
+      resumeAfter,
+      saveCursor: useLedger ? lastUserId => saveCursor(unit, claimedAt, lastUserId) : null,
+    });
   } catch (error) {
     const durationMs = Date.now() - startedAt;
     console.error(chalk.red(`[Cron] Falló ${jobName} (${timezone} ${localDate}):`), error);
@@ -81,7 +87,9 @@ export async function runWorkUnit(unit, { useLedger = true, deadline = Infinity 
  * atómica solo cuando quedó `failed` o su lease venció. El dueño es quien recibe el documento de vuelta;
  * `done` o un reclamo reciente de otra invocación significan que hay que saltearla.
  * @param {WorkUnit} unit
- * @returns {Promise<Date|null>} el `claimedAt` de esta invocación si es dueña de la unidad, null si hay que saltearla
+ * @returns {Promise<{claimedAt: Date, cursor: import('mongoose').Types.ObjectId|null}|null>} el `claimedAt` de esta
+ *   invocación y el cursor desde el que continuar (null = desde el primer usuario) si es dueña de la unidad;
+ *   null si hay que saltearla
  */
 async function claimUnit({ jobName, timezone, localDate, now }) {
   const key = { job: jobName, timezone, localDate };
@@ -94,7 +102,7 @@ async function claimUnit({ jobName, timezone, localDate, now }) {
       claimedAt,
       expiresAt: new Date(now.getTime() + JOB_RUN_RETENTION_MS),
     });
-    return claimedAt;
+    return { claimedAt, cursor: null };
   } catch (error) {
     if (error?.code !== DUPLICATE_KEY_ERROR_CODE) throw error;
   }
@@ -107,7 +115,22 @@ async function claimUnit({ jobName, timezone, localDate, now }) {
     { $set: { status: 'claimed', claimedAt, finishedAt: null, durationMs: null } },
     { new: true }
   );
-  return reclaimed ? claimedAt : null;
+  return reclaimed ? { claimedAt, cursor: reclaimed.cursor ?? null } : null;
+}
+
+/**
+ * Guarda el último usuario procesado de la unidad, con la misma guarda de dueño que `finishUnit`. Un fallo del
+ * ledger se registra y no se propaga: lo peor es que la retomada repita el último lote (la dedup lo absorbe).
+ */
+async function saveCursor({ jobName, timezone, localDate }, claimedAt, lastUserId) {
+  try {
+    await JobRun.updateOne(
+      { job: jobName, timezone, localDate, status: 'claimed', claimedAt },
+      { $set: { cursor: lastUserId } }
+    );
+  } catch (error) {
+    console.error(chalk.red(`[Cron] No se pudo guardar el cursor de ${jobName} (${timezone} ${localDate}):`), error);
+  }
 }
 
 /**
@@ -128,19 +151,24 @@ async function finishUnit({ jobName, timezone, localDate }, claimedAt, status, d
 
 /**
  * Corre el job de la unidad. Los jobs globales corren una vez; los de zona, en lotes de usuarios.
- * Si se agota el `deadline` entre lotes, corta con un error: la unidad queda `failed` (trabajo incompleto) y otra
- * invocación puede retomarla; lo ya notificado no se repite por la dedup de usuario, tipo y día local.
+ * Si se agota el `deadline` entre lotes, corta con un error: la unidad queda `failed` (trabajo incompleto) y el
+ * dispatcher la retoma en un tick posterior desde el cursor; lo ya notificado no se repite por la dedup de usuario,
+ * tipo y día local.
  * @param {WorkUnit} unit
  * @param {number} deadline - Timestamp (ms) límite para empezar un lote nuevo
+ * @param {Object} progress
+ * @param {import('mongoose').Types.ObjectId|null} progress.resumeAfter - Último usuario ya procesado (null = desde el inicio)
+ * @param {((lastUserId: import('mongoose').Types.ObjectId) => Promise<void>)|null} progress.saveCursor - Persiste el
+ *   cursor tras cada lote completo (null = corrida sin ledger)
  * @returns {Promise<Object>} Resultado agregado de la unidad
  */
-async function executeUnit({ job, group, timezone, localDate, now }, deadline) {
+async function executeUnit({ job, group, timezone, localDate, now }, deadline, { resumeAfter, saveCursor }) {
   if (job.scope === 'global') {
     return job.run();
   }
 
   const totals = { users: 0, notified: 0, persisted: 0 };
-  for await (const userIds of iterateUserBatches(group)) {
+  for await (const userIds of iterateUserBatches(group, resumeAfter)) {
     if (Date.now() > deadline) {
       throw new Error(`Se agotó el tiempo del dispatch con la unidad incompleta (${totals.users} usuarios procesados)`);
     }
@@ -149,6 +177,7 @@ async function executeUnit({ job, group, timezone, localDate, now }, deadline) {
     const result = await runBatch(job, { userIds, timezone, localDate, now }, deadline);
     totals.notified += result?.notified ?? 0;
     totals.persisted += result?.persisted ?? 0;
+    if (saveCursor) await saveCursor(userIds[userIds.length - 1]);
   }
   return totals;
 }
@@ -194,11 +223,12 @@ async function runBatch(job, context, deadline) {
 /**
  * Recorre los usuarios del grupo por páginas de `_id`, de a USER_BATCH_SIZE.
  * @param {import('./timezoneGroups.js').TimezoneGroup} group
+ * @param {import('mongoose').Types.ObjectId|null} startAfter - Se empieza después de este `_id` (null = desde el inicio)
  * @returns {AsyncGenerator<Array>} Lotes de ids de usuario
  */
-async function* iterateUserBatches(group) {
+async function* iterateUserBatches(group, startAfter) {
   const groupFilter = buildGroupUserFilter(group);
-  let lastId = null;
+  let lastId = startAfter;
 
   while (true) {
     const filter = lastId ? { $and: [groupFilter, { _id: { $gt: lastId } }] } : groupFilter;
