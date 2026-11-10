@@ -13,6 +13,7 @@ import {
   buildWindowProgressPipeline,
 } from './helpers/achievementProgressPipeline.js';
 import { resolveTimeZone } from './helpers/dateTime.js';
+import { PREMIUM_ACCESS_USER_SELECT, hasPremiumAccess } from './helpers/premiumAccess.js';
 import mongoose from 'mongoose';
 import chalk from 'chalk';
 
@@ -321,17 +322,24 @@ export class UserAchievementService {
    * edición, así que un objetivo subido en el medio no se revalida y la fila puede completarse por debajo del nuevo
    * objetivo (carrera aceptada, la completitud es irreversible). Solo se completan filas que cumplían el objetivo leído
    * en ese momento.
+   *
+   * El mismo reclamo deja constancia del aviso: toda finalización que se va a notificar escribe `notifiedAt`. La única
+   * excepción es la finalización SILENCIOSA de un logro premium de un usuario free (`notifiedAt: null`, sin aviso): la
+   * recoge el resumen de activación Premium (`notifyEarnedPremiumAchievements`).
    * @private
    * @param {Array} rows - Filas de UserAchievement que alcanzaron el objetivo
    * @param {Map<string, Object>} achievementById - Logros por id (string)
-   * @returns {Promise<Array<{userId: string, achievement: Object}>>} Solo las filas que ESTE llamado reclamó
+   * @returns {Promise<Array<{userId: string, achievement: Object, isSilent: boolean}>>} Solo las filas que ESTE llamado reclamó
    */
   static async _claimRows(rows, achievementById) {
     const now = new Date();
+    const freeOwnerIds = await this._findFreeOwnerIdsOfPremiumRows(rows, achievementById);
 
     const claims = await mapWithConcurrency(rows, COMPLETION_CONCURRENCY, async row => {
       const achievement = achievementById.get(row.achievement.toString());
       if (!achievement) return null;
+
+      const isSilent = achievement.tier === 'premium' && freeOwnerIds.has(row.user.toString());
 
       // El reclamo revalida lo que justificó la selección: un PUT concurrente pudo reiniciar el progreso (conteo y
       // franja), y completar es irreversible. El objetivo es el leído al seleccionar (puede estar desactualizado).
@@ -343,22 +351,55 @@ export class UserAchievementService {
       if (achievement.conditions?.sameWindow === true) claimFilter['window.key'] = row.window?.key ?? null;
 
       const claimedRow = await UserAchievement.findOneAndUpdate(claimFilter, {
-        $set: { status: 'completed', completedAt: now, unlockedAt: row.unlockedAt || now },
+        $set: {
+          status: 'completed',
+          completedAt: now,
+          unlockedAt: row.unlockedAt || now,
+          notifiedAt: isSilent ? null : now,
+        },
       });
-      return claimedRow ? { userId: row.user.toString(), achievement } : null;
+      return claimedRow ? { userId: row.user.toString(), achievement, isSilent } : null;
     });
 
     return claims.filter(Boolean);
   }
 
   /**
-   * Notifica los logros recién reclamados, con concurrencia acotada. Un fallo de notificación se registra y no corta.
+   * De las filas que completan un logro premium, los dueños SIN acceso Premium (ni admin ni suscripción activa).
+   * Es una lectura por llamada, solo si alguna fila es de un logro premium. El acceso se lee antes del reclamo: si el
+   * usuario se vuelve premium justo en el medio, esa fila queda silenciosa hasta el próximo resumen de activación.
    * @private
-   * @param {Array<{userId: string, achievement: Object}>} claims
+   * @param {Array} rows - Filas de UserAchievement a reclamar
+   * @param {Map<string, Object>} achievementById - Logros por id (string)
+   * @returns {Promise<Set<string>>} Ids (string) de usuarios free
+   */
+  static async _findFreeOwnerIdsOfPremiumRows(rows, achievementById) {
+    const premiumRowOwnerIds = [
+      ...new Set(
+        rows
+          .filter(row => achievementById.get(row.achievement.toString())?.tier === 'premium')
+          .map(row => row.user.toString())
+      ),
+    ];
+    if (premiumRowOwnerIds.length === 0) return new Set();
+
+    const owners = await User.find({ _id: { $in: premiumRowOwnerIds } })
+      .select(PREMIUM_ACCESS_USER_SELECT)
+      .lean();
+    const premiumOwnerIds = new Set(owners.filter(hasPremiumAccess).map(owner => owner._id.toString()));
+    return new Set(premiumRowOwnerIds.filter(ownerId => !premiumOwnerIds.has(ownerId)));
+  }
+
+  /**
+   * Notifica los logros recién reclamados, con concurrencia acotada. Un fallo de notificación se registra y no corta.
+   * Las finalizaciones silenciosas no se notifican.
+   * @private
+   * @param {Array<{userId: string, achievement: Object, isSilent: boolean}>} claims
    * @returns {Promise<void>}
    */
   static async _notifyClaimedAchievements(claims) {
-    await mapWithConcurrency(claims, COMPLETION_CONCURRENCY, async ({ userId, achievement }) => {
+    const audibleClaims = claims.filter(({ isSilent }) => !isSilent);
+    await mapWithConcurrency(audibleClaims, COMPLETION_CONCURRENCY, async ({ userId, achievement }) => {
       try {
         await persistAndNotify({
           userId,
@@ -375,7 +416,9 @@ export class UserAchievementService {
   }
 
   /**
-   * Completa filas de progreso y notifica solo las que ESTE llamado reclamó.
+   * Completa filas de progreso y notifica solo las que ESTE llamado reclamó y no son silenciosas.
+   * Una finalización silenciosa (premium de un usuario free) no cuenta como `notifiedAchievement` —así `goalService`
+   * sigue enviando el `goal_completed` aparte— ni aparece en `achievementsUnlocked` (que alimenta los toasts).
    * @private
    * @param {Array} rows - Filas de UserAchievement que alcanzaron el objetivo
    * @param {Map<string, Object>} achievementById - Logros por id (string)
@@ -385,9 +428,10 @@ export class UserAchievementService {
     const claims = await this._claimRows(rows, achievementById);
     await this._notifyClaimedAchievements(claims);
 
+    const audibleClaims = claims.filter(({ isSilent }) => !isSilent);
     return {
-      notifiedAchievement: claims.length > 0,
-      achievementsUnlocked: claims.map(({ achievement }) => ({
+      notifiedAchievement: audibleClaims.length > 0,
+      achievementsUnlocked: audibleClaims.map(({ achievement }) => ({
         id: achievement._id.toString(),
         title: achievement.title,
         description: achievement.description ?? '',
