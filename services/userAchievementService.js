@@ -23,6 +23,8 @@ const POPULATE_USER_FIELDS = 'name email avatar';
 const COMPLETION_BATCH_SIZE = 200;
 const COMPLETION_TIME_BUDGET_MS = 40_000;
 const COMPLETION_CONCURRENCY = 10;
+// Un resumen reclamado y no confirmado se puede reclamar de nuevo pasado este lease (la función murió a mitad de camino)
+const PREMIUM_SUMMARY_LEASE_MS = 2 * 60 * 1000;
 const DEFAULT_PROGRESS = {
   currentCount: 0,
   status: 'locked',
@@ -437,6 +439,75 @@ export class UserAchievementService {
         description: achievement.description ?? '',
       })),
     };
+  }
+
+  /**
+   * Avisa con UN solo resumen los logros premium que el usuario completó en silencio mientras no era Premium.
+   * Se llama al activarse el acceso Premium (webhook de suscripción, toggle admin, flag `isAdmin`); el llamador ya
+   * verificó que el usuario es Premium. Nunca lanza: un fallo se registra y el resumen se reintenta en la próxima activación.
+   *
+   * Exactamente una vez, con un lease en tres pasos:
+   *  1. CLAIM: `updateMany` de las filas completadas sin `notifiedAt` y sin lease vigente, que les estampa un
+   *     `notifyBatchId` nuevo y `notifyClaimedAt`. Dos llamados concurrentes reclaman filas distintas (la segunda ve el lease).
+   *  2. NOTIFICAR: una única notificación por el lote reclamado (`persistAndNotify`). Sin filas reclamadas no hay nada que avisar.
+   *  3. CONFIRMAR: recién con la notificación persistida se escribe `notifiedAt` en las filas del lote.
+   * Si la notificación falla, el lote se libera (se quita el lote y el lease) para que otro intento lo envíe. Si la función
+   * muere entre el claim y el confirm, las filas vuelven a ser reclamables al vencer el lease (2 minutos). Una muerte entre
+   * persistir la notificación y confirmar puede duplicar el resumen en el re-claim (aceptado, poco probable).
+   * Solo cuentan los logros premium ACTIVOS: son los que el usuario puede ver en el catálogo.
+   * @param {string} userId
+   * @returns {Promise<{notifiedCount: number}>} Cantidad de logros incluidos en el resumen enviado (0 si no hubo)
+   */
+  static async notifyEarnedPremiumAchievements(userId) {
+    try {
+      const premiumAchievements = await Achievement.find({ tier: 'premium', isActive: true }).select('_id').lean();
+      if (premiumAchievements.length === 0) return { notifiedCount: 0 };
+
+      const now = new Date();
+      const batchId = new mongoose.Types.ObjectId();
+      await UserAchievement.updateMany(
+        {
+          user: userId,
+          achievement: { $in: premiumAchievements.map(achievement => achievement._id) },
+          status: 'completed',
+          notifiedAt: null,
+          $or: [
+            { notifyClaimedAt: null },
+            { notifyClaimedAt: { $lt: new Date(now.getTime() - PREMIUM_SUMMARY_LEASE_MS) } },
+          ],
+        },
+        { $set: { notifyBatchId: batchId, notifyClaimedAt: now } }
+      );
+
+      const claimedCount = await UserAchievement.countDocuments({ notifyBatchId: batchId });
+      if (claimedCount === 0) return { notifiedCount: 0 };
+
+      try {
+        await persistAndNotify({
+          userId,
+          title: 'Tenés logros esperándote',
+          body:
+            claimedCount === 1
+              ? 'Con lo que venías haciendo ya ganaste 1 logro Premium. Entrá a Logros para verlo.'
+              : `Con lo que venías haciendo ya ganaste ${claimedCount} logros Premium. Entrá a Logros para verlos.`,
+          url: '/achievements',
+          type: 'achievements_premium_summary',
+          icon: '/notifications/crown.svg',
+        });
+      } catch (error) {
+        await UserAchievement.updateMany(
+          { notifyBatchId: batchId, notifiedAt: null },
+          { $unset: { notifyBatchId: '', notifyClaimedAt: '' } }
+        );
+        throw error;
+      }
+
+      await UserAchievement.updateMany({ notifyBatchId: batchId }, { $set: { notifiedAt: new Date() } });
+      return { notifiedCount: claimedCount };
+    } catch (error) {
+      console.error(chalk.yellow('[side-effect] Error al enviar el resumen de logros Premium:'), error);
+      return { notifiedCount: 0 };
+    }
   }
 
   /**

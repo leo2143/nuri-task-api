@@ -25,7 +25,7 @@ const notificationSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ['due_task', 'streak_risk', 'inactivity', 'streak_increase', 'achievement_completed', 'high_priority_upcoming', 'overdue_task', 'overdue_goal', 'goal_completed', 'empty_goal', 'day_recap', 'due_goal', 'high_priority_upcoming_goal', 'stalled_goal', 'pause_too_long', 'overdue_backlog', 'moodboard_nudge', 'premium_nag'],
+      enum: ['due_task', 'streak_risk', 'inactivity', 'streak_increase', 'achievement_completed', 'high_priority_upcoming', 'overdue_task', 'overdue_goal', 'goal_completed', 'empty_goal', 'day_recap', 'due_goal', 'high_priority_upcoming_goal', 'stalled_goal', 'pause_too_long', 'overdue_backlog', 'moodboard_nudge', 'premium_nag', 'achievements_premium_summary'],
     },
     read: {
       type: Boolean,

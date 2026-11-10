@@ -28,6 +28,8 @@ import {
 } from '../models/dtos/users/index.js';
 import { UpdateProfileImageDto } from '../models/dtos/users/UpdateProfileImageDto.js';
 import { UpdateTimezoneDto } from '../models/dtos/users/UpdateTimezoneDto.js';
+import { UserAchievementService } from './userAchievementService.js';
+import { hasPremiumAccess } from './helpers/premiumAccess.js';
 import { syncUserTimezone, syncUserTimezoneBestEffort } from './helpers/userTimezoneSync.js';
 import { DEFAULT_TIMEZONE } from './helpers/dateTime.js';
 import { CloudinaryHelper } from './helpers/cloudinaryHelper.js';
@@ -436,6 +438,8 @@ export class UserService {
         cleanData.password = await UserServiceHelpers.hashPassword(cleanData.password);
       }
 
+      const isSubscriptionToggled = cleanData.isSubscribed !== undefined;
+
       if (cleanData.isSubscribed !== undefined) {
         const subscriptionUpdate = await this._subscriptionFromAdminToggle(
           user.subscription,
@@ -450,6 +454,12 @@ export class UserService {
 
       Object.assign(user, cleanData);
       await user.save();
+
+      // El toggle de suscripción activa Premium igual que el webhook: mismo resumen, mismo reclamo. Ningún endpoint
+      // cambia `isAdmin` de un usuario existente (solo se fija al crearlo, sin logros), así que no hay otro disparo
+      if (isSubscriptionToggled && hasPremiumAccess(user)) {
+        await UserAchievementService.notifyEarnedPremiumAchievements(user._id);
+      }
 
       return new SuccessResponseModel(
         UserServiceHelpers.sanitizeUser(user),

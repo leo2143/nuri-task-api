@@ -7,6 +7,7 @@ import {
 } from '../models/responseModel.js';
 import { MercadoPagoService } from './mercadoPagoService.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
+import { UserAchievementService } from './userAchievementService.js';
 import chalk from 'chalk';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -154,6 +155,15 @@ export class SubscriptionService {
     return user.subscription?.isActive === isActive && user.subscription?.mercadoPagoId === mercadoPagoId;
   }
 
+  /**
+   * Con la suscripción activa intenta el resumen de logros Premium silenciosos. Corre también cuando el webhook es un
+   * duplicado ya aplicado: si el primer intento falló, la próxima entrega lo reintenta (el reclamo lo mantiene exactly-once).
+   */
+  static async #sendPremiumSummaryIfActive(userId, isActive) {
+    if (!isActive) return;
+    await UserAchievementService.notifyEarnedPremiumAchievements(userId);
+  }
+
   static async #saveUserWithRetry(user) {
     try {
       await user.save();
@@ -173,6 +183,7 @@ export class SubscriptionService {
       const userByRef = await User.findById(mpData.external_reference);
       if (userByRef) {
         if (this.#subscriptionAlreadyApplied(userByRef, isActive, subscriptionId)) {
+          await this.#sendPremiumSummaryIfActive(userByRef._id, isActive);
           return true;
         }
         userByRef.subscription = {
@@ -182,6 +193,7 @@ export class SubscriptionService {
           mercadoPagoId: subscriptionId,
         };
         await this.#saveUserWithRetry(userByRef);
+        await this.#sendPremiumSummaryIfActive(userByRef._id, isActive);
         console.log(chalk.green(`Suscripción actualizada via external_reference para usuario ${mpData.external_reference}: ${mpData.status}`));
         return true;
       }
@@ -193,6 +205,7 @@ export class SubscriptionService {
     }
 
     if (this.#subscriptionAlreadyApplied(user, isActive, subscriptionId)) {
+      await this.#sendPremiumSummaryIfActive(user._id, isActive);
       return true;
     }
 
@@ -203,6 +216,7 @@ export class SubscriptionService {
       mercadoPagoId: subscriptionId,
     };
     await this.#saveUserWithRetry(user);
+    await this.#sendPremiumSummaryIfActive(user._id, isActive);
 
     console.log(chalk.green(`Suscripción actualizada para usuario ${user._id}: ${mpData.status} → isActive: ${isActive}`));
     return true;

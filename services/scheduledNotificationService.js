@@ -37,6 +37,7 @@ const PUSH_ICONS = {
   overdue_backlog: '/notifications/nuri-happy.svg',
   moodboard_nudge: '/notifications/nuri-happy.svg',
   premium_nag: '/notifications/nuri-happy.svg',
+  achievements_premium_summary: '/notifications/crown.svg',
 };
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
