@@ -13,7 +13,7 @@ import {
   buildWindowProgressPipeline,
 } from './helpers/achievementProgressPipeline.js';
 import { resolveTimeZone } from './helpers/dateTime.js';
-import { PREMIUM_ACCESS_USER_SELECT, hasPremiumAccess } from './helpers/premiumAccess.js';
+import { PREMIUM_ACCESS_USER_SELECT, hasPremiumAccess, partitionByPremiumVisibility } from './helpers/premiumAccess.js';
 import mongoose from 'mongoose';
 import chalk from 'chalk';
 
@@ -65,8 +65,8 @@ export class UserAchievementService {
         limit: pagination.limit || 100,
       });
 
-      const user = await User.findById(userId).select('subscription isAdmin').lean();
-      const isPremium = user?.isAdmin || user?.subscription?.isActive;
+      const user = await User.findById(userId).select(PREMIUM_ACCESS_USER_SELECT).lean();
+      const isPremium = hasPremiumAccess(user);
 
       const query = { isActive: true };
       paginationDto.applyCursorToQuery(query);
@@ -110,7 +110,9 @@ export class UserAchievementService {
   }
 
   /**
-   * Obtiene el progreso del usuario en un logro específico
+   * Obtiene el progreso del usuario en un logro específico.
+   * Un usuario sin acceso Premium ve un logro premium con el progreso por defecto, sin importar lo que haya guardado
+   * (progreso o finalización silenciosa): la puerta de acceso vive acá y no depende del middleware de la ruta.
    * @param {string} userId - ID del usuario
    * @param {string} achievementId - ID del logro
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el progreso del usuario
@@ -118,17 +120,27 @@ export class UserAchievementService {
    */
   static async getUserAchievementProgress(userId, achievementId) {
     try {
+      const achievementData = await Achievement.findById(achievementId);
+      if (!achievementData) {
+        return new NotFoundResponseModel('Logro no encontrado');
+      }
+
+      if (achievementData.tier === 'premium') {
+        const user = await User.findById(userId).select(PREMIUM_ACCESS_USER_SELECT).lean();
+        if (!hasPremiumAccess(user)) {
+          return new SuccessResponseModel(
+            { achievement: achievementData, ...DEFAULT_PROGRESS },
+            'Progreso de logro obtenido correctamente'
+          );
+        }
+      }
+
       const userAchievement = await UserAchievement.findOne({ user: userId, achievement: achievementId })
         .populate('user', POPULATE_USER_FIELDS)
         .populate('achievement');
 
       if (!userAchievement) {
         // Si no existe progreso, devolver valores por defecto
-        const achievementData = await Achievement.findById(achievementId);
-        if (!achievementData) {
-          return new NotFoundResponseModel('Logro no encontrado');
-        }
-
         return new SuccessResponseModel(
           {
             achievement: achievementData,
@@ -145,14 +157,32 @@ export class UserAchievementService {
   }
 
   /**
-   * Obtiene estadísticas de logros del usuario
+   * Obtiene estadísticas de logros del usuario.
+   * Un usuario sin acceso Premium cuenta solo los logros básicos activos (`total`, `notStarted` y la tasa); `premiumLocked`
+   * es cuántos logros premium activos hay (0 para un usuario Premium, que los tiene todos en `total`).
+   * Los logros inactivos no cuentan: ni en el total ni en el progreso.
    * @param {string} userId - ID del usuario
    * @returns {Promise<SuccessResponseModel|ErrorResponseModel>}
    */
   static async getUserStats(userId) {
     try {
-      const totalAchievements = await Achievement.countDocuments({ isActive: true });
-      const userProgress = await UserAchievement.find({ user: userId });
+      const user = await User.findById(userId).select(PREMIUM_ACCESS_USER_SELECT).lean();
+      const activeAchievements = await Achievement.find({ isActive: true }).select('_id tier').lean();
+      const { visibleAchievements, premiumLocked } = partitionByPremiumVisibility(
+        activeAchievements,
+        hasPremiumAccess(user)
+      );
+
+      const totalAchievements = visibleAchievements.length;
+      const userProgress =
+        totalAchievements === 0
+          ? []
+          : await UserAchievement.find({
+              user: userId,
+              achievement: { $in: visibleAchievements.map(achievement => achievement._id) },
+            })
+              .select('status')
+              .lean();
 
       const statusCounts = userProgress.reduce(
         (acc, progress) => {
@@ -170,6 +200,7 @@ export class UserAchievementService {
         locked: statusCounts.locked,
         unlocked: statusCounts.unlocked,
         completed: statusCounts.completed,
+        premiumLocked,
         completionRate: totalAchievements > 0 ? ((statusCounts.completed / totalAchievements) * 100).toFixed(2) : 0,
       };
 

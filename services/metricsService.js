@@ -12,6 +12,7 @@ import { ErrorHandler } from './helpers/errorHandler.js';
 import { getLocalDayRange, resolveTimeZone, toLocalYmd } from './helpers/dateTime.js';
 import { buildActivityDayPipeline } from './helpers/metricsActivityPipeline.js';
 import { describeStreakTransition } from './helpers/streakDays.js';
+import { PREMIUM_ACCESS_USER_SELECT, hasPremiumAccess, partitionByPremiumVisibility } from './helpers/premiumAccess.js';
 import chalk from 'chalk';
 
 const POPULATE_USER_FIELDS = 'name email avatar timezone';
@@ -55,7 +56,8 @@ export class MetricsService {
       const metrics = await this._findOrCreateMetrics(userId);
       const populatedMetrics = await Metrics.findById(metrics._id).populate('userId', POPULATE_USER_FIELDS);
 
-      const achievementsProgress = await this._calculateAchievementsProgress(userId);
+      const owner = await User.findById(userId).select(PREMIUM_ACCESS_USER_SELECT).lean();
+      const achievementsProgress = await this._calculateAchievementsProgress(userId, hasPremiumAccess(owner));
 
       const timeZone = resolveTimeZone(populatedMetrics.userId?.timezone);
       const response = {
@@ -360,13 +362,17 @@ export class MetricsService {
   }
 
   /**
-   * Calcula el porcentaje de logros completados por el usuario
+   * Calcula el porcentaje de logros completados por el usuario.
+   * Un usuario sin acceso Premium cuenta solo los logros básicos (total, completados y porcentaje); `premiumLocked` es
+   * cuántos logros premium activos hay (0 para un usuario Premium, que los tiene todos en `total`).
    * @param {string} userId - ID del usuario
-   * @returns {Promise<Object>} { completed, total, percentage }
+   * @param {boolean} isPremium - Si el usuario tiene acceso Premium (admin o suscripción activa)
+   * @returns {Promise<Object>} { completed, total, percentage, premiumLocked }
    */
-  static async _calculateAchievementsProgress(userId) {
-    const activeAchievements = await Achievement.find({ isActive: true }).select('_id').lean();
-    const activeIds = activeAchievements.map(achievement => achievement._id);
+  static async _calculateAchievementsProgress(userId, isPremium) {
+    const activeAchievements = await Achievement.find({ isActive: true }).select('_id tier').lean();
+    const { visibleAchievements, premiumLocked } = partitionByPremiumVisibility(activeAchievements, isPremium);
+    const activeIds = visibleAchievements.map(achievement => achievement._id);
     const totalCount = activeIds.length;
 
     const completedCount =
@@ -384,6 +390,7 @@ export class MetricsService {
       completed: completedCount,
       total: totalCount,
       percentage,
+      premiumLocked,
     };
   }
 }
