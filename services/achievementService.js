@@ -51,6 +51,9 @@ function changesProgressMeaning(existing, cleanData) {
 const TRANSACTION_ATTEMPT_DEADLINE_MS = 40_000;
 const TRANSACTION_COMMIT_MAX_TIME_MS = 10_000;
 
+/** La edición agotó su presupuesto de tiempo antes de abrir un intento de transacción: se puede reintentar. */
+class EditBudgetExceededError extends Error {}
+
 /**
  * Indica si el error de Mongo es "este servidor no admite transacciones" (mongod suelto, sin replica set).
  * @param {Error} error
@@ -231,6 +234,7 @@ export class AchievementService {
         pendingCompletions,
       });
     } catch (error) {
+      if (error instanceof EditBudgetExceededError) return new ErrorResponseModel(error.message, 503);
       return ErrorHandler.handleDatabaseError(error, 'actualizar plantilla de logro');
     }
   }
@@ -239,7 +243,8 @@ export class AchievementService {
    * Guarda la definición y aplica la política de edición sobre el progreso de los usuarios:
    * - un logro completado NUNCA se revoca
    * - si cambian el evento o las condiciones, el progreso en curso se reinicia (ya no mide lo mismo)
-   * - si solo cambia el targetCount, el progreso se conserva (la finalización va aparte, después del guardado)
+   * - si solo cambia el targetCount, el progreso se conserva (la finalización va aparte, después del guardado y solo
+   *   cuando NO cambió el evento ni las condiciones, o sea en el camino sin transacción)
    * - editar título, descripción, recompensa, imagen o isActive no toca el progreso
    * Solo cuando cambia el significado del progreso se abre una transacción (requiere replica set; Atlas lo es): el
    * guardado de la definición y el reinicio de las filas sin completar quedan ambos o ninguno. Cualquier otra edición es
@@ -249,8 +254,10 @@ export class AchievementService {
    * justo después del reinicio (carrera aceptada: ese avance se cuenta con las reglas viejas). Los conflictos de escritura
    * solo ordenan las escrituras; no hacen que el evento se reevalúe.
    * Cota de tiempo: el PUT tiene `maxDuration = 60` s. `withTransaction` reintenta errores transitorios hasta 120 s, así que
-   * el callback no abre intentos pasados 40 s desde `startedAt` (lanza un error que no es de Mongo y corta los reintentos)
-   * y el commit tiene `maxCommitTimeMS` de 10 s. Esta fase no comparte presupuesto con `completeReachedTarget`: ese solo
+   * el callback no abre intentos pasados 40 s desde `startedAt` (lanza un error que no es de Mongo y corta los reintentos;
+   * la API responde 503 con un mensaje para reintentar) y el commit tiene `maxCommitTimeMS` de 10 s. Esa cota solo
+   * limita el INICIO de cada intento: un `updateMany` largo o los reintentos del commit del driver no quedan acotados
+   * por ella. Esta fase no comparte presupuesto con `completeReachedTarget`: ese solo
    * corre cuando NO hubo reinicio, es decir, cuando no hubo transacción.
    * Si el servidor no admite transacciones se registra un error y se relanza (no hay alternativa sin transacción).
    * Guardado optimista: solo gana quien edita sobre la versión que leyó (`updatedAt`). Los logros importados o migrados
@@ -274,7 +281,7 @@ export class AchievementService {
       await session.withTransaction(
         async () => {
           if (Date.now() - startedAt > TRANSACTION_ATTEMPT_DEADLINE_MS) {
-            throw new Error('La edición del logro superó el tiempo disponible. Volvé a intentar.');
+            throw new EditBudgetExceededError('La edición del logro superó el tiempo disponible. Volvé a intentar.');
           }
 
           outcome = await this.#saveGuardedDefinition(achievementId, existing, cleanData, session);
