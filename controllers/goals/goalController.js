@@ -39,6 +39,18 @@ export class GoalController {
   }
 
   /**
+   * Obtiene el cupo de metas del usuario autenticado
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   */
+  static async getGoalQuota(req, res) {
+    const result = await GoalService.fetchGoalQuota(req.userId);
+    res.status(result.status).json(result);
+  }
+
+  /**
    * Crea una nueva meta
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)

@@ -1262,6 +1262,62 @@
         ]
       }
     },
+    "/api/goals/quota": {
+      "get": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "Obtiene el cupo de metas del usuario",
+        "description": "Plan gratuito: máximo 6 metas en total (cualquier estado, subetas incluidas). Premium y admin: sin límite (limit null, canCreate true).",
+        "responses": {
+          "200": {
+            "description": "Cupo de metas obtenido correctamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "status": {
+                  "type": "number",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Cupo de metas obtenido correctamente"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "limit": {
+                      "type": "number",
+                      "example": 6
+                    },
+                    "used": {
+                      "type": "number",
+                      "example": 4
+                    },
+                    "canCreate": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/goals/active": {
       "get": {
         "tags": [
