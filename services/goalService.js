@@ -1,6 +1,5 @@
 import Goal, { calculateGoalProgress } from '../models/goalsModel.js';
 import Todo from '../models/todoModel.js';
-import User from '../models/userModel.js';
 import {
   NotFoundResponseModel,
   ErrorResponseModel,
@@ -35,13 +34,12 @@ import {
   wouldCreateGoalCycle,
   GOAL_CYCLE_MESSAGE,
 } from './helpers/goalHierarchy.js';
+import { getGoalQuota } from './helpers/goalQuota.js';
 import { assertGoalOpen } from './helpers/goalOpenGuard.js';
 import { getDueDateChangeError } from './helpers/dueDateRules.js';
 import { pausedAtFieldsForStatus, touchLastChildActivity } from './helpers/goalActivity.js';
 import { buildCompletionEvents, emptyCompletionEvents } from './helpers/completionEvents.js';
 import chalk from 'chalk';
-
-const FREE_GOALS_LIMIT = 2;
 
 const POPULATE_PARENT_TITLE = 'title';
 const POPULATE_PARENT_DESCRIPTION = 'description';
@@ -371,14 +369,11 @@ export class GoalService {
         return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
-      const user = await User.findById(userId).select('subscription isAdmin').lean();
-      if (!user.isAdmin && !user.subscription?.isActive) {
-        const goalCount = await Goal.countDocuments({ userId });
-        if (goalCount >= FREE_GOALS_LIMIT) {
-          return new ForbiddenResponseModel(
-            `Alcanzaste el límite de ${FREE_GOALS_LIMIT} metas del plan gratuito. Suscribite para crear metas ilimitadas.`
-          );
-        }
+      const quota = await getGoalQuota(userId);
+      if (!quota.canCreate) {
+        return new ForbiddenResponseModel(
+          `Alcanzaste el límite de ${quota.limit} metas del plan gratuito. Suscribite para crear metas ilimitadas.`
+        );
       }
 
       const cleanData = createDto.toPlainObject();
@@ -720,6 +715,20 @@ export class GoalService {
       });
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'obtener lista simple de metas');
+    }
+  }
+
+  /**
+   * Cupo de metas del usuario: límite (null si es Premium), cantidad usada y si puede crear otra
+   * @param {string} userId - ID del usuario
+   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Respuesta con `{ limit, used, canCreate }` o error
+   */
+  static async fetchGoalQuota(userId) {
+    try {
+      const quota = await getGoalQuota(userId);
+      return new SuccessResponseModel(quota, 'Cupo de metas obtenido correctamente');
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'obtener el cupo de metas');
     }
   }
 

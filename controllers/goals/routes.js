@@ -54,6 +54,25 @@ export const setupGoalRoutes = app => {
     return GoalController.getCatalogGoals(req, res);
   });
 
+  app.get('/api/goals/quota', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Obtiene el cupo de metas del usuario'
+    // #swagger.description = 'Plan gratuito: máximo 6 metas en total (cualquier estado, subetas incluidas). Premium y admin: sin límite (limit null, canCreate true).'
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    /* #swagger.responses[200] = {
+         description: 'Cupo de metas obtenido correctamente',
+         schema: {
+           success: true,
+           status: 200,
+           message: 'Cupo de metas obtenido correctamente',
+           data: { limit: 6, used: 4, canCreate: true }
+         }
+    } */
+    return GoalController.getGoalQuota(req, res);
+  });
+
   app.get('/api/goals/active', validateToken, (req, res) => {
     // #swagger.tags = ['Goals']
     // #swagger.summary = 'Obtiene todas las metas activas'

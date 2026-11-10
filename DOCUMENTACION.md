@@ -46,7 +46,7 @@ El backend es el dueño de la verdad: valida, persiste, aplica reglas (por ejemp
 | **Logro (Achievement)** | Plantilla global (admin). El progreso por usuario está en `UserAchievement`. Se dispara por eventos (`task:completed`, `goal:completed`, `task:goal-changed`, `streak:updated`) y puede exigir condiciones configurables por el admin. |
 | **Tier de logro** | `basic` (todos) o `premium` (visible para free, pero no accesible). |
 | **Moodboard** | Tablero 1:1 de imágenes inspiracionales. Requiere suscripción activa (o admin). |
-| **Premium** | `subscription.isActive === true` (vía MercadoPago o seteo admin). Desbloquea moodboard, dashboard de métricas y metas ilimitadas. El plan free permite **2 metas**. |
+| **Premium** | `subscription.isActive === true` (vía MercadoPago o seteo admin). Desbloquea moodboard, dashboard de métricas y metas ilimitadas. El plan free permite **6 metas**. |
 | **Notificación in-app** | Registro en Mongo. Tipos: vencimiento, riesgo de racha, inactividad, subida de racha, logro completado. |
 | **Push** | Misma información enviada al navegador vía Web Push (VAPID). |
 | **Onboarding** | Flag `onboardingCompleted`. El front redirige hasta que el usuario lo marca. |
@@ -659,7 +659,8 @@ No hay cron que reinicie rachas: la racha **efectiva** se calcula al leer (`getE
 
 ### Freemium
 
-- Máximo **2 metas** si no es admin y no tiene suscripción (`FREE_GOALS_LIMIT`).
+- Máximo **6 metas** si no es admin y no tiene suscripción (`FREE_GOALS_LIMIT` en `services/helpers/goalQuota.js`). Cuentan TODAS las metas del usuario: cualquier estado (completadas incluidas) y subetas. Premium y admin: sin límite.
+- `GET /api/goals/quota` (JWT) devuelve `{ limit, used, canCreate }`; `limit` es `null` para Premium/admin. `createGoal` usa el mismo `getGoalQuota`, así que el 403 y el endpoint no pueden divergir. El cliente lo usa para mostrar el banner y no abrir el formulario de alta.
 - Moodboard y `/api/metrics` + dashboard: `validateSubscription`.
 - `/api/metrics/current-streak` es solo JWT (el Navbar muestra la racha sin paywall).
 
