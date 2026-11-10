@@ -2158,6 +2158,25 @@
         ]
       }
     },
+    "/api/achievements/catalog": {
+      "get": {
+        "tags": [
+          "Achievements"
+        ],
+        "summary": "Obtiene eventos disparadores y condiciones permitidas por evento (solo admin)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/achievements/type/{type}": {
       "get": {
         "tags": [
@@ -2250,6 +2269,34 @@
           "Achievements"
         ],
         "summary": "Elimina un logro (solo admin)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "ID del logro"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/achievements/{id}/in-progress-count": {
+      "get": {
+        "tags": [
+          "Achievements"
+        ],
+        "summary": "Cuenta los usuarios con progreso en curso en un logro (solo admin)",
         "description": "",
         "parameters": [
           {
