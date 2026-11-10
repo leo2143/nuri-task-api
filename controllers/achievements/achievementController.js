@@ -25,6 +25,31 @@ export class AchievementController {
   }
 
   /**
+   * Obtiene el catálogo de eventos disparadores y condiciones permitidas (solo administradores)
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} res - Objeto response de Express
+   * @returns {void} No retorna valor, envía respuesta HTTP
+   */
+  static getAchievementCatalog(req, res) {
+    const result = AchievementService.getAchievementCatalog();
+    res.status(result.status).json(result);
+  }
+
+  /**
+   * Obtiene cuántos usuarios tienen progreso en curso en un logro (solo administradores)
+   * @param {Object} req - Objeto request de Express
+   * @param {Object} req.params - Parámetros de URL
+   * @param {string} req.params.id - ID del logro
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
+   */
+  static async getInProgressCount(req, res) {
+    const { id } = req.params;
+    const result = await AchievementService.getInProgressCount(id);
+    res.status(result.status).json(result);
+  }
+
+  /**
    * Obtiene una plantilla de logro por ID
    * @param {Object} req - Objeto request de Express
    * @param {Object} req.params - Parámetros de URL

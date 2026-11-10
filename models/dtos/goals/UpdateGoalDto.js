@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { CreateGoalDto } from './CreateGoalDto.js';
+import { normalizeDueDate } from '../../../services/helpers/dueDateRules.js';
 import {
-  dueDateNotPastField,
   goalStatusField,
   optionalDescriptionField,
+  optionalDueDateField,
   priorityField,
   titleField,
   validateZod,
@@ -22,7 +23,7 @@ export class UpdateGoalDto extends CreateGoalDto {
       .optional(),
     status: goalStatusField.optional(),
     priority: priorityField.optional(),
-    dueDate: dueDateNotPastField(),
+    dueDate: optionalDueDateField,
     parentGoalId: z.string().nullable().optional(),
   });
 
@@ -34,7 +35,7 @@ export class UpdateGoalDto extends CreateGoalDto {
     if (data.reason !== undefined) this.reason = data.reason;
     if (data.status !== undefined) this.status = data.status;
     if (data.priority !== undefined) this.priority = data.priority;
-    if (data.dueDate !== undefined) this.dueDate = data.dueDate;
+    if (data.dueDate !== undefined) this.dueDate = normalizeDueDate(data.dueDate);
     if (data.parentGoalId !== undefined) this.parentGoalId = data.parentGoalId;
   }
 

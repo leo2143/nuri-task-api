@@ -6,6 +6,7 @@ import {
   ErrorResponseModel,
   BadRequestResponseModel,
   ForbiddenResponseModel,
+  ConflictResponseModel,
 } from '../models/responseModel.js';
 import { SuccessResponseModel, CreatedResponseModel } from '../models/responseModel.js';
 import {
@@ -15,15 +16,27 @@ import {
   AddSubgoalDto,
   GoalFilterDto,
   CatalogGoalDto,
+  CatalogGoalsQueryDto,
 } from '../models/dtos/goals/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { findOwnedGoal } from './helpers/goalOwnership.js';
 import { UserAchievementService } from './userAchievementService.js';
 import { MetricsService } from './metricsService.js';
 import { persistAndNotify } from './helpers/persistAndNotify.js';
-import { runWithOneRetry, ensureSuccessWithRetry } from './helpers/runWithOneRetry.js';
-import { getStatusTransitionError, getCompleteEligibilityError } from './helpers/goalStatusRules.js';
-import { reopenCompletedGoal } from './helpers/reopenCompletedGoal.js';
+import { runWithOneRetry } from './helpers/runWithOneRetry.js';
+import {
+  getStatusTransitionError,
+  getCompleteEligibilityError,
+  isReopenTransition,
+} from './helpers/goalStatusRules.js';
+import {
+  getAncestorChain,
+  getDescendantIds,
+  wouldCreateGoalCycle,
+  GOAL_CYCLE_MESSAGE,
+} from './helpers/goalHierarchy.js';
+import { assertGoalOpen } from './helpers/goalOpenGuard.js';
+import { getDueDateChangeError } from './helpers/dueDateRules.js';
 import { pausedAtFieldsForStatus, touchLastChildActivity } from './helpers/goalActivity.js';
 import { buildCompletionEvents, emptyCompletionEvents } from './helpers/completionEvents.js';
 import chalk from 'chalk';
@@ -32,6 +45,8 @@ const FREE_GOALS_LIMIT = 2;
 
 const POPULATE_PARENT_TITLE = 'title';
 const POPULATE_PARENT_DESCRIPTION = 'description';
+
+const GOAL_NOT_COMPLETED_MESSAGE = 'Esta meta no está completada, así que no hay nada para reabrir.';
 
 /**
  * Servicio para manejar la lógica de negocio de metas (goals)
@@ -129,11 +144,86 @@ export class GoalService {
   }
 
   /**
-   * Reabre el padre si estaba completed (submeta reactivada o nuevo hijo).
+   * Reabre una sola meta completed con una actualización condicional (el perdedor de una carrera recibe null).
+   * Sella firstCompletedAt si faltaba (metas cerradas antes de que existiera el campo) y refresca
+   * los contadores de submetas del padre.
+   * @private
+   * @param {{_id: *, firstCompletedAt?: Date|null}} goal - Meta leída previamente
+   * @param {string} userId
+   * @returns {Promise<Object|null>} La meta reabierta, o null si ya no estaba completed
    */
-  static async _reopenParentIfNeeded(parentGoalId, userId, childStatus) {
-    if (childStatus !== 'active' || !parentGoalId) return;
-    await reopenCompletedGoal(parentGoalId, userId);
+  static async _reopenSingleGoal(goal, userId) {
+    const reopened = await Goal.findOneAndUpdate(
+      { _id: goal._id, userId, status: 'completed' },
+      { $set: { status: 'active', firstCompletedAt: goal.firstCompletedAt ?? new Date() } },
+      { new: true }
+    );
+
+    if (reopened?.parentGoalId) {
+      await this._updateParentGoalCounters(reopened.parentGoalId, userId);
+    }
+
+    return reopened;
+  }
+
+  /**
+   * Reabre una meta completed junto con su cadena contigua de ancestros completed.
+   * Los ancestros se reabren de afuera hacia adentro y la meta objetivo al final, así una falla a mitad de camino
+   * nunca deja una meta completed con un hijo activo que antes no tenía.
+   * No toca métricas, racha ni logros.
+   * @private
+   * @param {string} goalId
+   * @param {string} userId
+   * @returns {Promise<{error: Object|null, goal?: Object, cascaded?: string[]}>} error: ResponseModel (404/409) si no se puede reabrir
+   */
+  static async _reopenWithAncestors(goalId, userId) {
+    const target = await Goal.findOne({ _id: goalId, userId });
+    if (!target) {
+      return { error: new NotFoundResponseModel('Meta no encontrada') };
+    }
+    if (target.status !== 'completed') {
+      return { error: new ConflictResponseModel(GOAL_NOT_COMPLETED_MESSAGE) };
+    }
+
+    const completedAncestors = [];
+    for (const ancestor of await getAncestorChain(target._id, userId)) {
+      if (ancestor.status !== 'completed') continue;
+      completedAncestors.push(ancestor);
+    }
+
+    const cascaded = [];
+    for (const ancestor of completedAncestors.reverse()) {
+      if (await this._reopenSingleGoal(ancestor, userId)) {
+        cascaded.push(ancestor._id.toString());
+      }
+    }
+
+    const reopenedTarget = await this._reopenSingleGoal(target, userId);
+    if (!reopenedTarget) {
+      return { error: new ConflictResponseModel(GOAL_NOT_COMPLETED_MESSAGE) };
+    }
+
+    await touchLastChildActivity(reopenedTarget._id, userId);
+    return { error: null, goal: reopenedTarget, cascaded };
+  }
+
+  /**
+   * Reabre explícitamente una meta completada (y los ancestros completados que la contienen).
+   * @param {string} goalId - ID de la meta a reabrir
+   * @param {string} userId - ID del usuario
+   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ConflictResponseModel|ErrorResponseModel>}
+   *   data: { goal, cascaded } donde cascaded lista los IDs de ancestros reabiertos
+   */
+  static async reopenGoal(goalId, userId) {
+    try {
+      const { error, goal, cascaded } = await this._reopenWithAncestors(goalId, userId);
+      if (error) {
+        return error;
+      }
+      return new SuccessResponseModel({ goal, cascaded }, 'Meta reabierta correctamente');
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, 'reabrir meta');
+    }
   }
 
   /**
@@ -156,19 +246,23 @@ export class GoalService {
       return { error: null, events: emptyCompletionEvents() };
     }
 
-    const metricsResult = await ensureSuccessWithRetry(
-      await MetricsService.recordGoalCompleted(userId),
-      () => MetricsService.recordGoalCompleted(userId),
-      'registrar métricas de meta'
-    );
+    // Una meta completada es un día activo igual que una tarea: comparte escritura atómica, racha y evento
+    const metricsResult = await MetricsService.writeGoalMetrics(userId, { occurredAt: claimed.firstCompletedAt });
     if (!metricsResult.success) {
       return { error: metricsResult, events: emptyCompletionEvents() };
     }
+    const streakResult = await MetricsService.afterActivityMetrics(userId, metricsResult.data);
 
-    const achievementResult = await UserAchievementService.processEvent('goal:completed', userId);
+    // occurredAt y startedAt son del servidor: Meta Flash mide el primer cierre contra la creación de la meta
+    const achievementResult = await UserAchievementService.processEvent('goal:completed', userId, null, {
+      occurredAt: claimed.firstCompletedAt,
+      startedAt: claimed.createdAt,
+    });
+    const { streakIncreased, currentStreak } = metricsResult.data;
     const events = buildCompletionEvents({
       goalCompleted: { id: claimed._id.toString(), title: claimed.title },
-      achievementsUnlocked: achievementResult?.achievementsUnlocked ?? [],
+      streak: { increased: streakIncreased, current: currentStreak },
+      achievementsUnlocked: [...streakResult.achievementsUnlocked, ...(achievementResult?.achievementsUnlocked ?? [])],
     });
     if (achievementResult?.notifiedAchievement) {
       return { error: null, events };
@@ -225,7 +319,7 @@ export class GoalService {
         return new NotFoundResponseModel('No se encontraron metas para este usuario');
       }
 
-      results.forEach((goal) => {
+      results.forEach(goal => {
         goal.progress = calculateGoalProgress(goal);
       });
 
@@ -264,11 +358,13 @@ export class GoalService {
    * @param {Date} goalData.dueDate - Fecha límite
    * @param {string} goalData.reason - Razón de importancia de la meta
    * @param {string} userId - ID del usuario
+   * @param {Object} [options]
+   * @param {string} [options.todayYmd] - Hoy (YYYY-MM-DD) del usuario, para validar la fecha límite
    * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con la meta creada o error
    */
-  static async createGoal(goalData, userId) {
+  static async createGoal(goalData, userId, { todayYmd } = {}) {
     try {
-      const createDto = new CreateGoalDto(goalData);
+      const createDto = new CreateGoalDto(goalData, { todayYmd });
       const validation = createDto.validate();
 
       if (!validation.isValid) {
@@ -292,6 +388,11 @@ export class GoalService {
         if (parentError) {
           return parentError;
         }
+
+        const completedParentConflict = await assertGoalOpen(cleanData.parentGoalId, userId);
+        if (completedParentConflict) {
+          return completedParentConflict;
+        }
       }
 
       const goal = new Goal({
@@ -302,7 +403,6 @@ export class GoalService {
 
       if (savedGoal.parentGoalId) {
         await this._updateParentGoalCounters(savedGoal.parentGoalId, userId);
-        await reopenCompletedGoal(savedGoal.parentGoalId, userId);
         await touchLastChildActivity(savedGoal.parentGoalId, userId);
       }
 
@@ -320,7 +420,7 @@ export class GoalService {
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la meta actualizada o error
    * Actualización completa - requiere title. Detecta cambios en status y parentGoalId para actualizar contadores automáticamente
    */
-  static async updateGoal(goalId, updateData, userId) {
+  static async updateGoal(goalId, updateData, userId, { todayYmd } = {}) {
     try {
       const updateDto = new UpdateGoalDto(updateData);
       const validation = updateDto.validate();
@@ -337,10 +437,13 @@ export class GoalService {
 
       const cleanData = updateDto.toPlainObject();
 
+      // La fecha límite solo se valida si cambia: editar otros campos de una meta vencida debe funcionar
+      const dueDateError = getDueDateChangeError(cleanData.dueDate, currentGoal.dueDate, todayYmd);
+      if (dueDateError) {
+        return new BadRequestResponseModel(dueDateError);
+      }
+
       if (cleanData.parentGoalId) {
-        if (cleanData.parentGoalId.toString() === goalId.toString()) {
-          return new BadRequestResponseModel('Una meta no puede ser submeta de sí misma');
-        }
         const { error: parentError } = await this._findGoalByIdAndUser(cleanData.parentGoalId, userId);
         if (parentError) {
           return parentError;
@@ -348,6 +451,27 @@ export class GoalService {
       }
 
       const parentChange = this._detectParentGoalChange(currentGoal, cleanData);
+
+      if (parentChange.changed && parentChange.newParentId) {
+        if (await wouldCreateGoalCycle(goalId, parentChange.newParentId, userId)) {
+          return new ConflictResponseModel(GOAL_CYCLE_MESSAGE);
+        }
+
+        const completedParentConflict = await assertGoalOpen(parentChange.newParentId, userId);
+        if (completedParentConflict) {
+          return completedParentConflict;
+        }
+      }
+
+      // completed -> active solo ocurre a través del servicio de reapertura (misma cascada y mismo sellado)
+      if (isReopenTransition(currentGoal.status, cleanData.status)) {
+        const { error: reopenError } = await this._reopenWithAncestors(goalId, userId);
+        if (reopenError) {
+          return reopenError;
+        }
+        delete cleanData.status;
+      }
+
       const statusChange = this._detectStatusChange(currentGoal, cleanData);
 
       const statusError = await this._getStatusChangeError(currentGoal, cleanData.status);
@@ -373,24 +497,24 @@ export class GoalService {
       if (parentChange.changed) {
         await this._handleParentGoalUpdates(parentChange, userId);
         if (parentChange.newParentId) {
-          await reopenCompletedGoal(parentChange.newParentId, userId);
           await touchLastChildActivity(parentChange.newParentId, userId);
         }
       } else if (statusChange.changed && goal.parentGoalId) {
         await this._updateParentGoalCounters(goal.parentGoalId, userId);
-        await this._reopenParentIfNeeded(goal.parentGoalId, userId, statusChange.newStatus);
         await touchLastChildActivity(goal.parentGoalId, userId);
         console.log(chalk.green(`Estado cambiado: ${statusChange.oldStatus} → ${statusChange.newStatus}`));
       }
 
+      let events = emptyCompletionEvents();
       if (statusChange.changed && statusChange.newStatus === 'completed') {
-        const { error: completedError } = await this._handleGoalCompleted(userId, goalId);
-        if (completedError) {
-          return completedError;
+        const completed = await this._handleGoalCompleted(userId, goalId);
+        if (completed.error) {
+          return completed.error;
         }
+        events = completed.events;
       }
 
-      return new SuccessResponseModel(goal, 'Meta actualizada correctamente');
+      return new SuccessResponseModel(goal, 'Meta actualizada correctamente', 200, { events });
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar meta');
     }
@@ -513,10 +637,6 @@ export class GoalService {
 
       const { subgoalId } = addDto.toPlainObject();
 
-      if (subgoalId === parentGoalId) {
-        return new BadRequestResponseModel('Una meta no puede ser submeta de sí misma');
-      }
-
       // Early return: Verificar que la meta padre existe
       const { goal: parentGoal, error: parentError } = await this._findGoalByIdAndUser(parentGoalId, userId);
       if (parentError) {
@@ -529,6 +649,16 @@ export class GoalService {
         return new NotFoundResponseModel('Meta no encontrada');
       }
 
+      if (await wouldCreateGoalCycle(subgoalId, parentGoalId, userId)) {
+        return new ConflictResponseModel(GOAL_CYCLE_MESSAGE);
+      }
+
+      // Una meta completada puede colgarse de un padre activo (el padre no se autocompleta); no al revés
+      const completedParentConflict = await assertGoalOpen(parentGoalId, userId);
+      if (completedParentConflict) {
+        return completedParentConflict;
+      }
+
       const oldParentGoalId = subgoal.parentGoalId;
 
       subgoal.parentGoalId = parentGoalId;
@@ -539,7 +669,6 @@ export class GoalService {
       }
 
       await this._updateParentGoalCounters(parentGoalId, userId, 'Meta padre');
-      await reopenCompletedGoal(parentGoalId, userId);
       await touchLastChildActivity(parentGoalId, userId);
 
       return new SuccessResponseModel(subgoal, 'Submeta agregada correctamente');
@@ -549,18 +678,40 @@ export class GoalService {
   }
 
   /**
-   * Obtiene lista catalog de metas (solo id y título) del usuario
+   * Obtiene lista catalog de metas (id, título y estado) del usuario
    * @param {string} userId - ID del usuario
-   * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con lista catalog de metas
-   * Útilzado para selects
+   * @param {Object} [query={}] - Query params
+   * @param {string} [query.excludeCompleted] - 'true' para omitir las metas completadas
+   * @param {string} [query.excludeRelatedTo] - ID de una meta; se omiten ella, sus ancestros y sus descendientes
+   * @returns {Promise<SuccessResponseModel|BadRequestResponseModel|ErrorResponseModel>} Respuesta con lista catalog de metas
+   * (lista vacía = 200 con [], nunca 404). Utilizado para selects
    */
-  static async getCatalogGoals(userId) {
+  static async getCatalogGoals(userId, query = {}) {
     try {
-      const goals = await Goal.find({ userId }).select('_id title').sort({ createdAt: -1 });
-
-      if (goals.length === 0) {
-        return new NotFoundResponseModel('No se encontraron metas para este usuario');
+      const queryDto = new CatalogGoalsQueryDto(query);
+      const validation = queryDto.validate();
+      if (!validation.isValid) {
+        return new BadRequestResponseModel(validation.errors.join(', '));
       }
+
+      const { excludeCompleted, excludeRelatedTo } = queryDto.toPlainObject();
+      const filter = { userId };
+
+      if (excludeCompleted) {
+        filter.status = { $ne: 'completed' };
+      }
+
+      if (excludeRelatedTo) {
+        const [ancestors, descendantIds] = await Promise.all([
+          getAncestorChain(excludeRelatedTo, userId),
+          getDescendantIds(excludeRelatedTo, userId),
+        ]);
+        filter._id = {
+          $nin: [excludeRelatedTo, ...ancestors.map(ancestor => ancestor._id.toString()), ...descendantIds],
+        };
+      }
+
+      const goals = await Goal.find(filter).select('_id title status').sort({ createdAt: -1 });
 
       const catalogGoals = CatalogGoalDto.fromArray(goals);
 
@@ -599,6 +750,17 @@ export class GoalService {
         return new SuccessResponseModel(goal, 'Estado de la meta actualizado correctamente');
       }
 
+      // completed -> active solo ocurre a través del servicio de reapertura (misma cascada y mismo sellado)
+      if (isReopenTransition(oldStatus, status)) {
+        const { error: reopenError, goal: reopenedGoal } = await this._reopenWithAncestors(goalId, userId);
+        if (reopenError) {
+          return reopenError;
+        }
+        return new SuccessResponseModel(reopenedGoal, 'Estado de la meta actualizado correctamente', 200, {
+          events: emptyCompletionEvents(),
+        });
+      }
+
       const statusError = await this._getStatusChangeError(goal, status);
       if (statusError) {
         return statusError;
@@ -610,7 +772,6 @@ export class GoalService {
 
       if (goal.parentGoalId) {
         await this._updateParentGoalCounters(goal.parentGoalId, userId);
-        await this._reopenParentIfNeeded(goal.parentGoalId, userId, status);
         await touchLastChildActivity(goal.parentGoalId, userId);
         console.log(chalk.green(`Estado cambiado: ${oldStatus} → ${status}`));
       }

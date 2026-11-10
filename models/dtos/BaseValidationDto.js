@@ -1,11 +1,6 @@
 import { z } from 'zod';
-import {
-  dueDateNotPastField,
-  goalStatusField,
-  optionalTitleField,
-  priorityField,
-  validateZod,
-} from './zodHelpers.js';
+import { normalizeDueDate } from '../../services/helpers/dueDateRules.js';
+import { goalStatusField, optionalDueDateField, optionalTitleField, priorityField, validateZod } from './zodHelpers.js';
 
 /**
  * DTO base con title / priority / dueDate / status.
@@ -14,14 +9,14 @@ export class BaseValidationDto {
   static schema = z.object({
     title: optionalTitleField,
     priority: priorityField.optional(),
-    dueDate: dueDateNotPastField(),
+    dueDate: optionalDueDateField,
     status: goalStatusField.optional(),
   });
 
   constructor(data = {}) {
     this.title = data.title;
     this.priority = data.priority;
-    this.dueDate = data.dueDate || null;
+    this.dueDate = normalizeDueDate(data.dueDate);
     this.status = data.status;
   }
 

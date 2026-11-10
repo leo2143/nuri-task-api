@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CreateTodoDto } from './CreateTodoDto.js';
-import { dueDateNotPastField, optionalDescriptionField, optionalTitleField, priorityField, validateZod } from '../zodHelpers.js';
+import { normalizeDueDate } from '../../../services/helpers/dueDateRules.js';
+import { optionalDescriptionField, optionalDueDateField, optionalTitleField, priorityField, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para actualizar una tarea existente
@@ -10,8 +11,7 @@ export class UpdateTodoDto extends CreateTodoDto {
     title: optionalTitleField,
     description: optionalDescriptionField,
     priority: priorityField.optional(),
-    dueDate: dueDateNotPastField(),
-    completed: z.boolean({ invalid_type_error: 'El estado completado debe ser un booleano' }).optional(),
+    dueDate: optionalDueDateField,
     GoalId: z.string().nullable().optional(),
   });
 
@@ -20,8 +20,7 @@ export class UpdateTodoDto extends CreateTodoDto {
     if (data.title !== undefined) this.title = data.title;
     if (data.description !== undefined) this.description = data.description;
     if (data.priority !== undefined) this.priority = data.priority;
-    if (data.dueDate !== undefined) this.dueDate = data.dueDate;
-    if (data.completed !== undefined) this.completed = data.completed;
+    if (data.dueDate !== undefined) this.dueDate = normalizeDueDate(data.dueDate);
     if (data.GoalId !== undefined) this.GoalId = data.GoalId;
   }
 
@@ -31,7 +30,6 @@ export class UpdateTodoDto extends CreateTodoDto {
       description: this.description,
       priority: this.priority,
       dueDate: this.dueDate,
-      completed: this.completed,
       GoalId: this.GoalId,
     });
   }
@@ -43,7 +41,6 @@ export class UpdateTodoDto extends CreateTodoDto {
     if (this.description !== undefined) result.description = this.description.trim();
     if (this.priority !== undefined) result.priority = this.priority;
     if (this.dueDate !== undefined) result.dueDate = this.dueDate;
-    if (this.completed !== undefined) result.completed = this.completed;
     if (this.GoalId !== undefined) result.GoalId = this.GoalId;
 
     return result;

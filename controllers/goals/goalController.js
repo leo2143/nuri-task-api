@@ -1,5 +1,6 @@
 import { GoalService } from '../../services/goalService.js';
 import { withCompletionEvents } from '../../services/helpers/completionEvents.js';
+import { getRequestTodayYmd } from '../support/requestToday.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con metas (goals)
@@ -48,7 +49,7 @@ export class GoalController {
   static async createGoal(req, res) {
     const goalData = req.body;
     const userId = req.userId;
-    const result = await GoalService.createGoal(goalData, userId);
+    const result = await GoalService.createGoal(goalData, userId, { todayYmd: await getRequestTodayYmd(req) });
     res.status(result.status).json(result);
   }
 
@@ -66,8 +67,8 @@ export class GoalController {
     const { id } = req.params;
     const updateData = req.body;
     const userId = req.userId;
-    const result = await GoalService.updateGoal(id, updateData, userId);
-    res.status(result.status).json(result);
+    const result = await GoalService.updateGoal(id, updateData, userId, { todayYmd: await getRequestTodayYmd(req) });
+    res.status(result.status).json(withCompletionEvents(result));
   }
 
   /**
@@ -146,16 +147,17 @@ export class GoalController {
   }
 
   /**
-   * Obtiene lista catalog de metas (solo id y título)
+   * Obtiene lista catalog de metas (id, título y estado)
    * @param {Object} req - Objeto request de Express
    * @param {string} req.userId - ID del usuario (agregado por middleware de autenticación)
+   * @param {Object} req.query - Query params (excludeCompleted, excludeRelatedTo)
    * @param {Object} res - Objeto response de Express
    * @returns {Promise<void>} No retorna valor, envía respuesta HTTP
    * Útilizado para selects
    */
   static async getCatalogGoals(req, res) {
     const userId = req.userId;
-    const result = await GoalService.getCatalogGoals(userId);
+    const result = await GoalService.getCatalogGoals(userId, req.query);
     res.status(result.status).json(result);
   }
 
@@ -191,5 +193,20 @@ export class GoalController {
     const userId = req.userId;
     const result = await GoalService.updateGoalStatus(id, req.body, userId);
     res.status(result.status).json(withCompletionEvents(result));
+  }
+
+  /**
+   * Reabre una meta completada (y los ancestros completados que la contienen)
+   * @param {Object} req - Objeto request de Express
+   * @param {string} req.params.id - ID de la meta a reabrir
+   * @param {string} req.userId - ID del usuario
+   * @param {Object} res - Objeto response de Express
+   * @returns {Promise<void>}
+   */
+  static async reopenGoal(req, res) {
+    const { id } = req.params;
+    const userId = req.userId;
+    const result = await GoalService.reopenGoal(id, userId);
+    res.status(result.status).json(result);
   }
 }

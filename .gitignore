@@ -133,3 +133,6 @@ docs/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Migration backups (contain user data)
+scripts/migrations/backups/

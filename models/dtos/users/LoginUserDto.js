@@ -1,5 +1,5 @@
 import { EmailDto } from './EmailDto.js';
-import { loginPasswordField, validateZod } from '../zodHelpers.js';
+import { loginPasswordField, timezoneField, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para login de usuario
@@ -12,6 +12,8 @@ export class LoginUserDto extends EmailDto {
   constructor(data) {
     super(data);
     this.password = data.password;
+    // Zona del dispositivo: opcional y leniente (inválida => se descarta, el login sigue)
+    this.timezone = timezoneField.parse(data.timezone);
   }
 
   validate() {
@@ -25,6 +27,7 @@ export class LoginUserDto extends EmailDto {
     return {
       ...super.toPlainObject(),
       password: this.password,
+      ...(this.timezone ? { timezone: this.timezone } : {}),
     };
   }
 }

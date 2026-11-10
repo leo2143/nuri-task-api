@@ -133,7 +133,7 @@
           "Todos"
         ],
         "summary": "Crea una nueva tarea",
-        "description": "Crea una nueva tarea para el usuario autenticado",
+        "description": "Crea una nueva tarea para el usuario autenticado. 409 si la meta indicada ya está completada (hay que reabrirla antes).",
         "parameters": [
           {
             "name": "body",
@@ -245,7 +245,7 @@
           "Todos"
         ],
         "summary": "Actualiza una tarea existente",
-        "description": "",
+        "description": "Actualiza los datos de la tarea. No acepta completed: completar una tarea solo se hace con PATCH /api/todos/:id/state. 409 si se mueve la tarea a una meta completada.",
         "parameters": [
           {
             "name": "id",
@@ -327,7 +327,7 @@
           "Todos"
         ],
         "summary": "Actualiza solo el estado de una tarea",
-        "description": "Actualiza únicamente el campo completed",
+        "description": "Actualiza únicamente el campo completed. Completar es atómico y registra completedAt (hora del servidor): solo el request que gana dispara métricas, racha y logros. Repetir completed=true sobre una tarea ya completada responde 200 sin efectos; completed=false sobre una tarea completada o bloqueada responde 400.",
         "parameters": [
           {
             "name": "id",
@@ -707,10 +707,46 @@
           "Users"
         ],
         "summary": "Obtiene el perfil del usuario autenticado",
-        "description": "Retorna: name, email, subscription (isActive, startDate, endDate), profileImageUrl",
+        "description": "Retorna: name, email, subscription (isActive, startDate, endDate), profileImageUrl, timezone",
         "responses": {
           "default": {
             "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/user/timezone": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Sincroniza la zona horaria del usuario con la del dispositivo",
+        "description": "Una zona inválida se descarta y responde 200 sin cambios. Si la clave canónica es igual a la guardada no escribe nada. Responde { timezone, updated }.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Zona horaria IANA del dispositivo",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "timezone": {
+                  "type": "string",
+                  "example": "America/Bogota"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "500": {
+            "description": "Internal Server Error"
           }
         },
         "security": [
@@ -798,12 +834,17 @@
           "Users"
         ],
         "summary": "Verifica el email del usuario mediante token",
-        "description": "",
+        "description": "Acepta ?timezone= (zona IANA del dispositivo, opcional; una inválida se descarta).",
         "parameters": [
           {
             "name": "token",
             "in": "path",
             "required": true,
+            "type": "string"
+          },
+          {
+            "name": "timezone",
+            "in": "query",
             "type": "string"
           }
         ],
@@ -1147,8 +1188,24 @@
         "tags": [
           "Goals"
         ],
-        "summary": "Obtiene lista catalog de metas (solo id y título)",
-        "description": "Retorna solo id y título de las metas, ideal para dropdowns y selects",
+        "summary": "Obtiene lista catalog de metas (id, título y estado)",
+        "description": "Retorna id, título y estado de las metas, ideal para dropdowns y selects. excludeCompleted=true omite las completadas; excludeRelatedTo=<goalId> omite esa meta, sus ancestros y sus descendientes (400 si el id es inválido). Sin resultados responde 200 con lista vacía.",
+        "parameters": [
+          {
+            "name": "excludeCompleted",
+            "in": "query",
+            "description": "Si es true, omite las metas completadas",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "excludeRelatedTo",
+            "in": "query",
+            "description": "ID de una meta: se omiten ella, sus ancestros y sus descendientes",
+            "required": false,
+            "type": "string"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Lista catalog de metas obtenida correctamente",
@@ -1183,6 +1240,10 @@
                       "title": {
                         "type": "string",
                         "example": "Crear portafolio"
+                      },
+                      "status": {
+                        "type": "string",
+                        "example": "paused"
                       }
                     }
                   }
@@ -1290,7 +1351,7 @@
           "Goals"
         ],
         "summary": "Actualiza completamente una meta",
-        "description": "Actualiza una meta completa. DEBES enviar title (requerido), los demás campos son opcionales. Si cambia el status, actualiza automáticamente el progreso de metas padre.",
+        "description": "Actualiza una meta completa. DEBES enviar title (requerido), los demás campos son opcionales. Si cambia el status, actualiza automáticamente el progreso de metas padre. Si la meta pasa a completed, la respuesta incluye meta.events (toast de logros). Cambiar status de completed a active reabre la meta con la misma lógica que POST /api/goals/:id/reopen. 409 si el nuevo padre está completado o si el vínculo formaría un ciclo.",
         "parameters": [
           {
             "name": "id",
@@ -1474,7 +1535,7 @@
           "Goals"
         ],
         "summary": "Actualiza solo el estado de una meta",
-        "description": "active ↔ paused libre. completed solo si hay al menos un hijo (tarea o submeta), todas las tareas están hechas y todas las submetas completed. Una meta vacía no se cierra. paused no puede pasar a completed. Un completed no se reabre por este endpoint (sí al agregar un hijo).",
+        "description": "active ↔ paused libre. completed solo si hay al menos un hijo (tarea o submeta), todas las tareas están hechas y todas las submetas completed. Una meta vacía no se cierra. paused no puede pasar a completed. completed solo puede volver a active (se resuelve con la misma lógica que POST /api/goals/:id/reopen); cualquier otra transición desde completed responde 400.",
         "parameters": [
           {
             "name": "id",
@@ -1528,6 +1589,77 @@
           },
           "400": {
             "description": "Transición inválida o la meta no cumple la regla de hijos para completed"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/goals/{id}/reopen": {
+      "post": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "Reabre una meta completada",
+        "description": "Pasa una meta completed a active sin tocar métricas, racha ni logros. Si la meta es parte de un padre también completed, ese padre (y los ancestros completed contiguos) se reabren primero. Conserva firstCompletedAt (lo sella si era null). 409 si la meta no está completada.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "ID de la meta a reabrir"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Meta reabierta correctamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "status": {
+                  "type": "number",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Meta reabierta correctamente"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "goal": {
+                      "$ref": "#/definitions/Goal"
+                    },
+                    "cascaded": {
+                      "type": "array",
+                      "example": [
+                        "507f1f77bcf86cd799439011"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          },
+          "404": {
+            "description": "Meta no encontrada"
+          },
+          "409": {
+            "description": "La meta no está completada"
           }
         },
         "security": [
@@ -2026,6 +2158,25 @@
         ]
       }
     },
+    "/api/achievements/catalog": {
+      "get": {
+        "tags": [
+          "Achievements"
+        ],
+        "summary": "Obtiene eventos disparadores y condiciones permitidas por evento (solo admin)",
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/achievements/type/{type}": {
       "get": {
         "tags": [
@@ -2118,6 +2269,34 @@
           "Achievements"
         ],
         "summary": "Elimina un logro (solo admin)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "ID del logro"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/achievements/{id}/in-progress-count": {
+      "get": {
+        "tags": [
+          "Achievements"
+        ],
+        "summary": "Cuenta los usuarios con progreso en curso en un logro (solo admin)",
         "description": "",
         "parameters": [
           {

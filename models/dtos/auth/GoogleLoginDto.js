@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { validateZod } from '../zodHelpers.js';
+import { timezoneField, validateZod } from '../zodHelpers.js';
 
 /**
- * Body de POST /api/auth/google ({ code }).
+ * Body de POST /api/auth/google ({ code, timezone? }). La zona es opcional y leniente.
  */
 export class GoogleLoginDto {
   static schema = z.object({
@@ -14,6 +14,7 @@ export class GoogleLoginDto {
 
   constructor(data = {}) {
     this.code = data.code;
+    this.timezone = timezoneField.parse(data.timezone);
   }
 
   validate() {
@@ -23,6 +24,7 @@ export class GoogleLoginDto {
   toPlainObject() {
     return {
       code: String(this.code).trim(),
+      ...(this.timezone ? { timezone: this.timezone } : {}),
     };
   }
 }

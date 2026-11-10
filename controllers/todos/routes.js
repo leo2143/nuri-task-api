@@ -69,7 +69,7 @@ export const setupTodoRoutes = app => {
   app.post('/api/todos', validateToken, (req, res) => {
     // #swagger.tags = ['Todos']
     // #swagger.summary = 'Crea una nueva tarea'
-    // #swagger.description = 'Crea una nueva tarea para el usuario autenticado'
+    // #swagger.description = 'Crea una nueva tarea para el usuario autenticado. 409 si la meta indicada ya está completada (hay que reabrirla antes).'
     /* #swagger.parameters['body'] = {
          in: 'body',
          description: 'Datos de la tarea',
@@ -90,6 +90,7 @@ export const setupTodoRoutes = app => {
   app.put('/api/todos/:id', validateToken, (req, res) => {
     // #swagger.tags = ['Todos']
     // #swagger.summary = 'Actualiza una tarea existente'
+    // #swagger.description = 'Actualiza los datos de la tarea. No acepta completed: completar una tarea solo se hace con PATCH /api/todos/:id/state. 409 si se mueve la tarea a una meta completada.'
     /* #swagger.parameters['id'] = {
          in: 'path',
          description: 'ID de la tarea',
@@ -105,7 +106,7 @@ export const setupTodoRoutes = app => {
   app.patch('/api/todos/:id/state', validateToken, (req, res) => {
     // #swagger.tags = ['Todos']
     // #swagger.summary = 'Actualiza solo el estado de una tarea'
-    // #swagger.description = 'Actualiza únicamente el campo completed'
+    // #swagger.description = 'Actualiza únicamente el campo completed. Completar es atómico y registra completedAt (hora del servidor): solo el request que gana dispara métricas, racha y logros. Repetir completed=true sobre una tarea ya completada responde 200 sin efectos; completed=false sobre una tarea completada o bloqueada responde 400.'
     /* #swagger.parameters['id'] = {
          in: 'path',
          description: 'ID de la tarea',

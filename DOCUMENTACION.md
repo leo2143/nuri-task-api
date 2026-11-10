@@ -42,8 +42,8 @@ El backend es el dueño de la verdad: valida, persiste, aplica reglas (por ejemp
 | **Tarea bloqueada (`isLocked`)** | Al marcarse completada, queda irreversible para el usuario. Evita “descompletar” para inflar rachas o logros. |
 | **Meta (Goal)** | Objetivo de más alcance. Estados: `active`, `paused`, `completed`. Puede tener **submetas** (`parentGoalId`). |
 | **Progreso de meta** | Porcentaje 0–100 calculado **solo con las tareas** de esa meta (`completedTasks / totalTasks`). Las submetas no entran en la fórmula. |
-| **Racha (streak)** | Días consecutivos con al menos una tarea completada. Vive en el documento `Metrics` del usuario. |
-| **Logro (Achievement)** | Plantilla global (admin). El progreso por usuario está en `UserAchievement`. Se dispara por eventos (`task:completed`, `goal:completed`, `streak:updated`). |
+| **Racha (streak)** | Días locales consecutivos con al menos una tarea o una meta completada. Vive en el documento `Metrics` del usuario y se mide con claves de día `YYYY-MM-DD`. |
+| **Logro (Achievement)** | Plantilla global (admin). El progreso por usuario está en `UserAchievement`. Se dispara por eventos (`task:completed`, `goal:completed`, `task:goal-changed`, `streak:updated`) y puede exigir condiciones configurables por el admin. |
 | **Tier de logro** | `basic` (todos) o `premium` (visible para free, pero no accesible). |
 | **Moodboard** | Tablero 1:1 de imágenes inspiracionales. Requiere suscripción activa (o admin). |
 | **Premium** | `subscription.isActive === true` (vía MercadoPago o seteo admin). Desbloquea moodboard, dashboard de métricas y metas ilimitadas. El plan free permite **2 metas**. |
@@ -243,6 +243,7 @@ Timestamps automáticos. Índice sparse en `subscription.mercadoPagoId` (el webh
 | title, description | String | |
 | comments[] | `{ text, author, date }` | |
 | completed, isLocked | Boolean | Al completar → `isLocked = true` |
+| completedAt | Date | null | Hora del servidor en que se reclamó la completación. Las tareas legacy y las pendientes tienen `null` (sin backfill) |
 | userId, GoalId | ObjectId | GoalId puede ser null |
 | priority | enum | default `medium` |
 | dueDate | Date \| null | Lo usa el cron de vencimientos |
@@ -270,17 +271,17 @@ Métodos de instancia: `updateTaskCount()`, `updateSubGoalCount()`. Virtual `cal
 
 ### `achievements` y `userachievements`
 
-Plantilla global (admin): `title`, `description`, `targetCount`, `type` (`task|goal|metric|streak`), `triggerEvent` (`task:completed|goal:completed|streak:updated`), `tier` (`basic|premium`), `isActive`, `imageUrl`.
+Plantilla global (admin): `title`, `description`, `targetCount`, `type`, `triggerEvent`, `conditions`, `reward`, `tier` (`basic|premium`), `isActive`, `imageUrl`. Los tipos, los eventos y las condiciones que admite cada evento están en un solo lugar: `models/achievementCatalog.js` (lo consumen el modelo, los DTOs, el servicio y `GET /api/achievements/catalog`).
 
-Progreso por usuario: `{ user, achievement }` único, `currentCount`, `status` (`locked|unlocked|completed`), fechas. Índice `{ triggerEvent, isActive }` en plantillas para el `processEvent`.
+Progreso por usuario: `{ user, achievement }` único, `currentCount`, `window { key, count }` (solo logros con `sameWindow`), `status` (`locked|unlocked|completed`), fechas. Índice `{ triggerEvent, isActive }` en plantillas para el `processEvent`.
 
-`type: 'metric'` existe en el schema pero **no hay** `triggerEvent` de métricas en runtime. Solo corren los tres eventos listados.
+`type: 'metric'` existe en el schema pero **no hay** `triggerEvent` de métricas en runtime. Solo corren los cuatro eventos del catálogo.
 
 ### `metrics` (una fila por usuario)
 
-`currentStreak`, `bestStreak`, `totalTasksCompleted`, `totalGoalsCompleted`, `lastActivityDate`, `history[]` (tareas por día). Unique en `userId`.
+`currentStreak`, `bestStreak`, `totalTasksCompleted`, `totalGoalsCompleted`, `lastActivityDay` (clave de día local `YYYY-MM-DD`), `lastActivityDate` (instante), `history[]` (una fila por día local activo: `date`, `day`, `tasksCompleted`, `goalsCompleted`). Unique en `userId`, índice en `lastActivityDay`.
 
-La racha operativa vive **acá**, no en `streaks` (ver deuda técnica).
+La racha vive **acá**. Ya no existe un modelo `Streak` aparte.
 
 ### Otras colecciones
 
@@ -290,7 +291,7 @@ La racha operativa vive **acá**, no en `streaks` (ver deuda técnica).
 | `notifications` | Inbox in-app |
 | `pushsubscriptions` | `{ userId, endpoint, keys }` unique por par usuario+endpoint |
 | `pendingcloudinaryimages` | URL + publicId; TTL Mongo 3600 s |
-| `streaks` | Legacy. Nadie lo escribe en el flujo actual; solo se borra al eliminar usuario |
+| `streaks` | Sin modelo: es la colección legacy del `streaksModel.js` eliminado. Se borra con `s2-metrics-day-keys.js --step=drop-legacy-streaks` |
 
 `models/responseModel.js` y `models/dtos/**` **no** son colecciones: son contratos HTTP y de validación.
 
@@ -366,6 +367,7 @@ No se usa `skip/limit` (página 3 = escanear 2 páginas). Se usa el `_id` del ú
 | POST | `/api/users/reset-password` | RL-IP | UsersController.resetPassword |
 | PUT | `/api/users/change-password` | JWT | UsersController.changePassword |
 | GET | `/api/user/profile` | JWT | UsersController.getProfile |
+| PUT | `/api/user/timezone` | JWT | UsersController.updateTimezone |
 | PUT | `/api/user/profile-image` | JWT | UsersController.updateProfileImage |
 | DELETE | `/api/user/profile-image` | JWT | UsersController.deleteProfileImage |
 | PUT | `/api/user/onboarding-complete` | JWT | UsersController.completeOnboarding |
@@ -400,6 +402,7 @@ No se usa `skip/limit` (página 3 = escanear 2 páginas). Se usa el `_id` del ú
 | GET | `/api/goals/:id/parent` | JWT | GoalController.getGoalsByParentGoalId |
 | PATCH | `/api/goals/:id/subgoals` | JWT | GoalController.addSubgoal |
 | PATCH | `/api/goals/:id/status` | JWT | GoalController.updateGoalStatus |
+| POST | `/api/goals/:id/reopen` | JWT | GoalController.reopenGoal |
 | GET | `/api/metrics` | JWT+Sub | MetricsController.getAllMetrics |
 | GET | `/api/metrics/dashboard` | JWT+Sub | MetricsController.getMetricDashboard |
 | GET | `/api/metrics/current-streak` | JWT | MetricsController.getCurrentStreak |
@@ -412,8 +415,10 @@ No se usa `skip/limit` (página 3 = escanear 2 páginas). Se usa el `_id` del ú
 | PUT | `/api/moodboard/images/:imageId` | JWT+Sub | MoodboardController.updateImage |
 | GET | `/api/achievements` | Admin | AchievementController.getAllAchievements |
 | GET | `/api/achievements/stats` | Admin | AchievementController.getAchievementStats |
+| GET | `/api/achievements/catalog` | Admin | AchievementController.getAchievementCatalog |
 | GET | `/api/achievements/type/:type` | Admin | AchievementController.getAchievementsByType |
 | GET | `/api/achievements/:id` | Admin | AchievementController.getAchievementById |
+| GET | `/api/achievements/:id/in-progress-count` | Admin | AchievementController.getInProgressCount |
 | POST | `/api/achievements` | Admin | AchievementController.createAchievement |
 | PUT | `/api/achievements/:id` | Admin | AchievementController.updateAchievement |
 | DELETE | `/api/achievements/:id` | Admin | AchievementController.deleteAchievement |
@@ -426,8 +431,8 @@ No se usa `skip/limit` (página 3 = escanear 2 páginas). Se usa el `_id` del ú
 | POST | `/api/push/subscribe` | JWT | PushController.subscribe |
 | DELETE | `/api/push/unsubscribe` | JWT | PushController.unsubscribe |
 | GET | `/api/push/vapid-key` | — | PushController.getVapidKey |
-| GET | `/api/cron/morning` | Cron | CronController.morningJob |
-| GET | `/api/cron/evening` | Cron | CronController.eveningJob |
+| GET | `/api/cron/dispatch` | Cron | CronDispatcher.dispatch (`?h=0..23`, `dryRun=1` fuera de producción) |
+| GET | `/api/cron/:jobName` | Cron | CronController.run (corrida manual; jobs en `controllers/cron/jobRegistry.js`, `?timezone=`) |
 | GET | `/api/notifications/unread-count` | JWT | NotificationController.getUnreadCount |
 | GET | `/api/notifications` | JWT | NotificationController.getAll |
 | PATCH | `/api/notifications/read-all` | JWT | NotificationController.markAllAsRead |
@@ -475,7 +480,8 @@ El servicio hace `new TodoFilterDto(filters)` → `validate()` → si falla, `Ba
 | `queryBooleanField` + `toQueryBoolean` | Query strings |
 | `priorityField`, `goalStatusField`, `sortOrderField` | Enums |
 | `titleField` / `optionalTitleField` | 3–50 chars |
-| `dueDateNotPastField` | No fechas en el pasado (día calendario) |
+| `optionalDueDateField` | Fecha límite flotante opcional/nullable, solo valida el formato |
+| `dueDateNotPastField({ todayYmd })` | Lo anterior + no fechas en el pasado (día calendario). Solo DTOs de creación |
 | `imageUrlField` / `cloudinaryImageUrlField` | Delegados a `ValidationHelpers` |
 | `validateZod` / `mergeValidations` | Adaptador y unión de errores |
 | `paginationSchema` | cursor + limit 1–100 |
@@ -564,31 +570,92 @@ Los contadores del padre (`totalSubGoals`, `completedSubGoals`) se actualizan al
 
 ### Jerarquía
 
-`parentGoalId` apunta a otra meta del mismo usuario. No se puede ser padre de sí misma. Al borrar una meta: soft delete de la meta y de sus todos; **no** se borran ni reparentan las hijas (quedan con un padre “invisible”). Si falla el `save` de la meta, se revierte el `deleted_at` de los todos.
+`parentGoalId` apunta a otra meta del mismo usuario. Ninguna vinculación puede formar un ciclo (una meta no puede colgar de sí misma ni de uno de sus descendientes): la API responde **409** `No se pueden vincular estas metas: una ya forma parte de la otra.` antes de escribir. Una meta **completada** sí puede colgarse de un padre activo; el padre nunca se autocompleta por eso. Al borrar una meta: soft delete de la meta y de sus todos; **no** se borran ni reparentan las hijas (quedan con un padre “invisible”). Si falla el `save` de la meta, se revierte el `deleted_at` de los todos.
+
+### Metas completadas (solo lectura) y reapertura
+
+Una meta `completed` es de solo lectura para su contenido: la API responde **409** (`Esta meta ya está completada. Reabrila desde su detalle para sumarle tareas o submetas. Si no ves el botón, actualizá la app.`) antes de cualquier escritura cuando se intenta:
+
+- crear una tarea en ella (`POST /api/todos` con su `GoalId`),
+- mover una tarea pendiente hacia ella (`PUT /api/todos/:id` que cambia `GoalId`; editar otros campos de una tarea que ya vive en la meta sí se permite),
+- agregarle una submeta (`POST /api/goals` con `parentGoalId`, `PATCH /api/goals/:id/subgoals`, o `PUT /api/goals/:id` que cambia el padre).
+
+Editar título, descripción, fecha límite y prioridad de la meta sigue permitido. Mover, destildar o borrar tareas de una meta completada se rige por el bloqueo de tareas de abajo; borrar una submeta no deshace la completación.
+
+**Reapertura explícita.** `POST /api/goals/:id/reopen` es la única forma de volver a `active`; `PATCH /api/goals/:id/status` y `PUT /api/goals/:id` con `status: active` sobre una meta completada delegan en la misma lógica. Reglas:
+
+- Solo la meta del usuario (404 si no existe) y solo si está `completed` (409 si no; el segundo click de un doble click recibe 409).
+- No toca métricas, racha ni logros, y completar de nuevo no vuelve a otorgarlos (`firstCompletedAt` se conserva; si era `null` en una meta legacy, se sella con la hora actual).
+- Cascada: si los ancestros contiguos también están completados se reabren de afuera hacia adentro y la meta pedida al final, con actualización condicional por meta y contadores del padre refrescados en cada paso. La cadena se recorre con set de visitados y tope de profundidad 20, así un ciclo corrupto termina. Respuesta: `{ goal, cascaded }` con los IDs de los ancestros reabiertos.
+- Cualquier otra transición desde `completed` (por ejemplo a `paused`) responde 400 `Esta meta ya está completada. Si querés retomarla, reabrila desde su detalle.`
+
+**Selectores.** `GET /api/goals/catalogs` devuelve `{ id, title, status }` y acepta `excludeCompleted=true` (omite completadas) y `excludeRelatedTo=<goalId>` (omite esa meta, sus ancestros y sus descendientes; 400 si el id es inválido). Sin resultados responde `200` con lista vacía.
+
+### Fechas y zonas horarias
+
+Cada usuario tiene una zona IANA (`User.timezone`, con índice). Los usuarios sin zona resuelven a `DEFAULT_TIMEZONE` (`America/Argentina/Buenos_Aires`, "ART") hasta que la migración `s1-user-timezone` se la asigne. Toda la aritmética de fechas vive en `services/helpers/dateTime.js`.
+
+- **Dos tipos de fecha que no se mezclan.** Los *instantes* (`createdAt`, `completedAt`) se resuelven en la zona del usuario. Las *fechas flotantes* (`dueDate`, guardada como `YYYY-MM-DDT12:00:00Z`) se comparan y muestran como su Y-M-D, sin corrimiento (`toFloatingYmd`, `getFloatingDayRange`).
+- **Días como claves `YYYY-MM-DD`.** `toLocalYmd`, `addDaysToYmd` y `diffYmdDays` operan sobre claves de calendario, nunca dividen milisegundos por 24 h (un día local dura 23 o 25 horas en los cambios de horario). `getLocalDayRange(ymd, tz)` devuelve `[inicio, fin)` del día local; `zonedTimeToInstant` resuelve el desfase en el instante objetivo con dos pasadas, así soporta +05:30, +05:45, +14 y horas inexistentes por horario de verano.
+- **Captura.** El APP manda la zona del dispositivo (`Intl.DateTimeFormat().resolvedOptions().timeZone`) en login, registro, Google y verify-email (`?timezone=`), y la re-sincroniza con `PUT /api/user/timezone` cuando difiere. No hay selección manual.
+- **Validación leniente.** `isValidTimeZone` acepta solo zonas con región (letras primero y al menos una `/`), descarta `Etc/*`, `UTC`, `GMT`, `Z` y offsets (`+05:00`, `UTC+5`) y exige que `Intl` la reconozca. Un valor inválido se descarta, nunca falla la request y nunca pisa el valor guardado. `PUT /api/user/timezone` responde `{ timezone, updated }`; sin campo `timezone` devuelve 400.
+- **Grafías y clave canónica.** Lo que se guarda es la forma que devuelve `Intl` (`canonicalTimeZone`), que depende del ICU del runtime (por ejemplo Kolkata puede resolverse como `Asia/Calcutta`), por eso nunca se escribe una grafía a mano y `package.json` fija `engines.node`. La clave canónica sirve **solo** para igualdad y agrupación, nunca como valor de consulta: las consultas por zona deben matchear todas las grafías guardadas. Dos grafías de una misma zona no disparan una re-sincronización.
+- **Migración S1.** `node scripts/migrations/s1-user-timezone.js` (dry-run por defecto, `--apply` para escribir, `--restore`) asigna `DEFAULT_TIMEZONE` a los usuarios sin zona y asegura el índice; no reescribe grafías existentes y es idempotente. Orden de despliegue: API → `s1-user-timezone --apply` → APP.
+
+### Fecha límite (`dueDate`)
+
+Es una fecha flotante: el servidor la normaliza a `YYYY-MM-DDT12:00:00Z` con el día de calendario que mandó el cliente (primeros 10 caracteres, `normalizeDueDate`), nunca con el día UTC de un instante corrido. La validación de que no sea pasada vive solo en los DTOs de creación y compara días calendario contra el "hoy" del usuario (`getRequestTodayYmd` lee la zona de `req.userDoc`; un usuario sin zona usa la de producto). En los updates el servicio la valida únicamente si el valor entrante cambia respecto del guardado, con el mismo "hoy" del usuario, así editar el título de una meta o tarea ya vencida (por ejemplo una meta completada) funciona. Cambiar el estado de una meta nunca valida la fecha. Los jobs de notificación comparan la fecha límite como Y-M-D contra el día local del usuario (`getFloatingDayRange`), sin conversión de zona.
 
 ### Bloqueo de tareas
 
-Pasar de `completed: false` a `true` setea `isLocked = true`. `updateTodo` / `updateTodoState` rechazan si ya está completada o locked. El usuario no puede borrar una confirmada; el admin sí.
+Completar una tarea es un **reclamo atómico**: un `findOneAndUpdate` condicionado a `completed: false, isLocked: false` que setea `completed`, `isLocked = true` y `completedAt` (hora del servidor). Solo el request que gana dispara métricas, racha y logros; los demás reciben éxito idempotente sin efectos. Repetir `completed: true` sobre una tarea ya completada (con o sin lock, incluidas las legacy con `completed: true, isLocked: false`) responde 200 sin efectos. `completed: false` sobre una tarea completada o locked responde 400. `POST /api/todos` y `PUT /api/todos/:id` ya no aceptan `completed` (las tareas nuevas nacen pendientes): la única vía para completar es `PATCH /api/todos/:id/state`, así el reclamo, `completedAt` y los eventos no se pueden saltear. `updateTodo` rechaza si la tarea ya está completada o locked. El usuario no puede borrar una confirmada; el admin sí. `PUT /api/goals/:id` devuelve `meta.events` igual que `PATCH /api/goals/:id/status` cuando la meta se completa.
 
-Efectos al completar: contadores de meta → `MetricsService.recordTaskCompleted` → `processEvent('task:completed')` → si sube la racha, notificación y `processEvent('streak:updated')`.
+Efectos al completar: contadores de meta → `MetricsService.writeTaskMetrics` (escritura atómica de métricas y racha) → `afterActivityMetrics` (notificación de racha y `processEvent('streak:updated')`) → `processEvent('task:completed')`.
 
 ### Logros
 
 | Evento | Origen | Cómo cuenta |
 |--------|--------|-------------|
-| `task:completed` | `TodoService.updateTodoState` | `$inc currentCount` |
-| `goal:completed` | `GoalService.updateGoal` y `updateGoalStatus` | `$inc` |
-| `streak:updated` | `MetricsService.recordTaskCompleted` | `$set` al valor actual de la racha |
+| `task:completed` | `TodoService.updateTodoState` | suma 1 a `currentCount` |
+| `goal:completed` | `GoalService.updateGoal` y `updateGoalStatus` | suma 1 |
+| `task:goal-changed` | `TodoService.updateTodo` | suma 1, solo si la tarea pasa de una meta a OTRA (ambas no nulas y distintas); asignar o quitar la meta no cuenta. La respuesta lleva `meta.events` |
+| `streak:updated` | `MetricsService.afterActivityMetrics` | asigna el valor actual de la racha |
 
-`bulkWrite` upsert. Si `currentCount >= targetCount` → `completed` + notificación. En rachas, si el número baja del target, puede volver a `locked`. Los premium se listan para free con `isAccessible: false`. Un error en `processEvent` **no** tumba el request.
+`processEvent(trigger, userId, value, { occurredAt, startedAt, timezone })` evalúa las condiciones de cada logro activo con funciones puras (`services/achievementConditions.js`) y escribe el progreso con un pipeline de actualización atómico y upsert por `{ user, achievement }` (`services/helpers/achievementProgressPipeline.js`, driver nativo, MongoDB 4.2+). Solo cuenta el instante del SERVIDOR: `occurredAt` es el `completedAt` del reclamo de la tarea o el `firstCompletedAt` de la meta, nunca la hora de procesamiento ni una hora enviada por el cliente. La zona es la del usuario (se lee solo si alguna condición la necesita).
 
-**Inconsistencia:** `updateGoal` (PUT) al pasar a `completed` también llama `recordGoalCompleted`. `updateGoalStatus` (PATCH) dispara el logro **pero no** las métricas. Ver §12.
+Condiciones (`conditions`, combinadas con AND; cada evento admite solo algunas, otras responden 400):
+
+| Condición | Eventos | Significado |
+|-----------|---------|-------------|
+| `timeWindow { start, end }` | `task:completed`, `goal:completed`, `task:goal-changed` | Hora local `HH:mm` del instante del evento. El inicio se incluye y el fin NO; `start > end` cruza la medianoche (22:00-04:00); `start == end` se rechaza |
+| `sameWindow` | `task:completed` | Booleano explícito. Con `targetCount > 1` el progreso cuenta solo eventos de la misma instancia de franja (clave = fecha local en que EMPEZÓ la franja; sin `timeWindow`, el día calendario local); otra instancia reinicia en 1. `currentCount` es el conteo de la instancia vigente |
+| `maxDurationHours` | `goal:completed` | `firstCompletedAt - createdAt` en horas reales; reabrir y volver a cerrar no cambia la medida porque se usa el primer cierre |
+
+Si `currentCount >= targetCount` → `completed` + notificación. La completada es un reclamo condicional por fila (`status != completed`): si dos eventos llegan a la vez solo uno completa y notifica. **Un logro completado nunca se revierte**: una racha que cae no lo baja, el pipeline congela las filas completadas (conservan `currentCount` y `window`) y un evento con clave de franja MÁS VIEJA que la guardada (evento tardío o fuera de orden) se ignora. El filtro del upsert nunca incluye `status`: con `status != completed` una fila completada no coincidiría y el insert chocaría con el índice único (E11000). Los premium se listan para free con `isAccessible: false`. Un error en `processEvent` **no** tumba el request.
+
+**Edición por el admin** (`AchievementService.updateAchievement`): `PUT /api/achievements/:id` acepta `reward` y `conditions` (las condiciones se validan contra el evento resultante); el `tier` es **inmutable** (cualquier `tier` responde 400 "El tier de un logro no se puede cambiar. Desactivalo y creá uno nuevo."; `POST` sí lo acepta) y la actualización solo escribe los campos enviados. Los logros completados nunca se revocan. Si cambian el evento o las condiciones, el progreso en curso se reinicia (`currentCount 0`, `locked`, `window null`) en la MISMA transacción de Mongo que guarda la definición (`mongoose.startSession()` + `withTransaction`; requiere replica set, Atlas lo es; en un mongod suelto el PUT falla con 500 y se registra un error que lo explica, sin alternativa sin transacción): o quedan ambos cambios o ninguno, así no existe una definición nueva con el reinicio sin hacer ni reinicios a medias, y si la guarda optimista pierde (409) o algo falla el progreso queda intacto. La transacción solo se abre cuando cambia el evento o las condiciones; el resto de las ediciones (título, objetivo, etc.) son un único guardado con la misma guarda. Carrera aceptada: `processEvent` lee la definición y evalúa las condiciones antes de la transacción y escribe el progreso fuera de toda sesión, así que un evento evaluado con la definición vieja puede sumar progreso a una fila justo después del reinicio (ese avance se cuenta con las reglas viejas); los conflictos de escritura solo ordenan las escrituras, no hacen que el evento se reevalúe. La transacción está acotada para caber en el PUT (`maxDuration = 60`): no abre intentos nuevos pasados 40 s desde que empezó el PUT (si se agota responde 503 `La edición del logro superó el tiempo disponible. Volvé a intentar.`) y el commit tiene `maxCommitTimeMS` de 10 s; esa cota solo limita el inicio de cada intento, así que un `updateMany` largo o los reintentos del commit del driver no quedan acotados por ella; si solo cambia `targetCount`, el progreso se conserva y completa (con notificación) a quien ya lo alcanzó por tandas de 200, en rondas de 10 filas (reclamo y notificación juntos, así nunca quedan filas reclamadas sin notificar), con un presupuesto de 40 s contado desde que empieza el PUT que se revisa en cada ronda (el PUT tiene `maxDuration = 60`), y la respuesta trae `meta.pendingCompletions` con las filas que quedaron sin completar (se completan con el próximo evento del usuario que cuente para ese logro); editar título, descripción, recompensa o imagen no toca el progreso. El guardado es optimista sobre `updatedAt`: si otra edición modificó el logro entre la lectura y la escritura, responde 409 y no se aplica nada (ni el guardado ni el reinicio). La finalización por objetivo más bajo corre después del guardado y solo cuando la edición NO cambió el evento ni las condiciones (camino sin transacción). La guarda de un logro sin `updatedAt` (importado o migrado) exige que siga sin tenerlo. Completar (por evento o al bajar el objetivo) reclama cada fila solo si sigue en el `targetCount` aplicado y, con `sameWindow`, en la misma franja con la que se la eligió: un PUT concurrente que reinicia el progreso la deja sin completar. Subir el objetivo mientras se completa no lo revalida el reclamo (compara contra el `targetCount` leído al seleccionar, no relee el logro ni usa la sesión de la edición): una fila puede completarse por debajo del objetivo recién subido (carrera aceptada; la completitud es irreversible) y solo se completan las filas que cumplían el objetivo leído en ese momento. `GET /api/achievements/:id/in-progress-count` devuelve `{ inProgressCount }` (usuarios con progreso sin completar); en logros con `sameWindow` solo cuenta (y solo completa al bajar el objetivo) a quien tiene guardada la franja vigente según su zona, porque `currentCount` conserva el conteo de la última franja y no se limpia para avisar al admin antes de guardar un cambio que reinicia. `isActive: false` saca el logro del catálogo del usuario y del evaluador; lo ganado se conserva y reactivar no otorga nada retroactivamente. `GET /api/achievements/catalog` devuelve `{ triggers: [{ triggerEvent, allowedConditions }], types, conditionKeys }`.
+
+**Semillas y rollout (S5).** Canto de Gallo (tarea completada entre 05:00 y 08:00), Drácula (2 tareas en la misma franja 22:00-04:00), Meta Flash (meta cerrada dentro de 24 h) y Re-Ordenar (`task:goal-changed`) salen de `resources/moongo-scripts/achievements-data.json`. Orden: `mongoexport` de `userachievements` → `s5-achievements --step=seed --apply` (definiciones nuevas con `isActive: false`, así la API vieja no las otorga con la semántica vieja; antes de tocar nada guarda un backup con los logros originales y las filas de progreso que reinicia, y `--restore` devuelve ambos; si no hay nada que respaldar (ningún original ni fila por reiniciar y la corrida anterior no está pendiente, por ejemplo al repetir `seed` tras `activate`) no escribe backup y lo avisa en el log, para que un `--restore` sin `--file` no tome un backup vacío; el backup es acumulativo SOLO mientras la corrida anterior siga pendiente (tiene logros por activar, siguen inactivos y no se restauró): repetir `seed` en ese caso junta por `_id` los originales y por (usuario, logro) las filas del backup anterior con los nuevos, y gana el más antiguo, así `--restore` vuelve al estado previo al primer `seed` de la tanda; tras `activate` o tras un `--restore --apply` del seed (queda un archivo `.restored` junto al backup) el próximo `seed` escribe un backup nuevo solo con lo de su corrida, para que un `--restore` posterior no pise el progreso ganado desde entonces; el reinicio cubre el progreso en curso de los logros pendientes aunque el paso se repita tras una falla) → deploy de la API (anotar la hora) → `--step=reset --cutoff=<hora del deploy> --apply` (reinicia en silencio los completados anteriores; Meta Flash se conserva solo si hay una meta real cerrada dentro del límite) → `--step=reset-in-progress --cutoff=<hora del deploy> --apply` → `--step=activate --apply` (activa solo los logros que dejó inactivos el seed, leídos de su backup; uno que un admin desactivó no se toca; al terminar con `--apply` deja un archivo `.activated` junto al backup del seed y un `activate` repetido avisa que ya está consumido y no hace nada, así nunca reactiva lo que un admin desactivó después; tampoco activa un backup restaurado) → deploy del APP. El seed también corrige la `description` de los cuatro logros desde el JSON (sin desactivarlos ni reiniciar progreso si solo cambia el texto). Todos los pasos son idempotentes, dry-run por defecto y con `--restore` desde el backup; ninguno crea notificaciones.
+
+**Logros premium y usuarios free (S6).** El progreso de TODOS los logros se registra sin importar el plan. Cuando un usuario sin acceso Premium (ni `isAdmin` ni suscripción activa) completa un logro `premium`, la finalización es **silenciosa**: la fila queda `completed` con `notifiedAt: null`, sin notificación, toast ni webhook; no aparece en `achievementsUnlocked` y tampoco cuenta como `notifiedAchievement`, así que el `goal_completed` de una meta cerrada se sigue enviando. Toda finalización que sí avisa (evento, `streak:updated`, `completeReachedTarget` del admin, logro premium de un usuario Premium) escribe `notifiedAt` en el mismo reclamo. El acceso se lee antes del reclamo: si el usuario se vuelve premium justo en el medio, esa fila queda silenciosa hasta el próximo resumen.
+
+Al activarse Premium se envía **un solo resumen** (`UserAchievementService.notifyEarnedPremiumAchievements`, notificación `achievements_premium_summary`, "Tenés logros esperándote"). Disparadores: el webhook de suscripción (`SubscriptionService`, incluido el webhook duplicado que `#subscriptionAlreadyApplied` corta temprano, cuando la suscripción está activa: reintenta un resumen cuyo primer intento falló) y el toggle de suscripción del admin (`PUT /api/admin/users/:id` con `isSubscribed`). Ningún endpoint cambia `isAdmin` de un usuario existente, así que no hay otro disparo. Es exactly-once con un lease: (1) `updateMany` reclama las filas premium activas `completed` con `notifiedAt` nulo y sin lease vigente (estampa `notifyBatchId` y `notifyClaimedAt`), (2) se persiste una única notificación por el lote, (3) recién entonces se confirma con `notifiedAt`. Si la notificación falla se libera el lote (se quitan `notifyBatchId` y `notifyClaimedAt`); si la función muere después del reclamo, las filas vuelven a ser reclamables a los 2 minutos; una muerte entre persistir y confirmar puede duplicar el resumen en el re-claim (aceptado). Sin filas pendientes no se envía nada. Los logros premium inactivos no se incluyen (el usuario no los ve).
+
+Visibilidad: la puerta de acceso vive en el servicio (no depende del middleware de la ruta) y cubre las tres lecturas. `GET /api/user/achievements` devuelve los logros premium a un usuario free **bloqueados** (`isAccessible: false`, progreso por defecto), sin filtrar lo guardado. `GET /api/user/achievements/:id/progress` de un logro premium devuelve el progreso por defecto a un usuario free. `GET /api/user/achievements/stats` y `achievementsProgress` de `GET /api/metrics` cuentan solo los logros básicos activos para un usuario free (`total`, `notStarted`, `completed`, porcentajes) y agregan `premiumLocked` (cuántos logros premium activos hay; 0 para un usuario Premium, que los tiene todos en `total`). Si el plan se vence, lo ganado no se revoca: queda oculto en las lecturas, el progreso sigue, y lo completado mientras tanto es silencioso y se resume en la próxima activación. El `tier` es inmutable, así que un logro nunca cambia de plan.
+
+**Migración S6 (`s6-notified-at`).** Marca `notifiedAt = completedAt` en todos los logros ya completados, para que el resumen no sea retroactivo. Orden: `mongoexport` de `userachievements` → `s6-notified-at --apply` ANTES del deploy → deploy de la API (anotar la hora) → `s6-notified-at --cutoff=<hora del deploy> --apply` otra vez. El `--cutoff` de la segunda corrida es obligatorio en la práctica: la API nueva deja `notifiedAt: null` en las finalizaciones silenciosas y, sin cutoff, la corrida las marcaría como avisadas y esos usuarios nunca recibirían su resumen. Es idempotente, dry-run por defecto y con `--restore` desde el backup.
+
+Completar una meta por `PUT` o `PATCH` pasa por el mismo camino (`GoalService._handleGoalCompleted`): reclama `firstCompletedAt`, escribe las métricas con `writeGoalMetrics` y dispara el logro.
 
 ### Rachas
 
-Días calendario (medianoche del servidor). Primera actividad del día → racha 1; día siguiente consecutivo → +1 y posible `bestStreak`; hueco > 1 día → el cron o `checkStreakExpiration` pone 0.
+Un día activo es un día local en el que se completó una tarea **o** una meta (los jobs de recencia corren por zona desde el dispatcher y reciben el día local de cada grupo). Se compara con claves `YYYY-MM-DD` (`services/helpers/streakDays.js`), nunca con milisegundos. Primera actividad → racha 1; día siguiente consecutivo → +1 y posible `bestStreak`; hueco > 1 día → la próxima actividad reinicia en 1; mismo día, o un día anterior por cambio de huso → no cambia y `lastActivityDay` no retrocede.
 
-El cron de la mañana resetea si `lastActivityDate` es anterior al inicio de ayer (criterio batch, no idéntico al método de instancia).
+La escritura es **una sola operación atómica** (`findOneAndUpdate` con pipeline de agregación, `services/helpers/metricsActivityPipeline.js`): actualiza racha, contadores, `lastActivityDay` y la fila de `history` del día, tanto para tareas como para metas. Solo se reintenta si el driver nunca envió la escritura (`runWriteRetryingOnlyIfUnsent`), así un reintento no cuenta dos veces. Requiere MongoDB 4.2 o superior.
+
+No hay cron que reinicie rachas: la racha **efectiva** se calcula al leer (`getEffectiveStreak`: si pasó más de un día local desde `lastActivityDay`, es 0) y no escribe nada. `checkStreakExpiration` y el job `streak-reset` ya no existen.
+
+**Rollout (S2).** Antes del deploy: `mongoexport` de `metrics`. Con el deploy: `node scripts/migrations/s2-metrics-day-keys.js --apply` (completa `lastActivityDay`, `history[].day` y `goalsCompleted` en ART y crea el índice; dry-run por defecto, idempotente, `--restore` desde backup). Sin la migración, una fila de historial sin `day` falla la validación y la próxima actividad cuenta como la primera. Después de verificar las rachas: `--step=drop-legacy-streaks --apply` borra la colección `streaks` con backup previo.
 
 ### Freemium
 
@@ -602,7 +669,7 @@ Se crea en el registro (local o Google). Si falla, se borra el usuario. Imágene
 
 ### Borrado de cuenta
 
-`deleteUserOwnedDocuments` hace `deleteMany` paralelo (todos, metas, métricas, streak legacy, moodboard, notificaciones, push, userAchievements, pending images) y después `User.findByIdAndDelete`. Es hard delete.
+`deleteUserOwnedDocuments` hace `deleteMany` paralelo (todos, metas, métricas, moodboard, notificaciones, push, userAchievements, pending images) y después `User.findByIdAndDelete`. Es hard delete.
 
 ---
 
@@ -639,12 +706,46 @@ Verificación, reset y confirmación de cambio de clave. `FRONTEND_URL` (o `http
 
 ### Cron (Vercel)
 
-| Ruta | UTC | Trabajo |
-|------|-----|---------|
-| `GET /api/cron/morning` | `0 3 * * *` | Reset de rachas vencidas, tareas por vencer, usuarios inactivos |
-| `GET /api/cron/evening` | `0 23 * * *` | Riesgo de perder racha |
+Vercel Hobby solo admite crons diarios, así que [`vercel.json`](vercel.json) declara **24 crons** que apuntan a un único dispatcher: `0 H * * *` → `GET /api/cron/dispatch?h=H` para H = 0..23 (hora UTC). Cada tick decide qué jobs tocan en cada zona horaria. Hobby permite 100 crons por proyecto y puede disparar cada uno en cualquier minuto de su hora.
 
-No se manda el mismo `type` más de una vez por usuario por día UTC. El push del cron solo sale si hay `PushSubscription`.
+**Hora del tick.** `?h=H` del path (primaria); si falta, el header `x-vercel-cron-schedule` (`M H * * *`); si tampoco está, la hora UTC actual con un warning. Un `h` presente pero inválido responde 400 y no corre nada. El instante del tick es el último `H:00Z` anterior a `now`; un tick de más de 90 minutos se saltea (200).
+
+**Qué corre.** Los jobs viven en [`jobRegistry.js`](controllers/cron/jobRegistry.js) con su `localHour` (jobs por zona) o `utcHour` (global). Un job corre para una zona solo si en ese instante la hora local de la zona **es exactamente** `localHour` (sin rangos ni recuperación: una hora salteada por el horario de verano no corre ese día). Los usuarios se agrupan por zona canónica, pero se consultan por **todas** las grafías guardadas; los usuarios sin zona y los valores que `Intl` rechaza caen en el grupo de producto (ART).
+
+| Job | Hora local | Tipo |
+|-----|-----------|------|
+| `due-tasks` | 00:00 | `due_task` |
+| `due-goals` | 01:00 | `due_goal` |
+| `overdue-tasks` | 03:00 | `overdue_task` |
+| `overdue-goals` | 06:00 | `overdue_goal` |
+| `empty-goals` | 07:00 | `empty_goal` |
+| `stalled-goals` | 08:00 | `stalled_goal` |
+| `high-priority` | 09:00 | `high_priority_upcoming` |
+| `high-priority-goals` | 10:00 | `high_priority_upcoming_goal` |
+| `pause-too-long` | 11:00 | `pause_too_long` |
+| `inactivity` | 12:00 | `inactivity` |
+| `overdue-backlog` | 13:00 | `overdue_backlog` |
+| `moodboard-nudge` | 14:00 | `moodboard_nudge` |
+| `premium-nag` | 15:00 | `premium_nag` |
+| `day-recap` | 19:00 | `day_recap` |
+| `streak-risk` | 20:00 | `streak_risk` |
+| `expire-notifications` | 02:00 UTC (global) | — |
+
+Cada job de zona recibe `{ userIds, timezone, localDate, now }`: un lote de hasta 500 usuarios, la zona del grupo, el día local del tick y el instante. Las ventanas de "n días" se calculan con días de calendario locales (`getLocalDayRange(addDaysToYmd(localDate, -n), tz)`), no con múltiplos de 24 h. Cambiar un horario es cambiar un número en el registro.
+
+**Ledger e idempotencia.** [`JobRun`](models/jobRunModel.js) tiene una fila por (`job`, `timezone`, `localDate`), única; `timezone` es la clave canónica o `global`. La unidad se reclama con un insert atómico; si ya existe, solo se retoma (una operación atómica, que suma 1 a `attempts`) si quedó `failed` o su `claimed` tiene más de 90 s y no agotó los 3 intentos. `done` o un reclamo reciente se saltean. TTL de 30 días. Esto protege de entregas duplicadas del cron, no de fallos.
+
+**Reintentos dentro del día local.** Vercel no reintenta, así que el dispatcher lo hace: una unidad que falla o se corta por el deadline queda `failed` con un cursor (último usuario procesado, `JobRun.cursor`) y cada tick siguiente del mismo día local vuelve a planearla (una consulta por `localDate` + `status`), después de las unidades nuevas de la hora y mientras alcancen los 50 s (`MAX_DISPATCH_MS`) y queden al menos 10 s (`MIN_UNIT_BUDGET_MS`): con menos margen la unidad no se reclama: un reintento no gasta intento y espera al tick siguiente, pero una unidad nueva de la hora no tiene registro en el ledger y se pierde ese día. Si el deadline corta el envío de push de un lote, ese lote no avanza el cursor y la unidad termina `failed`: la retomada lo rehace (la dedup evita notificaciones repetidas y los pendientes se empujan). Cada unidad tiene como máximo 3 intentos seguidos sin avanzar (`JobRun.attempts`, `MAX_UNIT_ATTEMPTS`; guardar el cursor vuelve el contador a 1); al agotarse se registra en error una sola vez, la unidad queda `exhausted` (también cuando la función murió en el último intento: el siguiente tick la marca y la registra) y no se vuelve a planear. Si planear los reintentos falla, el dispatcher lo registra y corre igual las unidades nuevas. La retomada continúa desde el cursor; pasado el día local una unidad incompleta se pierde. Si algo falló o quedó sin correr el dispatcher responde 500 (solo se ve en los logs de cron). Se acepta a la escala actual: perder un push no afecta rachas ni logros.
+
+**Push pendiente (at-least-once).** Los jobs programados guardan la notificación con `pushSentAt: null` (explícito; las demás notificaciones no llevan el campo, y un índice parcial `{type, userId, createdAt}` solo cubre las pendientes). Después de cada lote el runner empuja los pendientes del tipo del job, **aunque el job no haya creado nada**: el payload se rearma desde la notificación guardada. `pushSentAt` se marca si se entregó, si el usuario no tiene suscripciones o si todos los fallos fueron permanentes (404/410); si hubo un fallo transitorio, o VAPID no está configurado, queda pendiente. Si la función muere entre el envío y la marca, el próximo intento puede repetir ese push.
+
+**Corrida manual.** `GET /api/cron/:jobName?timezone=` (Bearer `CRON_SECRET`) corre el job ahora para los usuarios de esa zona (por defecto ART), fuera del ledger y sin respetar la hora local; también empuja los pendientes. Una zona inválida responde 400. Puede coincidir con un tick de la misma unidad: la dedup por usuario, tipo y día local evita notificaciones duplicadas y, en el peor caso, se repite un push.
+
+**dryRun.** `/api/cron/dispatch?h=H&dryRun=1` (Bearer válido) solo se acepta cuando `VERCEL_ENV !== 'production'` (un preview puede apuntar a la base de producción). Resuelve la hora y las unidades y devuelve lo que correría: sin ledger, sin notificaciones, sin push.
+
+Las rachas no tienen cron de reinicio (se calculan al leer). Los jobs de recencia (`streak-risk`, `inactivity`, `day-recap`) leen las claves de día de `Metrics`. No se manda el mismo `type` más de una vez por usuario por día **local**. Los endpoints demo de administración corren los mismos jobs del registro para todos los usuarios en ART, sin ledger.
+
+**Rollout S3.** El mismo deploy lleva el dispatcher, el índice parcial de `pushSentAt` y el `vercel.json` de 24 crons. Antes de mergear: en un preview con Deployment Protection bypass, llamar `/api/cron/dispatch?h=H&dryRun=1` con el Bearer y confirmar la resolución de `?h`, la selección de unidades, que Vercel acepta el query string en el path del cron y que `maxDuration` 60 aplica con la config `builds` legada. Después del deploy, verificar el primer tick real en `JobRun`. Rollback: restaurar el `vercel.json` anterior desde git.
 
 ---
 
@@ -654,7 +755,7 @@ No se manda el mismo `type` más de una vez por usuario por día UTC. El push de
 
 - Build: `index.js` con `@vercel/node`; `public/**` estático.
 - Rewrite catch-all a `index.js`, excepto assets de Swagger/css/js.
-- Crons de arriba.
+- 24 crons horarios hacia `/api/cron/dispatch` (ver Cron).
 - Headers CORS extra en `/api/*`.
 - `maxDuration` 60 s en `index.js`.
 
@@ -680,7 +781,7 @@ Patrones de resiliencia (no son librerías, son helpers propios):
 | Helper | Qué evita |
 |--------|-----------|
 | `runWithOneRetry` | Un blip de red al actualizar contadores de meta no deja la meta desfasada |
-| `ensureSuccessWithRetry` | Idem para `ResponseModel.success === false` en métricas |
+| `runWriteRetryingOnlyIfUnsent` | Reintenta la escritura atómica de métricas solo si el driver nunca la envió: un reintento no duplica la actividad |
 | `persistAndNotify` + `waitUntil` | El push no alarga la respuesta ni se pierde en el freeze de Vercel |
 | Compensación registro | User sin moodboard no queda a medias |
 | Compensación MP | Preapproval sin `mercadoPagoId` en Mongo se cancela |
@@ -695,15 +796,13 @@ No hay `session()` de Mongo (transacciones multi-documento). Las compensaciones 
 Conviene poder explicarlas en la defensa, no esconderlas.
 
 1. **No hay tests automatizados.** `npm test` es un placeholder. La red de seguridad hoy es Sonar + prueba manual + el envelope consistente.
-2. **`streaksModel.js` está huérfano.** La racha real está en `Metrics`. `Streak` solo se borra al eliminar usuario. Quedó de un diseño anterior.
-3. **`updateGoalStatus` no llama `recordGoalCompleted`.** Completar por PATCH suma logro, no `totalGoalsCompleted`. Completar por PUT sí. Dos puertas, dos semánticas.
-4. **Login con credenciales inválidas usa `ErrorResponseModel` sin `status`.** El constructor default es **500**, no 401. El mensaje es el correcto (anti-enumeración); el código HTTP no es el idiomático.
-5. **`ValidationErrorResponseModel` existe y no se usa.** Las validaciones van a `BadRequestResponseModel` con errores concatenados.
-6. **Sin transacciones multi-documento.** Un crash entre “marcar todo” y “guardar meta” se mitiga con retry/compensación, no con snapshot isolation.
-7. **Borrar una plantilla de logro no borra `UserAchievement`.** Pueden quedar huérfanos.
-8. **Borrar una meta no reparenta submetas.** Las hijas quedan apuntando a un padre soft-deleted.
-9. **Swagger incompleto** para push, cron, notifications, subscription y webhooks.
-10. **`type: 'metric'` en logros** no tiene trigger en runtime.
+2. **Login con credenciales inválidas usa `ErrorResponseModel` sin `status`.** El constructor default es **500**, no 401. El mensaje es el correcto (anti-enumeración); el código HTTP no es el idiomático.
+3. **`ValidationErrorResponseModel` existe y no se usa.** Las validaciones van a `BadRequestResponseModel` con errores concatenados.
+4. **Sin transacciones multi-documento.** Un crash entre “marcar todo” y “guardar meta” se mitiga con retry/compensación, no con snapshot isolation.
+5. **Borrar una plantilla de logro no borra `UserAchievement`.** Pueden quedar huérfanos.
+6. **Borrar una meta no reparenta submetas.** Las hijas quedan apuntando a un padre soft-deleted.
+7. **Swagger incompleto** para push, cron, notifications, subscription y webhooks.
+8. **`type: 'metric'` en logros** no tiene trigger en runtime.
 
 Ninguna de estas rompe el Quality Gate actual de Sonar. Son deuda de diseño, no de análisis estático.
 

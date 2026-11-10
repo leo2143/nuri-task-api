@@ -19,16 +19,27 @@ import {
 } from '../models/dtos/todo/index.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { findOwnedGoal } from './helpers/goalOwnership.js';
-import { runWithOneRetry, ensureSuccessWithRetry } from './helpers/runWithOneRetry.js';
-import { reopenCompletedGoal } from './helpers/reopenCompletedGoal.js';
+import { runWithOneRetry } from './helpers/runWithOneRetry.js';
+import { assertGoalOpen } from './helpers/goalOpenGuard.js';
+import { getDueDateChangeError } from './helpers/dueDateRules.js';
 import { touchLastChildActivity } from './helpers/goalActivity.js';
 import { buildCompletionEvents, emptyCompletionEvents } from './helpers/completionEvents.js';
 import chalk from 'chalk';
+
+const CONFIRMED_TODO_MESSAGE = 'Esta tarea ya fue confirmada y no se puede modificar';
 
 /**
  * Servicio para manejar la lógica de negocio de tareas (todos)
  */
 export class TodoService {
+  /**
+   * Respuesta de una tarea completada junto con los eventos de la completación (vacíos si no fue este request).
+   * @private
+   */
+  static _buildCompletedTodoResponse(todo, events) {
+    return new SuccessResponseModel(todo, 'Tarea completada correctamente', 200, { events });
+  }
+
   /**
    * Actualiza los contadores de tareas de un goal
    * @private
@@ -130,11 +141,13 @@ export class TodoService {
    * @param {string} [todoData.priority='medium'] - Prioridad (low/medium/high)
    * @param {Date} [todoData.dueDate=null] - Fecha límite de la tarea
    * @param {string} userId - ID del usuario autenticado
+   * @param {Object} [options]
+   * @param {string} [options.todayYmd] - Hoy (YYYY-MM-DD) del usuario, para validar la fecha límite
    * @returns {Promise<CreatedResponseModel|ErrorResponseModel>} Respuesta con la tarea creada o error
    */
-  static async createTodo(todoData, userId) {
+  static async createTodo(todoData, userId, { todayYmd } = {}) {
     try {
-      const createDto = new CreateTodoDto(todoData);
+      const createDto = new CreateTodoDto(todoData, { todayYmd });
       const validation = createDto.validate();
 
       if (!validation.isValid) {
@@ -148,6 +161,11 @@ export class TodoService {
         if (goalError) {
           return goalError;
         }
+
+        const completedGoalConflict = await assertGoalOpen(cleanData.GoalId, userId);
+        if (completedGoalConflict) {
+          return completedGoalConflict;
+        }
       }
 
       const todo = new Todo({
@@ -159,7 +177,6 @@ export class TodoService {
 
       // Actualizar contadores del goal si está asociado
       await this._updateGoalTaskCounters(savedTodo.GoalId, userId, 'Goal');
-      await reopenCompletedGoal(savedTodo.GoalId, userId);
       await touchLastChildActivity(savedTodo.GoalId, userId);
 
       return new CreatedResponseModel(savedTodo, 'Tarea creada correctamente');
@@ -173,9 +190,11 @@ export class TodoService {
    * @param {string} id - ID de la tarea
    * @param {Object} todoData - Datos a actualizar
    * @param {string} userId - ID del usuario autenticado
+   * @param {Object} [options]
+   * @param {string} [options.todayYmd] - Hoy (YYYY-MM-DD) del usuario, para validar un cambio de fecha límite
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con la tarea actualizada o error
    */
-  static async updateTodo(id, todoData, userId) {
+  static async updateTodo(id, todoData, userId, { todayYmd } = {}) {
     try {
       const updateDto = new UpdateTodoDto(todoData);
       const validation = updateDto.validate();
@@ -190,10 +209,16 @@ export class TodoService {
       }
 
       if (currentTodo.completed || currentTodo.isLocked) {
-        return new BadRequestResponseModel('Esta tarea ya fue confirmada y no se puede modificar');
+        return new BadRequestResponseModel(CONFIRMED_TODO_MESSAGE);
       }
 
       const cleanData = updateDto.toPlainObject();
+
+      // La fecha límite solo se valida si cambia respecto de la guardada
+      const dueDateError = getDueDateChangeError(cleanData.dueDate, currentTodo.dueDate, todayYmd);
+      if (dueDateError) {
+        return new BadRequestResponseModel(dueDateError);
+      }
 
       if (cleanData.GoalId) {
         const { error: goalError } = await findOwnedGoal(cleanData.GoalId, userId);
@@ -205,6 +230,14 @@ export class TodoService {
       const oldGoalId = currentTodo.GoalId?.toString();
       const newGoalId = cleanData.GoalId !== undefined ? cleanData.GoalId?.toString() : oldGoalId;
 
+      // Solo mover una tarea HACIA una meta completada es conflicto; editar una tarea que ya vive en ella no lo es
+      if (oldGoalId !== newGoalId) {
+        const completedGoalConflict = await assertGoalOpen(newGoalId, userId);
+        if (completedGoalConflict) {
+          return completedGoalConflict;
+        }
+      }
+
       const todo = await Todo.findOneAndUpdate({ _id: id, userId }, cleanData, {
         new: true,
         runValidators: true,
@@ -214,11 +247,19 @@ export class TodoService {
       if (oldGoalId !== newGoalId) {
         await this._updateGoalTaskCounters(oldGoalId, userId, 'Goal anterior');
         await this._updateGoalTaskCounters(newGoalId, userId, 'Goal nuevo');
-        await reopenCompletedGoal(newGoalId, userId);
         await touchLastChildActivity(newGoalId, userId);
       }
 
-      return new SuccessResponseModel(todo, 'Tarea actualizada correctamente');
+      // Pasar una tarea de una meta a otra es progreso para "Re-Ordenar"; asignar o quitar la meta no lo es
+      const events = emptyCompletionEvents();
+      if (oldGoalId && newGoalId && oldGoalId !== newGoalId) {
+        const goalChangedEvent = await UserAchievementService.processEvent('task:goal-changed', userId, null, {
+          occurredAt: new Date(),
+        });
+        events.achievementsUnlocked = goalChangedEvent?.achievementsUnlocked ?? [];
+      }
+
+      return new SuccessResponseModel(todo, 'Tarea actualizada correctamente', 200, { events });
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar tarea');
     }
@@ -248,60 +289,77 @@ export class TodoService {
         return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
       }
 
-      if (existingTodo.isLocked) {
-        return new BadRequestResponseModel('Esta tarea ya fue confirmada y no se puede modificar');
-      }
-
-      const wasCompleted = existingTodo.completed;
-      let events = emptyCompletionEvents();
-
-      existingTodo.completed = completed;
-
-      if (!wasCompleted && completed === true) {
-        existingTodo.isLocked = true;
-        await existingTodo.save();
-
-        await this._updateGoalTaskCounters(existingTodo.GoalId, userId, 'Goal');
-        await touchLastChildActivity(existingTodo.GoalId, userId);
-
-        const metricsResult = await ensureSuccessWithRetry(
-          await MetricsService.recordTaskCompleted(userId),
-          () => MetricsService.recordTaskCompleted(userId),
-          'registrar métricas de tarea'
-        );
-        if (!metricsResult.success) {
-          return metricsResult;
+      if (completed === false) {
+        if (existingTodo.completed || existingTodo.isLocked) {
+          return new BadRequestResponseModel(CONFIRMED_TODO_MESSAGE);
         }
 
-        const taskEvent = await UserAchievementService.processEvent('task:completed', userId);
-
-        try {
-          const streakMeta = metricsResult.meta ?? {};
-          events = buildCompletionEvents({
-            taskCompleted: { id: existingTodo._id.toString(), title: existingTodo.title },
-            streak:
-              typeof streakMeta.currentStreak === 'number'
-                ? { increased: Boolean(streakMeta.streakIncreased), current: streakMeta.currentStreak }
-                : null,
-            achievementsUnlocked: [
-              ...(streakMeta.achievementsUnlocked ?? []),
-              ...(taskEvent?.achievementsUnlocked ?? []),
-            ],
-          });
-        } catch (eventError) {
-          console.error(chalk.yellow('[side-effect] Error al armar eventos de tarea completada:'), eventError);
-        }
-      } else {
-        await existingTodo.save();
         await this._updateGoalTaskCounters(existingTodo.GoalId, userId, 'Goal');
+        return new SuccessResponseModel(existingTodo, 'Tarea marcada como pendiente correctamente', 200, {
+          events: emptyCompletionEvents(),
+        });
       }
 
-      return new SuccessResponseModel(
-        existingTodo,
-        `Tarea ${completed ? 'completada' : 'marcada como pendiente'} correctamente`,
-        200,
-        { events }
+      // Una tarea ya completada (con o sin lock, incluidas las legacy) es éxito idempotente y sin efectos
+      if (existingTodo.completed) {
+        return this._buildCompletedTodoResponse(existingTodo, emptyCompletionEvents());
+      }
+
+      // Reclamo atómico: solo el request que gana pasa de pendiente a completada y dispara métricas y logros
+      const completedAt = new Date();
+      const claimedTodo = await Todo.findOneAndUpdate(
+        { _id: id, userId, completed: false, isLocked: false },
+        { $set: { completed: true, isLocked: true, completedAt } },
+        { new: true }
       );
+
+      if (!claimedTodo) {
+        const latestTodo = await Todo.findOne({ _id: id, userId });
+        if (latestTodo?.completed) {
+          return this._buildCompletedTodoResponse(latestTodo, emptyCompletionEvents());
+        }
+        if (!latestTodo) {
+          return new NotFoundResponseModel('No se encontró la tarea con el id: ' + id);
+        }
+        return new BadRequestResponseModel(CONFIRMED_TODO_MESSAGE);
+      }
+
+      // Contadores y actividad de la meta son efectos secundarios: si fallan no deben saltear métricas ni eventos del reclamo
+      try {
+        await this._updateGoalTaskCounters(claimedTodo.GoalId, userId, 'Goal');
+        await touchLastChildActivity(claimedTodo.GoalId, userId);
+      } catch (sideEffectError) {
+        console.error(
+          chalk.yellow('[side-effect] Error al actualizar la meta de la tarea completada:'),
+          sideEffectError
+        );
+      }
+
+      // La escritura atómica de métricas es lo único que se reintenta; sus efectos posteriores no (ver MetricsService)
+      const metricsResult = await MetricsService.writeTaskMetrics(userId, { occurredAt: claimedTodo.completedAt });
+      if (!metricsResult.success) {
+        return metricsResult;
+      }
+      const streakResult = await MetricsService.afterActivityMetrics(userId, metricsResult.data);
+
+      // occurredAt es el reloj del servidor del reclamo; los logros con condiciones lo consumen (S5)
+      const taskEvent = await UserAchievementService.processEvent('task:completed', userId, null, {
+        occurredAt: claimedTodo.completedAt,
+      });
+
+      let events = emptyCompletionEvents();
+      try {
+        const { streakIncreased, currentStreak } = metricsResult.data;
+        events = buildCompletionEvents({
+          taskCompleted: { id: claimedTodo._id.toString(), title: claimedTodo.title },
+          streak: { increased: streakIncreased, current: currentStreak },
+          achievementsUnlocked: [...streakResult.achievementsUnlocked, ...(taskEvent?.achievementsUnlocked ?? [])],
+        });
+      } catch (eventError) {
+        console.error(chalk.yellow('[side-effect] Error al armar eventos de tarea completada:'), eventError);
+      }
+
+      return this._buildCompletedTodoResponse(claimedTodo, events);
     } catch (error) {
       return ErrorHandler.handleDatabaseError(error, 'actualizar estado de la tarea');
     }

@@ -16,6 +16,9 @@
     "targetCount": 1,
     "type": "goal",
     "triggerEvent": "goal:completed",
+    "conditions": {
+      "maxDurationHours": 24
+    },
     "tier": "basic",
     "reward": "Chispa del Rayo",
     "isActive": true,
@@ -26,7 +29,7 @@
     "description": "Cambiaste la meta de una tarea",
     "targetCount": 1,
     "type": "task",
-    "triggerEvent": "task:completed",
+    "triggerEvent": "task:goal-changed",
     "tier": "basic",
     "reward": "Piedra del Cauce",
     "isActive": true,
@@ -34,10 +37,16 @@
   },
   {
     "title": "Canto de Gallo",
-    "description": "Completaste una meta antes de las 8am",
+    "description": "Completaste una tarea antes de las 8am",
     "targetCount": 1,
-    "type": "goal",
-    "triggerEvent": "goal:completed",
+    "type": "task",
+    "triggerEvent": "task:completed",
+    "conditions": {
+      "timeWindow": {
+        "start": "05:00",
+        "end": "08:00"
+      }
+    },
     "tier": "basic",
     "reward": "Rocío del Alba",
     "isActive": true,
@@ -49,6 +58,13 @@
     "targetCount": 2,
     "type": "task",
     "triggerEvent": "task:completed",
+    "conditions": {
+      "timeWindow": {
+        "start": "22:00",
+        "end": "04:00"
+      },
+      "sameWindow": true
+    },
     "tier": "basic",
     "reward": "Colmillo Nocturno",
     "isActive": true,

@@ -4,14 +4,44 @@ import Goal from '../models/goalsModel.js';
 import Achievement from '../models/achievementModel.js';
 import UserAchievement from '../models/userAchievementModel.js';
 import { UserAchievementService } from './userAchievementService.js';
-import { NotFoundResponseModel, ErrorResponseModel } from '../models/responseModel.js';
+import { NotFoundResponseModel } from '../models/responseModel.js';
 import { SuccessResponseModel } from '../models/responseModel.js';
 import { MetricsDashboardDto, CreateMetricDto } from '../models/dtos/metrics/index.js';
 import { persistAndNotify } from './helpers/persistAndNotify.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
+import { getLocalDayRange, resolveTimeZone, toLocalYmd } from './helpers/dateTime.js';
+import { buildActivityDayPipeline } from './helpers/metricsActivityPipeline.js';
+import { describeStreakTransition } from './helpers/streakDays.js';
+import { PREMIUM_ACCESS_USER_SELECT, hasPremiumAccess, partitionByPremiumVisibility } from './helpers/premiumAccess.js';
 import chalk from 'chalk';
 
-const POPULATE_USER_FIELDS = 'name email avatar';
+const POPULATE_USER_FIELDS = 'name email avatar timezone';
+const DUPLICATE_KEY_ERROR_CODE = 11000;
+// Errores del driver que garantizan que la escritura nunca llegó al servidor: son los únicos que se reintentan
+const UNSENT_WRITE_ERROR_NAMES = new Set([
+  'MongoServerSelectionError',
+  'MongoPoolClearedError',
+  'MongoNotConnectedError',
+]);
+
+/**
+ * Corre una escritura; solo la repite una vez si el driver garantiza que no llegó al servidor.
+ * Un error de resultado desconocido (p. ej. corte de red tras enviarla) no se reintenta:
+ * se prefiere perder un incremento antes que contarlo dos veces.
+ * @param {() => Promise<*>} write
+ * @returns {Promise<*>}
+ */
+async function runWriteRetryingOnlyIfUnsent(write) {
+  try {
+    return await write();
+  } catch (error) {
+    if (!UNSENT_WRITE_ERROR_NAMES.has(error?.name)) {
+      throw error;
+    }
+    console.error(chalk.yellow('Escritura de métricas no enviada: reintento'), error);
+    return write();
+  }
+}
 
 /**
  * Servicio para manejar la lógica de negocio de métricas generales del usuario
@@ -26,10 +56,13 @@ export class MetricsService {
       const metrics = await this._findOrCreateMetrics(userId);
       const populatedMetrics = await Metrics.findById(metrics._id).populate('userId', POPULATE_USER_FIELDS);
 
-      const achievementsProgress = await this._calculateAchievementsProgress(userId);
+      const owner = await User.findById(userId).select(PREMIUM_ACCESS_USER_SELECT).lean();
+      const achievementsProgress = await this._calculateAchievementsProgress(userId, hasPremiumAccess(owner));
 
+      const timeZone = resolveTimeZone(populatedMetrics.userId?.timezone);
       const response = {
         ...populatedMetrics.toObject(),
+        currentStreak: populatedMetrics.getEffectiveStreak(timeZone),
         achievementsProgress,
       };
 
@@ -61,76 +94,68 @@ export class MetricsService {
   }
 
   /**
-   * Registra una tarea completada y actualiza rachas
+   * Registra una tarea completada en las métricas con UNA escritura atómica (día activo, racha, contadores).
+   * Es lo único que se puede reintentar de una completada; los efectos posteriores van en `afterActivityMetrics`.
+   * @param {string} userId
+   * @param {Object} [context]
+   * @param {Date} [context.occurredAt] - Instante de la completada (el `completedAt` del reclamo)
+   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} data: resultado de `_writeActivityMetrics`
    */
-  static async recordTaskCompleted(userId) {
-    try {
-      const metrics = await this._findOrCreateMetrics(userId);
+  static async writeTaskMetrics(userId, { occurredAt = new Date() } = {}) {
+    return this._writeActivityMetrics(userId, 'task', occurredAt);
+  }
 
-      const prevStreak = metrics.currentStreak;
-      metrics.onTaskCompleted();
-      await metrics.save();
+  /**
+   * Registra una meta completada: comparte con las tareas el mismo día activo, racha y escritura atómica.
+   * @param {string} userId
+   * @param {Object} [context]
+   * @param {Date} [context.occurredAt] - Instante de la completada (el `firstCompletedAt` del reclamo)
+   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} data: resultado de `_writeActivityMetrics`
+   */
+  static async writeGoalMetrics(userId, { occurredAt = new Date() } = {}) {
+    return this._writeActivityMetrics(userId, 'goal', occurredAt);
+  }
 
-      console.log(
-        chalk.green(
-          `Métricas actualizadas: ${metrics.totalTasksCompleted} tareas | Racha: ${metrics.currentStreak} días`
-        )
-      );
-
-      const streakIncreased = metrics.currentStreak > prevStreak;
-
-      if (streakIncreased) {
-        const payload = {
-          title: `¡Día ${metrics.currentStreak} de racha!`,
-          body: '¡Seguiste sumando días, cada tarea cuenta. Seguí así!',
-          url: '/metrics',
-          icon: '/notifications/nuri-fire.svg',
-        };
-
+  /**
+   * Efectos posteriores a una escritura de métricas ya confirmada: notificación "Día N de racha" y evento
+   * `streak:updated`. Cada paso va en su propio try/catch y NUNCA se reintenta, así un fallo de notificación
+   * no puede volver a correr un incremento que ya se contó.
+   * @param {string} userId
+   * @param {{streakIncreased: boolean, currentStreak: number}} written - `data` de `writeTaskMetrics`/`writeGoalMetrics`
+   * @returns {Promise<{achievementsUnlocked: Array}>}
+   */
+  static async afterActivityMetrics(userId, { streakIncreased, currentStreak }) {
+    if (streakIncreased) {
+      try {
         await persistAndNotify({
           userId,
-          title: payload.title,
-          body: payload.body,
-          url: payload.url,
+          title: `¡Día ${currentStreak} de racha!`,
+          body: '¡Seguiste sumando días, cada tarea cuenta. Seguí así!',
+          url: '/metrics',
           type: 'streak_increase',
-          icon: payload.icon,
+          icon: '/notifications/nuri-fire.svg',
         });
+      } catch (error) {
+        console.error(chalk.yellow('[side-effect] Error al notificar la racha:'), error);
       }
-
-      const streakEvent = await UserAchievementService.processEvent('streak:updated', userId, metrics.currentStreak);
-
-      return new SuccessResponseModel(metrics, 'Tarea registrada en métricas correctamente', 200, {
-        streakIncreased,
-        currentStreak: metrics.currentStreak,
-        achievementsUnlocked: streakEvent?.achievementsUnlocked ?? [],
-      });
-    } catch (error) {
-      return ErrorHandler.handleDatabaseError(error, 'registrar tarea completada');
     }
-  }
 
-  /**
-   * Registra una meta completada
-   */
-  static async recordGoalCompleted(userId) {
     try {
-      const metrics = await this._findOrCreateMetrics(userId);
-
-      metrics.onGoalCompleted();
-      await metrics.save();
-
-      console.log(chalk.green(`Meta completada Total: ${metrics.totalGoalsCompleted} metas`));
-
-      return new SuccessResponseModel(metrics, 'Meta registrada en métricas correctamente');
+      const streakEvent = await UserAchievementService.processEvent('streak:updated', userId, currentStreak);
+      return { achievementsUnlocked: streakEvent?.achievementsUnlocked ?? [] };
     } catch (error) {
-      return ErrorHandler.handleDatabaseError(error, 'registrar meta completada');
+      console.error(chalk.yellow('[side-effect] Error al procesar logros de racha:'), error);
+      return { achievementsUnlocked: [] };
     }
   }
 
   /**
-   * Verifica y actualiza el estado de las rachas
+   * Verifica el estado de las rachas. No escribe: la racha rota se resuelve al leer (racha efectiva).
+   * @param {string} userId
+   * @param {Object} [context]
+   * @param {string|null} [context.timezone] - Zona del usuario (`req.userDoc.timezone`)
    */
-  static async checkAndUpdateStreaks(userId) {
+  static async checkAndUpdateStreaks(userId, { timezone } = {}) {
     try {
       const metrics = await Metrics.findOne({ userId });
 
@@ -138,16 +163,12 @@ export class MetricsService {
         return new NotFoundResponseModel('Métricas del usuario no encontradas');
       }
 
-      const expired = metrics.checkStreakExpiration();
-
-      if (expired) {
-        await metrics.save();
-        console.log(chalk.yellow('Racha expirada y reseteada'));
-      }
+      const effectiveStreak = metrics.getEffectiveStreak(resolveTimeZone(timezone));
+      const expired = metrics.currentStreak > 0 && effectiveStreak === 0;
 
       return new SuccessResponseModel(
         {
-          currentStreak: metrics.currentStreak,
+          currentStreak: effectiveStreak,
           bestStreak: metrics.bestStreak,
           expired,
         },
@@ -169,7 +190,7 @@ export class MetricsService {
         return new NotFoundResponseModel('Métricas del usuario no encontradas');
       }
 
-      const dashboard = MetricsDashboardDto.fromMetrics(metrics);
+      const dashboard = MetricsDashboardDto.fromMetrics(metrics, resolveTimeZone(metrics.userId?.timezone));
 
       return new SuccessResponseModel(dashboard, 'Dashboard obtenido correctamente');
     } catch (error) {
@@ -180,18 +201,20 @@ export class MetricsService {
   /**
    * Obtiene solo la racha actual del usuario
    * @param {string} userId - ID del usuario
+   * @param {Object} [context]
+   * @param {string|null} [context.timezone] - Zona del usuario (`req.userDoc.timezone`)
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>}
    */
-  static async getCurrentStreak(userId) {
+  static async getCurrentStreak(userId, { timezone } = {}) {
     try {
-      const metrics = await Metrics.findOne({ userId }).select('currentStreak');
+      const metrics = await Metrics.findOne({ userId }).select('currentStreak lastActivityDay');
 
       if (!metrics) {
         return new NotFoundResponseModel('Métricas del usuario no encontradas');
       }
 
       return new SuccessResponseModel(
-        { currentStreak: metrics.currentStreak },
+        { currentStreak: metrics.getEffectiveStreak(resolveTimeZone(timezone)) },
         'Racha actual obtenida correctamente'
       );
     } catch (error) {
@@ -266,13 +289,90 @@ export class MetricsService {
   }
 
   /**
-   * Calcula el porcentaje de logros completados por el usuario
-   * @param {string} userId - ID del usuario
-   * @returns {Promise<Object>} { completed, total, percentage }
+   * Zona horaria del usuario (ART si todavía no tiene una).
+   * @private
+   * @param {string} userId
+   * @returns {Promise<string>}
    */
-  static async _calculateAchievementsProgress(userId) {
-    const activeAchievements = await Achievement.find({ isActive: true }).select('_id').lean();
-    const activeIds = activeAchievements.map(achievement => achievement._id);
+  static async _findUserTimeZone(userId) {
+    const user = await User.findById(userId).select('timezone').lean();
+    return resolveTimeZone(user?.timezone);
+  }
+
+  /**
+   * Escritura atómica de una actividad: día local en la zona del usuario, pipeline sobre el documento y,
+   * a partir del documento previo que devuelve la MISMA operación, racha previa efectiva y si la racha subió.
+   * @private
+   * @param {string} userId
+   * @param {'task'|'goal'} kind
+   * @param {Date} occurredAt
+   * @returns {Promise<SuccessResponseModel|ErrorResponseModel>}
+   *   data: { day, currentStreak, bestStreak, lastActivityDay, prevEffectiveStreak, streakIncreased }
+   */
+  static async _writeActivityMetrics(userId, kind, occurredAt) {
+    const action = kind === 'task' ? 'registrar tarea completada' : 'registrar meta completada';
+
+    try {
+      const timeZone = await this._findUserTimeZone(userId);
+      const day = toLocalYmd(occurredAt, timeZone);
+      const dayStart = getLocalDayRange(day, timeZone).start;
+
+      const writeActivity = () =>
+        Metrics.findOneAndUpdate({ userId }, buildActivityDayPipeline({ kind, day, dayStart, occurredAt }), {
+          new: false,
+        }).lean();
+
+      let previous = await runWriteRetryingOnlyIfUnsent(writeActivity);
+      if (!previous) {
+        await this._createMetricsIfMissing(userId);
+        previous = await runWriteRetryingOnlyIfUnsent(writeActivity);
+      }
+      if (!previous) {
+        throw new Error('No se pudieron crear las métricas del usuario');
+      }
+
+      const transition = describeStreakTransition(previous, day);
+      console.log(
+        chalk.green(`Métricas actualizadas (${kind}) | Día: ${day} | Racha: ${transition.currentStreak} días`)
+      );
+
+      return new SuccessResponseModel(
+        { day, ...transition },
+        kind === 'task' ? 'Tarea registrada en métricas correctamente' : 'Meta registrada en métricas correctamente'
+      );
+    } catch (error) {
+      return ErrorHandler.handleDatabaseError(error, action);
+    }
+  }
+
+  /**
+   * Crea el documento de métricas si no existe. Dos completadas simultáneas de un usuario nuevo pueden
+   * competir por crearlo: el que pierde (clave duplicada) simplemente sigue con el documento del ganador.
+   * @private
+   * @param {string} userId
+   */
+  static async _createMetricsIfMissing(userId) {
+    try {
+      await this._findOrCreateMetrics(userId);
+    } catch (error) {
+      if (error?.code !== DUPLICATE_KEY_ERROR_CODE) {
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Calcula el porcentaje de logros completados por el usuario.
+   * Un usuario sin acceso Premium cuenta solo los logros básicos (total, completados y porcentaje); `premiumLocked` es
+   * cuántos logros premium activos hay (0 para un usuario Premium, que los tiene todos en `total`).
+   * @param {string} userId - ID del usuario
+   * @param {boolean} isPremium - Si el usuario tiene acceso Premium (admin o suscripción activa)
+   * @returns {Promise<Object>} { completed, total, percentage, premiumLocked }
+   */
+  static async _calculateAchievementsProgress(userId, isPremium) {
+    const activeAchievements = await Achievement.find({ isActive: true }).select('_id tier').lean();
+    const { visibleAchievements, premiumLocked } = partitionByPremiumVisibility(activeAchievements, isPremium);
+    const activeIds = visibleAchievements.map(achievement => achievement._id);
     const totalCount = activeIds.length;
 
     const completedCount =
@@ -290,6 +390,7 @@ export class MetricsService {
       completed: completedCount,
       total: totalCount,
       percentage,
+      premiumLocked,
     };
   }
 }

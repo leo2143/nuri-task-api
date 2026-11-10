@@ -9,6 +9,7 @@ import { UserServiceHelpers } from './helpers/userServiceHelpers.js';
 import { ErrorHandler } from './helpers/errorHandler.js';
 import { MoodboardService } from './moodboardService.js';
 import { GoogleLoginDto } from '../models/dtos/auth/index.js';
+import { syncUserTimezoneBestEffort } from './helpers/userTimezoneSync.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -59,7 +60,7 @@ export class GoogleAuthService {
         return new BadRequestResponseModel(validation.errors.join(', '));
       }
 
-      const { code } = loginDto.toPlainObject();
+      const { code, timezone } = loginDto.toPlainObject();
       const googleUser = await this.exchangeCodeForUserInfo(code);
 
       if (!googleUser.emailVerified) {
@@ -81,6 +82,7 @@ export class GoogleAuthService {
           googleId: googleUser.googleId,
           profileImageUrl: googleUser.picture,
           emailVerified: true,
+          timezone,
         });
         await user.save();
         const moodboardResult = await MoodboardService.createMoodboardForUser(user._id);
@@ -105,6 +107,8 @@ export class GoogleAuthService {
         user.emailVerified = true;
         await user.save();
       }
+
+      await syncUserTimezoneBestEffort(user, timezone);
 
       const payload = UserServiceHelpers.createJWTPayload(user);
       const token = UserServiceHelpers.generateJWT(payload);

@@ -9,3 +9,4 @@ export { UpdateGoalStatusDto } from './UpdateGoalStatusDto.js';
 export { AddSubgoalDto } from './AddSubgoalDto.js';
 export { GoalFilterDto } from './GoalFilterDto.js';
 export { CatalogGoalDto } from './CatalogGoalDto.js';
+export { CatalogGoalsQueryDto } from './CatalogGoalsQueryDto.js';

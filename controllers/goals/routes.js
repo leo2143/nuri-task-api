@@ -20,8 +20,20 @@ export const setupGoalRoutes = app => {
 
   app.get('/api/goals/catalogs', validateToken, (req, res) => {
     // #swagger.tags = ['Goals']
-    // #swagger.summary = 'Obtiene lista catalog de metas (solo id y título)'
-    // #swagger.description = 'Retorna solo id y título de las metas, ideal para dropdowns y selects'
+    // #swagger.summary = 'Obtiene lista catalog de metas (id, título y estado)'
+    // #swagger.description = 'Retorna id, título y estado de las metas, ideal para dropdowns y selects. excludeCompleted=true omite las completadas; excludeRelatedTo=<goalId> omite esa meta, sus ancestros y sus descendientes (400 si el id es inválido). Sin resultados responde 200 con lista vacía.'
+    /* #swagger.parameters['excludeCompleted'] = {
+         in: 'query',
+         description: 'Si es true, omite las metas completadas',
+         required: false,
+         type: 'string'
+    } */
+    /* #swagger.parameters['excludeRelatedTo'] = {
+         in: 'query',
+         description: 'ID de una meta: se omiten ella, sus ancestros y sus descendientes',
+         required: false,
+         type: 'string'
+    } */
     /* #swagger.security = [{
          "bearerAuth": []
     }] */
@@ -33,9 +45,9 @@ export const setupGoalRoutes = app => {
            message: 'Lista simple de metas obtenida correctamente',
            count: 3,
            data: [
-             { id: '507f1f77bcf86cd799439011', title: 'Aprender Node.js' },
-             { id: '507f1f77bcf86cd799439012', title: 'Dominar React' },
-             { id: '507f1f77bcf86cd799439013', title: 'Crear portafolio' }
+             { id: '507f1f77bcf86cd799439011', title: 'Aprender Node.js', status: 'active' },
+             { id: '507f1f77bcf86cd799439012', title: 'Dominar React', status: 'completed' },
+             { id: '507f1f77bcf86cd799439013', title: 'Crear portafolio', status: 'paused' }
            ]
          }
     } */
@@ -110,7 +122,7 @@ export const setupGoalRoutes = app => {
   app.put('/api/goals/:id', validateToken, (req, res) => {
     // #swagger.tags = ['Goals']
     // #swagger.summary = 'Actualiza completamente una meta'
-    // #swagger.description = 'Actualiza una meta completa. DEBES enviar title (requerido), los demás campos son opcionales. Si cambia el status, actualiza automáticamente el progreso de metas padre.'
+    // #swagger.description = 'Actualiza una meta completa. DEBES enviar title (requerido), los demás campos son opcionales. Si cambia el status, actualiza automáticamente el progreso de metas padre. Si la meta pasa a completed, la respuesta incluye meta.events (toast de logros). Cambiar status de completed a active reabre la meta con la misma lógica que POST /api/goals/:id/reopen. 409 si el nuevo padre está completado o si el vínculo formaría un ciclo.'
     /* #swagger.parameters['id'] = {
          in: 'path',
          description: 'ID de la meta',
@@ -203,7 +215,7 @@ export const setupGoalRoutes = app => {
   app.patch('/api/goals/:id/status', validateToken, (req, res) => {
     // #swagger.tags = ['Goals']
     // #swagger.summary = 'Actualiza solo el estado de una meta'
-    // #swagger.description = 'active ↔ paused libre. completed solo si hay al menos un hijo (tarea o submeta), todas las tareas están hechas y todas las submetas completed. Una meta vacía no se cierra. paused no puede pasar a completed. Un completed no se reabre por este endpoint (sí al agregar un hijo).'
+    // #swagger.description = 'active ↔ paused libre. completed solo si hay al menos un hijo (tarea o submeta), todas las tareas están hechas y todas las submetas completed. Una meta vacía no se cierra. paused no puede pasar a completed. completed solo puede volver a active (se resuelve con la misma lógica que POST /api/goals/:id/reopen); cualquier otra transición desde completed responde 400.'
     /* #swagger.parameters['id'] = {
          in: 'path',
          description: 'ID de la meta',
@@ -234,5 +246,36 @@ export const setupGoalRoutes = app => {
          "bearerAuth": []
     }] */
     return GoalController.updateGoalStatus(req, res);
+  });
+
+  app.post('/api/goals/:id/reopen', validateToken, (req, res) => {
+    // #swagger.tags = ['Goals']
+    // #swagger.summary = 'Reabre una meta completada'
+    // #swagger.description = 'Pasa una meta completed a active sin tocar métricas, racha ni logros. Si la meta es parte de un padre también completed, ese padre (y los ancestros completed contiguos) se reabren primero. Conserva firstCompletedAt (lo sella si era null). 409 si la meta no está completada.'
+    /* #swagger.parameters['id'] = {
+         in: 'path',
+         description: 'ID de la meta a reabrir',
+         required: true,
+         type: 'string'
+    } */
+    /* #swagger.responses[200] = {
+         description: 'Meta reabierta correctamente',
+         schema: {
+           success: true,
+           status: 200,
+           message: 'Meta reabierta correctamente',
+           data: { goal: { $ref: '#/definitions/Goal' }, cascaded: ['507f1f77bcf86cd799439011'] }
+         }
+    } */
+    /* #swagger.responses[404] = {
+         description: 'Meta no encontrada'
+    } */
+    /* #swagger.responses[409] = {
+         description: 'La meta no está completada'
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return GoalController.reopenGoal(req, res);
   });
 };

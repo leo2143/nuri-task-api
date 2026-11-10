@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { EmailDto } from './EmailDto.js';
-import { passwordField, validateZod } from '../zodHelpers.js';
+import { passwordField, timezoneField, validateZod } from '../zodHelpers.js';
 
 /**
  * DTO para crear un nuevo usuario
@@ -18,6 +18,8 @@ export class CreateUserDto extends EmailDto {
     super(data);
     this.name = data.name;
     this.password = data.password;
+    // Zona del dispositivo: opcional y leniente (inválida => se descarta, el registro sigue)
+    this.timezone = timezoneField.parse(data.timezone);
   }
 
   static validatePasswordValue(password) {
@@ -38,6 +40,7 @@ export class CreateUserDto extends EmailDto {
       name: this.name.trim(),
       ...super.toPlainObject(),
       password: this.password,
+      ...(this.timezone ? { timezone: this.timezone } : {}),
     };
   }
 }

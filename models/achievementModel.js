@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { ACHIEVEMENT_TRIGGER_EVENTS, ACHIEVEMENT_TYPES } from './achievementCatalog.js';
 
 /**
  * Esquema de Mongoose para el modelo de Achievement (Plantilla Global)
@@ -7,7 +8,11 @@ import mongoose from 'mongoose';
  * @property {string} description - Descripción del logro (requerido)
  * @property {number} targetCount - Conteo objetivo para desbloquear/completar el logro (requerido)
  * @property {string} type - Tipo de logro (requerido) - Valores: 'task', 'goal', 'metric', 'streak'
- * @property {string} triggerEvent - Evento que dispara el progreso del logro (requerido)
+ * @property {string} triggerEvent - Evento que dispara el progreso del logro (requerido, ver achievementCatalog.js)
+ * @property {Object} conditions - Condiciones que el evento debe cumplir para sumar progreso (editables por el admin)
+ * @property {Object} [conditions.timeWindow] - Franja horaria local `{start, end}` en `HH:mm`; el fin no se incluye y start > end cruza la medianoche
+ * @property {boolean} [conditions.sameWindow] - El progreso cuenta solo eventos de la misma franja (o del mismo día local sin franja)
+ * @property {number} [conditions.maxDurationHours] - Horas máximas entre la creación de la meta y su primer cierre
  * @property {string} tier - Nivel de acceso del logro: 'basic' (todos) o 'premium' (solo suscriptores)
  * @property {boolean} isActive - Si el logro está activo (default: true)
  * @property {Date} createdAt - Fecha de creación (automático)
@@ -20,6 +25,23 @@ import mongoose from 'mongoose';
  * Solo los administradores pueden crear, actualizar o eliminar logros
  * @constant {mongoose.Schema} achievementSchema
  */
+const timeWindowSchema = new mongoose.Schema(
+  {
+    start: { type: String, required: true },
+    end: { type: String, required: true },
+  },
+  { _id: false }
+);
+
+const conditionsSchema = new mongoose.Schema(
+  {
+    timeWindow: { type: timeWindowSchema, default: undefined },
+    sameWindow: { type: Boolean, default: undefined },
+    maxDurationHours: { type: Number, min: 0, default: undefined },
+  },
+  { _id: false }
+);
+
 const achievementSchema = new mongoose.Schema(
   {
     title: {
@@ -42,12 +64,16 @@ const achievementSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ['task', 'goal', 'metric', 'streak'],
+      enum: ACHIEVEMENT_TYPES,
     },
     triggerEvent: {
       type: String,
       required: true,
-      enum: ['task:completed', 'goal:completed', 'streak:updated'],
+      enum: ACHIEVEMENT_TRIGGER_EVENTS,
+    },
+    conditions: {
+      type: conditionsSchema,
+      default: () => ({}),
     },
     tier: {
       type: String,

@@ -1,4 +1,5 @@
 import { MetricsService } from '../../services/metricsService.js';
+import { getRequestUser } from '../../middlewares/requestUser.js';
 
 /**
  * Controlador para manejar las peticiones HTTP relacionadas con Metrics
@@ -50,7 +51,8 @@ export class MetricsController {
   static async checkAndUpdateStreaks(req, res) {
     try {
       const userId = req.userId;
-      const result = await MetricsService.checkAndUpdateStreaks(userId);
+      const user = await getRequestUser(req);
+      const result = await MetricsService.checkAndUpdateStreaks(userId, { timezone: user?.timezone });
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error al verificar rachas:', error);
@@ -67,7 +69,8 @@ export class MetricsController {
   static async getCurrentStreak(req, res) {
     try {
       const userId = req.userId;
-      const result = await MetricsService.getCurrentStreak(userId);
+      const user = await getRequestUser(req);
+      const result = await MetricsService.getCurrentStreak(userId, { timezone: user?.timezone });
       res.status(result.status).json(result);
     } catch (error) {
       console.error('Error al obtener racha actual:', error);

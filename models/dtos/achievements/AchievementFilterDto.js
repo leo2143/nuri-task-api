@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PaginationDto } from '../paginationDto.js';
+import { ACHIEVEMENT_TYPES } from '../../achievementCatalog.js';
 import { ValidationHelpers } from '../../../services/helpers/validationHelpers.js';
 import { mergeValidations, queryBooleanField, sortOrderField, validateZod } from '../zodHelpers.js';
 
@@ -32,7 +33,11 @@ export class AchievementFilterDto extends PaginationDto {
    * @returns {Object} Objeto con isValid y errores
    */
   static schema = z.object({
-    type: z.enum(['task', 'goal', 'metric', 'streak'], { errorMap: () => ({ message: 'El tipo debe ser uno de: task, goal, metric, streak' }) }).optional(),
+    type: z
+      .enum(ACHIEVEMENT_TYPES, {
+        errorMap: () => ({ message: `El tipo debe ser uno de: ${ACHIEVEMENT_TYPES.join(', ')}` }),
+      })
+      .optional(),
     isActive: queryBooleanField.optional(),
     search: z.string().optional(),
     sortOrder: sortOrderField.optional(),

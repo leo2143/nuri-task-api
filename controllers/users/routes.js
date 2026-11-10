@@ -131,11 +131,29 @@ export const setupUserRoutes = app => {
   app.get('/api/user/profile', validateToken, (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Obtiene el perfil del usuario autenticado'
-    // #swagger.description = 'Retorna: name, email, subscription (isActive, startDate, endDate), profileImageUrl'
+    // #swagger.description = 'Retorna: name, email, subscription (isActive, startDate, endDate), profileImageUrl, timezone'
     /* #swagger.security = [{
          "bearerAuth": []
     }] */
     return UsersController.getProfile(req, res);
+  });
+
+  app.put('/api/user/timezone', validateToken, (req, res) => {
+    // #swagger.tags = ['Users']
+    // #swagger.summary = 'Sincroniza la zona horaria del usuario con la del dispositivo'
+    // #swagger.description = 'Una zona inválida se descarta y responde 200 sin cambios. Si la clave canónica es igual a la guardada no escribe nada. Responde { timezone, updated }.'
+    /* #swagger.parameters['body'] = {
+         in: 'body',
+         description: 'Zona horaria IANA del dispositivo',
+         required: true,
+         schema: {
+           timezone: 'America/Bogota'
+         }
+    } */
+    /* #swagger.security = [{
+         "bearerAuth": []
+    }] */
+    return UsersController.updateTimezone(req, res);
   });
 
   app.put('/api/user/profile-image', validateToken, (req, res) => {
@@ -176,6 +194,7 @@ export const setupUserRoutes = app => {
   app.get('/api/users/verify-email/:token', (req, res) => {
     // #swagger.tags = ['Users']
     // #swagger.summary = 'Verifica el email del usuario mediante token'
+    // #swagger.description = 'Acepta ?timezone= (zona IANA del dispositivo, opcional; una inválida se descarta).'
     return UsersController.verifyEmail(req, res);
   });
 

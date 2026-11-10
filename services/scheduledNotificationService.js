@@ -8,9 +8,12 @@ import Moodboard from '../models/moodboardModel.js';
 import { PushNotificationService } from './pushNotificationService.js';
 import { NotificationService } from './notificationService.js';
 import {
-  formatDateYmdInTimeZone,
-  getDayRangeInTimeZone,
-  getStartOfDayInTimeZone,
+  DEFAULT_TIMEZONE,
+  addDaysToYmd,
+  getFloatingDayRange,
+  getLocalDayRange,
+  resolveTimeZone,
+  toLocalYmd,
 } from './helpers/dateTime.js';
 import chalk from 'chalk';
 
@@ -34,6 +37,7 @@ const PUSH_ICONS = {
   overdue_backlog: '/notifications/nuri-happy.svg',
   moodboard_nudge: '/notifications/nuri-happy.svg',
   premium_nag: '/notifications/nuri-happy.svg',
+  achievements_premium_summary: '/notifications/crown.svg',
 };
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
@@ -47,26 +51,42 @@ const MOODBOARD_STALE_DAYS = 21;
 const PREMIUM_NAG_COOLDOWN_DAYS = 14;
 const OVERDUE_BACKLOG_DAYS = 7;
 const OVERDUE_BACKLOG_COOLDOWN_DAYS = 7;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const FREE_GOALS_LIMIT = 2;
+// Usuarios por consulta de suscripciones push: acota cada `$in` dentro de los 60 s de la función
+const PUSH_SUBSCRIPTION_BATCH_SIZE = 500;
+// Push enviados en paralelo: acota el tiempo de un lote sin abrir cientos de conexiones a la vez
+const PUSH_SEND_CONCURRENCY = 20;
+// Ventana de recuperación de push pendientes: pasada esta edad el contenido ("vence hoy") ya quedó viejo y no se empuja
+const PENDING_PUSH_RECOVERY_HOURS = 48;
 
 /**
- * Servicio de notificaciones programadas. Cada método es un cron diario propio.
+ * Servicio de notificaciones programadas. Cada método es un job diario propio.
+ *
+ * Los jobs por zona horaria reciben un contexto `{ userIds, timezone, localDate, now }`:
+ * - `userIds`: lote de usuarios a evaluar (null = todos);
+ * - `timezone`: zona IANA del grupo; todo "día" se evalúa en esa zona;
+ * - `localDate`: `YYYY-MM-DD` local del momento del disparo;
+ * - `now`: instante del disparo.
+ * Sin contexto, un job corre para todos los usuarios en la zona de producto (ART).
  */
 export class ScheduledNotificationService {
   /**
-   * Persiste notificaciones in-app para todos los usuarios y envía push
-   * solo a aquellos con suscripción activa.
+   * Persiste las notificaciones in-app (con el push marcado como pendiente) y empuja las pendientes
+   * de esos usuarios. Si la función muere a mitad del envío, lo que quedó pendiente se empuja en la
+   * próxima corrida del mismo tipo (`pushPendingNotifications`), mientras la notificación siga vigente.
    * @param {Array<{userId: string, payload: Object}>} entries
    * @param {string} label - Etiqueta para el log
    * @param {string} type - Tipo de notificación
-   * @returns {Promise<{notified: number, persisted: number}>}
+   * @param {number} [cooldownDays] - Días de calendario sin repetir el tipo
+   * @param {Object} [context] - Contexto del job (ver la doc de la clase)
+   * @returns {Promise<{notified: number, persisted: number, truncated: boolean}>} `truncated`: el deadline cortó el
+   *   envío y quedaron push pendientes (el runner no debe dar el lote por terminado)
    */
-  static async _sendToSubscribedUsers(entries, label, type, cooldownDays = 0) {
-    const pendingEntries = await this._excludeNotifiedSince(entries, type, cooldownDays);
+  static async _sendToSubscribedUsers(entries, label, type, cooldownDays = 0, context) {
+    const pendingEntries = await this._excludeNotifiedSince(entries, type, cooldownDays, context);
     if (pendingEntries.length === 0) {
       console.log(chalk.blue(`[Cron] ${label}: ya notificados`));
-      return { notified: 0, persisted: 0 };
+      return { notified: 0, persisted: 0, truncated: false };
     }
 
     await NotificationService.createMany(
@@ -76,33 +96,177 @@ export class ScheduledNotificationService {
         body: payload.body,
         url: payload.url,
         type,
+        // null explícito = push pendiente (ver pushPendingNotifications)
+        pushSentAt: null,
       }))
     );
 
-    let notified = 0;
+    const { now, deadline } = this.resolveContext(context);
+    const { sent, truncated } = await this.pushPendingNotifications({
+      type,
+      userIds: pendingEntries.map(entry => entry.userId),
+      now,
+      deadline,
+    });
 
-    for (const { userId, payload } of pendingEntries) {
-      const hasSub = await PushSubscription.exists({ userId });
-      if (!hasSub) continue;
-
-      await PushNotificationService.sendNotification(userId, {
-        ...payload,
-        icon: payload.icon || PUSH_ICONS[type],
-      });
-      notified++;
-    }
-
-    console.log(chalk.green(`[Cron] ${label}: ${pendingEntries.length} persistidas, ${notified} push enviados`));
-    return { notified, persisted: pendingEntries.length };
+    console.log(chalk.green(`[Cron] ${label}: ${pendingEntries.length} persistidas, ${sent} push enviados`));
+    return { notified: sent, persisted: pendingEntries.length, truncated };
   }
 
   /**
-   * Omite usuarios notificados del mismo tipo desde el inicio de hace `days` días ART.
+   * Empuja las notificaciones de un tipo cuyo push quedó pendiente (`pushSentAt: null`), siguen sin leer y fueron
+   * creadas en las últimas PENDING_PUSH_RECOVERY_HOURS horas; las más nuevas van primero. Como los jobs corren una
+   * vez por día local, un push que falló o quedó sin enviar se recupera en el siguiente disparo del mismo tipo
+   * para ese usuario, pero no días después: el contenido ya estaría vencido.
+   * Se rearma el payload desde el documento guardado (el ícono sale de PUSH_ICONS, el modelo no lo guarda).
+   *
+   * Un documento se marca como enviado (`pushSentAt` = ahora) si se entregó a alguna suscripción, si el usuario
+   * no tiene suscripciones o si todos los fallos fueron permanentes. Si hubo fallos transitorios (o VAPID sin
+   * configurar) queda pendiente para la próxima corrida. Es at-least-once: si la función muere entre el envío y
+   * la marca, el próximo intento puede duplicar ese push.
+   * @param {Object} params
+   * @param {string} params.type - Tipo de notificación
+   * @param {Array|null} [params.userIds] - Lote de usuarios (null = todos)
+   * @param {Date} [params.now] - Instante de referencia de la ventana de recuperación
+   * @param {number} [params.deadline] - Timestamp (ms) límite: no se empieza un grupo de envíos nuevo pasado ese
+   *   instante y lo que falta queda pendiente para el próximo disparo
+   * @returns {Promise<{pending: number, sent: number, truncated: boolean}>} `truncated`: el deadline cortó el envío con
+   *   notificaciones todavía sin procesar
+   */
+  static async pushPendingNotifications({ type, userIds = null, now = new Date(), deadline = Infinity }) {
+    const recoverySince = new Date(now.getTime() - PENDING_PUSH_RECOVERY_HOURS * 60 * 60 * 1000);
+    const pending = await Notification.find({
+      type,
+      ...(userIds ? { userId: { $in: userIds } } : {}),
+      createdAt: { $gte: recoverySince },
+      read: false,
+      // $type 'null' (no `pushSentAt: null`, que también matchea documentos sin el campo) y pega en el índice parcial
+      pushSentAt: { $type: 'null' },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (pending.length === 0) return { pending: 0, sent: 0, truncated: false };
+
+    const subscriptionsByUser = await this._fetchSubscriptionsByUser(pending.map(doc => doc.userId));
+
+    let sent = 0;
+    let truncated = false;
+    for (let index = 0; index < pending.length; index += PUSH_SEND_CONCURRENCY) {
+      if (Date.now() > deadline) {
+        truncated = true;
+        break;
+      }
+
+      const chunk = pending.slice(index, index + PUSH_SEND_CONCURRENCY);
+      const settled = await Promise.allSettled(
+        chunk.map(async doc => {
+          const subscriptions = subscriptionsByUser.get(doc.userId.toString()) ?? [];
+          if (subscriptions.length === 0) return { doc, delivered: false, shouldMark: true };
+
+          const result = await PushNotificationService.sendNotification(
+            doc.userId,
+            { title: doc.title, body: doc.body, url: doc.url, icon: PUSH_ICONS[type] },
+            subscriptions
+          );
+          return {
+            doc,
+            delivered: result.delivered > 0,
+            shouldMark: result.delivered > 0 || !result.transientFailure,
+          };
+        })
+      );
+
+      // Un envío que rechaza queda pendiente; no pierde las marcas de los que sí se resolvieron
+      settled.forEach((entry, position) => {
+        if (entry.status === 'rejected') {
+          console.error(chalk.red(`[Cron] Falló el envío push de ${chunk[position]._id} (${type}):`), entry.reason);
+        }
+      });
+      const outcomes = settled.filter(entry => entry.status === 'fulfilled').map(entry => entry.value);
+      sent += outcomes.filter(outcome => outcome.delivered).length;
+
+      const sentAt = new Date();
+      const toMark = outcomes.filter(outcome => outcome.shouldMark);
+      if (toMark.length > 0) {
+        try {
+          await Notification.bulkWrite(
+            toMark.map(({ doc }) => ({
+              updateOne: {
+                filter: { _id: doc._id, pushSentAt: { $type: 'null' } },
+                update: { $set: { pushSentAt: sentAt } },
+              },
+            })),
+            { ordered: false }
+          );
+        } catch (error) {
+          // Las filas sin marcar se re-empujan en la próxima corrida (at-least-once); el lote sigue
+          console.error(chalk.red(`[Cron] No se pudo marcar push enviado (${type}):`), error);
+        }
+      }
+    }
+
+    return { pending: pending.length, sent, truncated };
+  }
+
+  /**
+   * Suscripciones push de un conjunto de usuarios, leídas en lotes (una consulta por lote).
+   * @private
+   * @param {Array} userIds
+   * @returns {Promise<Map<string, Array>>} userId (string) -> suscripciones
+   */
+  static async _fetchSubscriptionsByUser(userIds) {
+    const uniqueUserIds = [...new Set(userIds.map(userId => userId.toString()))];
+    const subscriptionsByUser = new Map();
+
+    for (let index = 0; index < uniqueUserIds.length; index += PUSH_SUBSCRIPTION_BATCH_SIZE) {
+      const batch = uniqueUserIds.slice(index, index + PUSH_SUBSCRIPTION_BATCH_SIZE);
+      const subscriptions = await PushSubscription.find({ userId: { $in: batch } });
+      for (const subscription of subscriptions) {
+        const key = subscription.userId.toString();
+        if (!subscriptionsByUser.has(key)) subscriptionsByUser.set(key, []);
+        subscriptionsByUser.get(key).push(subscription);
+      }
+    }
+
+    return subscriptionsByUser;
+  }
+
+  /**
+   * Completa el contexto de un job con sus valores por defecto: todos los usuarios, zona de producto,
+   * "hoy" calculado a partir de `now`. Una zona inválida cae a la de producto.
+   * `deadline` (ms) es el límite de tiempo del dispatch para los envíos push; sin él (corridas manuales) no hay límite.
+   * @param {{userIds?: Array|null, timezone?: string, localDate?: string, now?: Date, deadline?: number}} [context]
+   * @returns {{userIds: Array|null, timezone: string, localDate: string, now: Date, deadline: number}}
+   */
+  static resolveContext({
+    userIds = null,
+    timezone = DEFAULT_TIMEZONE,
+    localDate,
+    now = new Date(),
+    deadline = Infinity,
+  } = {}) {
+    const zone = resolveTimeZone(timezone);
+    return { userIds, timezone: zone, localDate: localDate ?? toLocalYmd(now, zone), now, deadline };
+  }
+
+  /**
+   * Fragmento de filtro que limita una consulta al lote de usuarios del contexto.
+   * @private
+   * @param {{userIds: Array|null}} ctx
+   * @param {string} [field] - Campo que referencia al usuario (`userId` o `_id`)
+   * @returns {Object}
+   */
+  static _userScope(ctx, field = 'userId') {
+    return ctx.userIds ? { [field]: { $in: ctx.userIds } } : {};
+  }
+
+  /**
+   * Omite usuarios notificados del mismo tipo desde el inicio de hace `days` días de calendario locales.
    * days = 0 equivale a “ya notificado hoy”.
    */
-  static async _excludeNotifiedSince(entries, type, days = 0) {
-    const start = getStartOfDayInTimeZone();
-    start.setTime(start.getTime() - days * MS_PER_DAY);
+  static async _excludeNotifiedSince(entries, type, days = 0, context) {
+    const { start } = this._getDayRange(-days, this.resolveContext(context));
 
     const userIds = entries.map((entry) => entry.userId);
     const existing = await Notification.find({
@@ -118,27 +282,43 @@ export class ScheduledNotificationService {
   }
 
   /**
-   * Ventana [start, end) del día calendario ART corrido `daysFromToday` (0 = hoy).
+   * Ventana [start, end) del día de calendario local `daysFromToday` días después de `ctx.localDate` (0 = hoy).
+   * Se cuentan días de calendario, no múltiplos de 24 h: un día local dura 23 o 25 h en los cambios de horario.
    * @private
+   * @param {number} daysFromToday
+   * @param {{localDate: string, timezone: string}} ctx
+   * @returns {{start: Date, end: Date}}
    */
-  static _getDayRange(daysFromToday) {
-    return getDayRangeInTimeZone(daysFromToday);
+  static _getDayRange(daysFromToday, ctx) {
+    return getLocalDayRange(addDaysToYmd(ctx.localDate, daysFromToday), ctx.timezone);
   }
 
   /**
-   * YYYY-MM-DD en ART (misma base que `_getDayRange`).
+   * Ventana UTC [start, end) de una fecha límite (flotante, guardada a las 12:00Z) que cae `daysFromToday` días
+   * después de `ctx.localDate`. La fecha límite es un día de calendario sin zona: se compara contra el "hoy"
+   * del usuario como Y-M-D, nunca como instante.
+   * @private
+   * @param {number} daysFromToday
+   * @param {{localDate: string}} ctx
+   * @returns {{start: Date, end: Date}}
+   */
+  static _getDueDateRange(daysFromToday, ctx) {
+    return getFloatingDayRange(this._getYmd(daysFromToday, ctx));
+  }
+
+  /**
+   * YYYY-MM-DD del día de calendario local `daysFromToday` días después de `ctx.localDate`.
    * @private
    */
-  static _formatDateYmd(date) {
-    return formatDateYmdInTimeZone(date);
+  static _getYmd(daysFromToday, ctx) {
+    return addDaysToYmd(ctx.localDate, daysFromToday);
   }
 
   /**
    * Lista de tareas filtrada a un día calendario.
    * @private
    */
-  static _tasksDateFilterUrl(rangeStart, extraQuery = '') {
-    const ymd = this._formatDateYmd(rangeStart);
+  static _tasksDateFilterUrl(ymd, extraQuery = '') {
     return `/tasks?dueDateFrom=${ymd}&dueDateTo=${ymd}${extraQuery}`;
   }
 
@@ -146,8 +326,7 @@ export class ScheduledNotificationService {
    * Lista de metas activas filtrada a un día calendario.
    * @private
    */
-  static _goalsDateFilterUrl(rangeStart, extraQuery = '') {
-    const ymd = this._formatDateYmd(rangeStart);
+  static _goalsDateFilterUrl(ymd, extraQuery = '') {
     return `/goals?dueDateFrom=${ymd}&dueDateTo=${ymd}&status=active${extraQuery}`;
   }
 
@@ -176,31 +355,15 @@ export class ScheduledNotificationService {
   }
 
   /**
-   * Resetea a 0 las rachas de usuarios cuya última actividad fue hace 2+ días.
-   */
-  static async resetExpiredStreaks() {
-    const { start: yesterday } = this._getDayRange(-1);
-
-    const result = await Metrics.updateMany(
-      { currentStreak: { $gt: 0 }, lastActivityDate: { $lt: yesterday } },
-      { $set: { currentStreak: 0 } }
-    );
-
-    if (result.modifiedCount > 0) {
-      console.log(chalk.yellow(`[Cron] Rachas expiradas reseteadas: ${result.modifiedCount}`));
-    }
-
-    return { modifiedCount: result.modifiedCount };
-  }
-
-  /**
    * Notifica a usuarios que tienen tareas con dueDate = hoy y no completadas.
    * Agrupa por userId para enviar una sola notificación por usuario.
    */
-  static async checkDueTasks() {
-    const { start, end } = this._getDayRange(0);
+  static async checkDueTasks(context) {
+    const ctx = this.resolveContext(context);
+    const { start, end } = this._getDueDateRange(0, ctx);
 
     const dueTasks = await Todo.find({
+      ...this._userScope(ctx),
       dueDate: { $gte: start, $lt: end },
       completed: false,
     }).lean();
@@ -211,7 +374,7 @@ export class ScheduledNotificationService {
     }
 
     const tasksByUser = this._groupTasksByUser(dueTasks);
-    const listUrl = this._tasksDateFilterUrl(start);
+    const listUrl = this._tasksDateFilterUrl(this._getYmd(0, ctx));
 
     const entries = Array.from(tasksByUser, ([userId, tasks]) => {
       const sortedTasks = this._sortTasksByPriority(tasks);
@@ -232,16 +395,18 @@ export class ScheduledNotificationService {
       };
     });
 
-    return this._sendToSubscribedUsers(entries, 'Tareas por vencer', 'due_task');
+    return this._sendToSubscribedUsers(entries, 'Tareas por vencer', 'due_task', 0, ctx);
   }
 
   /**
    * Notifica tareas no completadas cuya fecha era ayer.
    */
-  static async checkOverdueTasks() {
-    const { start, end } = this._getDayRange(-1);
+  static async checkOverdueTasks(context) {
+    const ctx = this.resolveContext(context);
+    const { start, end } = this._getDueDateRange(-1, ctx);
 
     const overdueTasks = await Todo.find({
+      ...this._userScope(ctx),
       dueDate: { $gte: start, $lt: end },
       completed: false,
     }).lean();
@@ -252,7 +417,7 @@ export class ScheduledNotificationService {
     }
 
     const tasksByUser = this._groupTasksByUser(overdueTasks);
-    const listUrl = this._tasksDateFilterUrl(start);
+    const listUrl = this._tasksDateFilterUrl(this._getYmd(-1, ctx));
 
     const entries = Array.from(tasksByUser, ([userId, tasks]) => {
       const sortedTasks = this._sortTasksByPriority(tasks);
@@ -273,16 +438,18 @@ export class ScheduledNotificationService {
       };
     });
 
-    return this._sendToSubscribedUsers(entries, 'Tareas de ayer', 'overdue_task');
+    return this._sendToSubscribedUsers(entries, 'Tareas de ayer', 'overdue_task', 0, ctx);
   }
 
   /**
    * Notifica metas activas cuya fecha era ayer.
    */
-  static async checkOverdueGoals() {
-    const { start, end } = this._getDayRange(-1);
+  static async checkOverdueGoals(context) {
+    const ctx = this.resolveContext(context);
+    const { start, end } = this._getDueDateRange(-1, ctx);
 
     const overdueGoals = await Goal.find({
+      ...this._userScope(ctx),
       dueDate: { $gte: start, $lt: end },
       status: 'active',
     }).lean();
@@ -293,7 +460,7 @@ export class ScheduledNotificationService {
     }
 
     const goalsByUser = this._groupTasksByUser(overdueGoals);
-    const listUrl = this._goalsDateFilterUrl(start);
+    const listUrl = this._goalsDateFilterUrl(this._getYmd(-1, ctx));
 
     const entries = Array.from(goalsByUser, ([userId, goals]) => {
       const sortedGoals = this._sortTasksByPriority(goals);
@@ -314,17 +481,19 @@ export class ScheduledNotificationService {
       };
     });
 
-    return this._sendToSubscribedUsers(entries, 'Metas de ayer', 'overdue_goal');
+    return this._sendToSubscribedUsers(entries, 'Metas de ayer', 'overdue_goal', 0, ctx);
   }
 
   /**
    * Notifica tareas de prioridad alta que vencen exactamente en 4 días.
    * Una notificación por usuario y día (tipo high_priority_upcoming).
    */
-  static async checkUpcomingHighPriorityTasks() {
-    const { start, end } = this._getDayRange(4);
+  static async checkUpcomingHighPriorityTasks(context) {
+    const ctx = this.resolveContext(context);
+    const { start, end } = this._getDueDateRange(4, ctx);
 
     const upcomingTasks = await Todo.find({
+      ...this._userScope(ctx),
       dueDate: { $gte: start, $lt: end },
       completed: false,
       priority: 'high',
@@ -336,7 +505,7 @@ export class ScheduledNotificationService {
     }
 
     const tasksByUser = this._groupTasksByUser(upcomingTasks);
-    const listUrl = this._tasksDateFilterUrl(start, '&priority=high');
+    const listUrl = this._tasksDateFilterUrl(this._getYmd(4, ctx), '&priority=high');
 
     const entries = Array.from(tasksByUser, ([userId, tasks]) => {
       const singleTask = tasks.length === 1 ? tasks[0] : null;
@@ -356,16 +525,18 @@ export class ScheduledNotificationService {
       };
     });
 
-    return this._sendToSubscribedUsers(entries, 'Tareas de prioridad alta en 4 días', 'high_priority_upcoming');
+    return this._sendToSubscribedUsers(entries, 'Tareas de prioridad alta en 4 días', 'high_priority_upcoming', 0, ctx);
   }
 
   /**
    * Notifica metas activas con dueDate hoy y al menos una tarea.
    */
-  static async checkDueGoals() {
-    const { start, end } = this._getDayRange(0);
+  static async checkDueGoals(context) {
+    const ctx = this.resolveContext(context);
+    const { start, end } = this._getDueDateRange(0, ctx);
 
     const dueGoals = await Goal.find({
+      ...this._userScope(ctx),
       dueDate: { $gte: start, $lt: end },
       status: 'active',
       totalTasks: { $gt: 0 },
@@ -377,7 +548,7 @@ export class ScheduledNotificationService {
     }
 
     const goalsByUser = this._groupTasksByUser(dueGoals);
-    const listUrl = this._goalsDateFilterUrl(start);
+    const listUrl = this._goalsDateFilterUrl(this._getYmd(0, ctx));
 
     const entries = Array.from(goalsByUser, ([userId, goals]) => {
       const sortedGoals = this._sortTasksByPriority(goals);
@@ -398,17 +569,19 @@ export class ScheduledNotificationService {
       };
     });
 
-    return this._sendToSubscribedUsers(entries, 'Metas con fecha para hoy', 'due_goal');
+    return this._sendToSubscribedUsers(entries, 'Metas con fecha para hoy', 'due_goal', 0, ctx);
   }
 
   /**
    * Notifica metas activas sin tareas cuya fecha es hoy o exactamente en 4 días.
    */
-  static async checkEmptyGoals() {
-    const today = this._getDayRange(0);
-    const inFourDays = this._getDayRange(4);
+  static async checkEmptyGoals(context) {
+    const ctx = this.resolveContext(context);
+    const today = this._getDueDateRange(0, ctx);
+    const inFourDays = this._getDueDateRange(4, ctx);
 
     const emptyGoals = await Goal.find({
+      ...this._userScope(ctx),
       status: 'active',
       totalTasks: 0,
       $or: [
@@ -442,16 +615,18 @@ export class ScheduledNotificationService {
       };
     });
 
-    return this._sendToSubscribedUsers(entries, 'Metas vacías', 'empty_goal');
+    return this._sendToSubscribedUsers(entries, 'Metas vacías', 'empty_goal', 0, ctx);
   }
 
   /**
    * Notifica metas activas de prioridad alta que vencen exactamente en 4 días y tienen tareas.
    */
-  static async checkUpcomingHighPriorityGoals() {
-    const { start, end } = this._getDayRange(4);
+  static async checkUpcomingHighPriorityGoals(context) {
+    const ctx = this.resolveContext(context);
+    const { start, end } = this._getDueDateRange(4, ctx);
 
     const upcomingGoals = await Goal.find({
+      ...this._userScope(ctx),
       dueDate: { $gte: start, $lt: end },
       status: 'active',
       priority: 'high',
@@ -464,7 +639,7 @@ export class ScheduledNotificationService {
     }
 
     const goalsByUser = this._groupTasksByUser(upcomingGoals);
-    const listUrl = this._goalsDateFilterUrl(start, '&priority=high');
+    const listUrl = this._goalsDateFilterUrl(this._getYmd(4, ctx), '&priority=high');
 
     const entries = Array.from(goalsByUser, ([userId, goals]) => {
       const singleGoal = goals.length === 1 ? goals[0] : null;
@@ -484,59 +659,76 @@ export class ScheduledNotificationService {
       };
     });
 
-    return this._sendToSubscribedUsers(entries, 'Metas de prioridad alta en 4 días', 'high_priority_upcoming_goal');
+    return this._sendToSubscribedUsers(entries, 'Metas de prioridad alta en 4 días', 'high_priority_upcoming_goal', 0, ctx);
   }
 
   /**
    * Recap positivo de la noche: usuarios que completaron al menos una tarea hoy.
    */
-  static async checkDayRecap() {
-    const { start, end } = this._getDayRange(0);
+  static async checkDayRecap(context) {
+    const ctx = this.resolveContext(context);
+    const today = ctx.localDate;
 
     const metricsWithActivity = await Metrics.find({
+      ...this._userScope(ctx),
       history: {
         $elemMatch: {
-          date: { $gte: start, $lt: end },
-          tasksCompleted: { $gt: 0 },
+          day: today,
+          $or: [{ tasksCompleted: { $gt: 0 } }, { goalsCompleted: { $gt: 0 } }],
         },
       },
     }).lean();
 
     if (metricsWithActivity.length === 0) {
-      console.log(chalk.blue('[Cron] Nadie completó tareas hoy para el recap'));
+      console.log(chalk.blue('[Cron] Nadie completó tareas ni metas hoy para el recap'));
       return { notified: 0, persisted: 0 };
     }
 
     const entries = metricsWithActivity.map((metric) => {
-      const todayRecord = (metric.history || []).find(
-        (entry) => entry.date >= start && entry.date < end && entry.tasksCompleted > 0
-      );
-      const count = todayRecord?.tasksCompleted ?? 1;
-      const taskWord = count === 1 ? 'tarea' : 'tareas';
+      const todayRecord = metric.history.find((entry) => entry.day === today);
       return {
         userId: metric.userId.toString(),
         payload: {
           title: 'Qué día',
-          body: `Hoy cerraste ${count} ${taskWord}. Eso suma. Mañana seguimos.`,
+          body: `Hoy cerraste ${this._describeDayActivity(todayRecord)}. Eso suma. Mañana seguimos.`,
           url: '/',
         },
       };
     });
 
-    return this._sendToSubscribedUsers(entries, 'Recap del día', 'day_recap');
+    return this._sendToSubscribedUsers(entries, 'Recap del día', 'day_recap', 0, ctx);
+  }
+
+  /**
+   * Arma las partes del recap: "3 tareas", "1 meta" o "3 tareas y 1 meta".
+   * @private
+   * @param {{tasksCompleted?: number, goalsCompleted?: number}} dayRecord
+   * @returns {string}
+   */
+  static _describeDayActivity({ tasksCompleted = 0, goalsCompleted = 0 }) {
+    const parts = [];
+    if (tasksCompleted > 0) {
+      parts.push(`${tasksCompleted} ${tasksCompleted === 1 ? 'tarea' : 'tareas'}`);
+    }
+    if (goalsCompleted > 0) {
+      parts.push(`${goalsCompleted} ${goalsCompleted === 1 ? 'meta' : 'metas'}`);
+    }
+    return parts.join(' y ');
   }
 
   /**
    * Notifica a usuarios con racha activa cuya última actividad fue ayer
    * (aún no completaron tarea hoy). Se ejecuta por la noche.
    */
-  static async checkStreaksAtRisk() {
-    const { start: today } = this._getDayRange(0);
-    const { start: yesterday } = this._getDayRange(-1);
+  static async checkStreaksAtRisk(context) {
+    const ctx = this.resolveContext(context);
+    const yesterday = this._getYmd(-1, ctx);
 
+    // Última actividad ayer: la racha guardada sigue vigente (es la efectiva) y hoy todavía no hubo actividad
     const metricsAtRisk = await Metrics.find({
+      ...this._userScope(ctx),
       currentStreak: { $gt: 0 },
-      lastActivityDate: { $gte: yesterday, $lt: today },
+      lastActivityDay: yesterday,
     }).lean();
 
     if (metricsAtRisk.length === 0) {
@@ -553,7 +745,7 @@ export class ScheduledNotificationService {
       },
     }));
 
-    return this._sendToSubscribedUsers(entries, 'Rachas en riesgo', 'streak_risk');
+    return this._sendToSubscribedUsers(entries, 'Rachas en riesgo', 'streak_risk', 0, ctx);
   }
 
   /**
@@ -561,11 +753,14 @@ export class ScheduledNotificationService {
    * Omite quien nunca tuvo actividad, quien ya recibió due/overdue hoy,
    * y quien ya tiene inactivity en los últimos INACTIVITY_COOLDOWN_DAYS días.
    */
-  static async checkInactiveUsers() {
-    const { start: twoDaysAgo } = this._getDayRange(-2);
+  static async checkInactiveUsers(context) {
+    const ctx = this.resolveContext(context);
+    const twoDaysAgo = this._getYmd(-2, ctx);
 
+    // Las claves YYYY-MM-DD ordenan igual que las fechas, así que $lte compara bien
     const inactiveMetrics = await Metrics.find({
-      lastActivityDate: { $ne: null, $lte: twoDaysAgo },
+      ...this._userScope(ctx),
+      lastActivityDay: { $ne: null, $lte: twoDaysAgo },
     }).lean();
 
     if (inactiveMetrics.length === 0) {
@@ -574,9 +769,8 @@ export class ScheduledNotificationService {
     }
 
     const userIds = inactiveMetrics.map((metric) => metric.userId);
-    const { start: startOfDay } = this._getDayRange(0);
-    const cooldownStart = getStartOfDayInTimeZone();
-    cooldownStart.setTime(cooldownStart.getTime() - INACTIVITY_COOLDOWN_DAYS * MS_PER_DAY);
+    const { start: startOfDay } = this._getDayRange(0, ctx);
+    const { start: cooldownStart } = this._getDayRange(-INACTIVITY_COOLDOWN_DAYS, ctx);
 
     const [calendarNotified, recentInactivity] = await Promise.all([
       Notification.find({
@@ -617,16 +811,18 @@ export class ScheduledNotificationService {
       },
     }));
 
-    return this._sendToSubscribedUsers(entries, 'Usuarios inactivos', 'inactivity');
+    return this._sendToSubscribedUsers(entries, 'Usuarios inactivos', 'inactivity', 0, ctx);
   }
 
   /**
    * Meta activa con hijos, sin movimiento en STALLED_DAYS.
    */
-  static async checkStalledGoals() {
-    const cutoff = new Date(getStartOfDayInTimeZone().getTime() - STALLED_DAYS * MS_PER_DAY);
+  static async checkStalledGoals(context) {
+    const ctx = this.resolveContext(context);
+    const { start: cutoff } = this._getDayRange(-STALLED_DAYS, ctx);
 
     const stalledGoals = await Goal.find({
+      ...this._userScope(ctx),
       status: 'active',
       $expr: { $gt: [{ $add: ['$totalTasks', '$totalSubGoals'] }, 0] },
       $or: [
@@ -659,16 +855,18 @@ export class ScheduledNotificationService {
       };
     });
 
-    return this._sendToSubscribedUsers(entries, 'Metas estancadas', 'stalled_goal', STALLED_DAYS);
+    return this._sendToSubscribedUsers(entries, 'Metas estancadas', 'stalled_goal', STALLED_DAYS, ctx);
   }
 
   /**
    * Meta en pausa hace PAUSE_TOO_LONG_DAYS o más.
    */
-  static async checkPausedTooLong() {
-    const cutoff = new Date(getStartOfDayInTimeZone().getTime() - PAUSE_TOO_LONG_DAYS * MS_PER_DAY);
+  static async checkPausedTooLong(context) {
+    const ctx = this.resolveContext(context);
+    const { start: cutoff } = this._getDayRange(-PAUSE_TOO_LONG_DAYS, ctx);
 
     const pausedGoals = await Goal.find({
+      ...this._userScope(ctx),
       status: 'paused',
       pausedAt: { $lte: cutoff },
     }).lean();
@@ -697,18 +895,20 @@ export class ScheduledNotificationService {
       };
     });
 
-    return this._sendToSubscribedUsers(entries, 'Metas en pausa larga', 'pause_too_long', PAUSE_TOO_LONG_DAYS);
+    return this._sendToSubscribedUsers(entries, 'Metas en pausa larga', 'pause_too_long', PAUSE_TOO_LONG_DAYS, ctx);
   }
 
   /**
    * Tareas y metas con fecha de hace 7+ días (no pisa el job de ayer).
    */
-  static async checkOverdueBacklog() {
-    const { start: startOfDay } = this._getDayRange(0);
-    const { start: backlogCutoff } = this._getDayRange(-(OVERDUE_BACKLOG_DAYS - 1));
+  static async checkOverdueBacklog(context) {
+    const ctx = this.resolveContext(context);
+    const { start: startOfDay } = this._getDayRange(0, ctx);
+    const { start: backlogCutoff } = this._getDueDateRange(-(OVERDUE_BACKLOG_DAYS - 1), ctx);
 
     const [alreadyToday] = await Promise.all([
       Notification.find({
+        ...this._userScope(ctx),
         type: { $in: ['overdue_task', 'overdue_goal'] },
         createdAt: { $gte: startOfDay },
       })
@@ -718,8 +918,8 @@ export class ScheduledNotificationService {
     const skipUserIds = new Set(alreadyToday.map((doc) => doc.userId.toString()));
 
     const [overdueTasks, overdueGoals] = await Promise.all([
-      Todo.find({ completed: false, dueDate: { $lt: backlogCutoff } }).lean(),
-      Goal.find({ status: 'active', dueDate: { $lt: backlogCutoff } }).lean(),
+      Todo.find({ ...this._userScope(ctx), completed: false, dueDate: { $lt: backlogCutoff } }).lean(),
+      Goal.find({ ...this._userScope(ctx), status: 'active', dueDate: { $lt: backlogCutoff } }).lean(),
     ]);
 
     const itemsByUser = new Map();
@@ -741,7 +941,7 @@ export class ScheduledNotificationService {
       return { notified: 0, persisted: 0 };
     }
 
-    const ymd = this._formatDateYmd(backlogCutoff);
+    const ymd = this._getYmd(-(OVERDUE_BACKLOG_DAYS - 1), ctx);
     const entries = Array.from(itemsByUser, ([userId, { tasks, goals }]) => {
       const total = tasks.length + goals.length;
       const singleTask = tasks.length === 1 && goals.length === 0 ? tasks[0] : null;
@@ -770,15 +970,17 @@ export class ScheduledNotificationService {
       };
     });
 
-    return this._sendToSubscribedUsers(entries, 'Backlog vencido', 'overdue_backlog', OVERDUE_BACKLOG_COOLDOWN_DAYS);
+    return this._sendToSubscribedUsers(entries, 'Backlog vencido', 'overdue_backlog', OVERDUE_BACKLOG_COOLDOWN_DAYS, ctx);
   }
 
   /**
    * Moodboard premium vacío o sin imagen nueva.
    */
-  static async checkMoodboardNudge() {
-    const { start: startOfDay } = this._getDayRange(0);
+  static async checkMoodboardNudge(context) {
+    const ctx = this.resolveContext(context);
+    const { start: startOfDay } = this._getDayRange(0, ctx);
     const premiumUsers = await User.find({
+      ...this._userScope(ctx, '_id'),
       $or: [{ 'subscription.isActive': true }, { isAdmin: true }],
     })
       .select('_id subscription.startDate createdAt')
@@ -803,8 +1005,8 @@ export class ScheduledNotificationService {
     }).lean();
     const boardByUser = new Map(boards.map((board) => [board.userId.toString(), board]));
 
-    const emptyCutoff = new Date(getStartOfDayInTimeZone().getTime() - MOODBOARD_EMPTY_DAYS * MS_PER_DAY);
-    const staleCutoff = new Date(getStartOfDayInTimeZone().getTime() - MOODBOARD_STALE_DAYS * MS_PER_DAY);
+    const { start: emptyCutoff } = this._getDayRange(-MOODBOARD_EMPTY_DAYS, ctx);
+    const { start: staleCutoff } = this._getDayRange(-MOODBOARD_STALE_DAYS, ctx);
 
     const entries = [];
     for (const user of premiumUsers) {
@@ -844,19 +1046,19 @@ export class ScheduledNotificationService {
       return { notified: 0, persisted: 0 };
     }
 
-    return this._sendToSubscribedUsers(entries, 'Moodboard', 'moodboard_nudge', MOODBOARD_STALE_DAYS);
+    return this._sendToSubscribedUsers(entries, 'Moodboard', 'moodboard_nudge', MOODBOARD_STALE_DAYS, ctx);
   }
 
   /**
    * Nag suave a free users que ya chocaron el techo de metas.
    */
-  static async checkPremiumNag() {
-    const cooldownStart = new Date(
-      getStartOfDayInTimeZone().getTime() - PREMIUM_NAG_COOLDOWN_DAYS * MS_PER_DAY
-    );
+  static async checkPremiumNag(context) {
+    const ctx = this.resolveContext(context);
+    const { start: cooldownStart } = this._getDayRange(-PREMIUM_NAG_COOLDOWN_DAYS, ctx);
     const recentCancelCutoff = cooldownStart;
 
     const freeUsers = await User.find({
+      ...this._userScope(ctx, '_id'),
       isAdmin: { $ne: true },
       'subscription.isActive': { $ne: true },
       $or: [{ 'subscription.endDate': null }, { 'subscription.endDate': { $lte: recentCancelCutoff } }],
@@ -871,7 +1073,7 @@ export class ScheduledNotificationService {
     const moodboardToday = await Notification.find({
       userId: { $in: freeUsers.map((user) => user._id) },
       type: 'moodboard_nudge',
-      createdAt: { $gte: getStartOfDayInTimeZone() },
+      createdAt: { $gte: this._getDayRange(0, ctx).start },
     })
       .select('userId')
       .lean();
@@ -897,6 +1099,6 @@ export class ScheduledNotificationService {
       return { notified: 0, persisted: 0 };
     }
 
-    return this._sendToSubscribedUsers(entries, 'Premium nag', 'premium_nag', PREMIUM_NAG_COOLDOWN_DAYS);
+    return this._sendToSubscribedUsers(entries, 'Premium nag', 'premium_nag', PREMIUM_NAG_COOLDOWN_DAYS, ctx);
   }
 }

@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import { ValidationHelpers } from '../../services/helpers/validationHelpers.js';
+import { canonicalTimeZone } from '../../services/helpers/dateTime.js';
+import {
+  DUE_DATE_INVALID_MESSAGE,
+  DUE_DATE_PAST_MESSAGE,
+  isDueDateInPast,
+} from '../../services/helpers/dueDateRules.js';
 
 /**
  * Corre un schema Zod y lo adapta a { isValid, errors }.
@@ -117,21 +123,34 @@ export const optionalDescriptionField = z
   .max(100, 'La descripción no puede superar los 100 caracteres')
   .optional();
 
-export function dueDateNotPastField(message = 'La fecha límite no puede ser anterior al día actual') {
-  return z
-    .union([z.date(), z.string(), z.null()])
-    .optional()
-    .refine(value => {
-      if (value === undefined || value === null || value === '') return true;
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return false;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const due = new Date(date);
-      due.setHours(0, 0, 0, 0);
-      return due >= today;
-    }, { message });
+/**
+ * Fecha límite flotante (calendario, sin zona horaria): opcional, nullable y con formato de fecha válido.
+ * No valida que sea futura; eso lo hacen los DTOs de creación o el servicio en los updates.
+ */
+export const optionalDueDateField = z
+  .union([z.date(), z.string(), z.null()])
+  .optional()
+  .refine(value => !value || !Number.isNaN(new Date(value).getTime()), DUE_DATE_INVALID_MESSAGE);
+
+/**
+ * Fecha límite flotante que no puede estar antes de "hoy". Solo para DTOs de creación.
+ * @param {Object} [options]
+ * @param {string} [options.todayYmd] - Hoy (YYYY-MM-DD) para el usuario; por defecto, hoy en la zona de producto
+ * @param {string} [options.message]
+ */
+export function dueDateNotPastField({ todayYmd, message = DUE_DATE_PAST_MESSAGE } = {}) {
+  return optionalDueDateField.refine(value => !isDueDateInPast(value, todayYmd), { message });
 }
+
+/**
+ * Zona horaria IANA del dispositivo, LENIENTE: un valor inválido se descarta (queda `undefined`) y la request
+ * sigue su curso, nunca falla por un dato de zona raro. Un valor válido sale en la forma que resuelve `Intl`
+ * (por ejemplo `asia/kolkata` → la grafía de Kolkata de este runtime), que es la que se guarda.
+ */
+export const timezoneField = z
+  .unknown()
+  .optional()
+  .transform(value => canonicalTimeZone(value) ?? undefined);
 
 export function imageUrlField(required = true, fieldName = 'La URL de la imagen') {
   return z

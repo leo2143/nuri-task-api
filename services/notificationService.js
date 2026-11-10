@@ -123,4 +123,5 @@ export class NotificationService {
   }
 }
 
+/** Días que vive una notificación antes de que `expire-notifications` la borre. */
 const RETENTION_DAYS = 30;
