@@ -43,7 +43,10 @@ import { findLatestBackup, isBackupRestored, readBackup, runMigration } from './
  * definición y su `isActive` previos).
  *
  * `seed` también guarda en su backup, como `meta.pendingActivationIds`, los logros que dejó inactivos esperando el
- * deploy: `activate` activa SOLO esos (un logro que un admin desactivó por su cuenta no se toca). Si `seed` se repite
+ * deploy: `activate` activa SOLO esos (un logro que un admin desactivó por su cuenta no se toca). Al terminar con
+ * `--apply` deja una marca `<backup>.json.activated` al lado del backup: un `activate` repetido (o sin nada que
+ * respaldar tras un `seed`) ve el backup consumido, lo avisa y no hace nada, así nunca reactiva lo que un admin
+ * desactivó después. Un backup restaurado tampoco se activa. Si `seed` se repite
  * (tras una falla a medias o por una corrida idempotente), esos ids se arrastran del backup anterior y el backup nuevo
  * es ACUMULATIVO: junta por _id los originales y las filas de progreso del anterior (gana el más antiguo) con los de
  * esta corrida, así `--restore` vuelve al estado previo al primer `seed` de la tanda.
@@ -165,7 +168,17 @@ function readLastSeedBackup() {
     progressRows,
     pendingActivationIds: meta?.pendingActivationIds ?? [],
     restored: isBackupRestored(filePath),
+    activated: fs.existsSync(activatedMarkerPath(filePath)),
   };
+}
+
+// Marca al lado del backup (como `.restored`): no coincide con el patrón de sello, así findLatestBackup la ignora
+function activatedMarkerPath(filePath) {
+  return `${filePath}.activated`;
+}
+
+function markSeedBackupActivated(filePath) {
+  fs.writeFileSync(activatedMarkerPath(filePath), new Date().toISOString());
 }
 
 /**
@@ -173,7 +186,14 @@ function readLastSeedBackup() {
  * alguno de sus logros pendientes sigue inactivo (si ya se activaron, o se restauró, el estado previo dejó de ser vigente).
  */
 async function isSeedBackupPending(lastSeedBackup) {
-  if (!lastSeedBackup || lastSeedBackup.restored || lastSeedBackup.pendingActivationIds.length === 0) return false;
+  if (
+    !lastSeedBackup ||
+    lastSeedBackup.restored ||
+    lastSeedBackup.activated ||
+    lastSeedBackup.pendingActivationIds.length === 0
+  ) {
+    return false;
+  }
 
   const stillInactive = await mongoose.connection
     .collection('achievements')
@@ -374,18 +394,28 @@ await runMigration({
         if (!lastSeedBackup) {
           throw new Error('No hay backup de seed: corré --step=seed --apply antes de activar');
         }
+        if (lastSeedBackup.activated || lastSeedBackup.restored) {
+          log(
+            `El último backup de seed ya está ${lastSeedBackup.activated ? 'activado' : 'restaurado'}: no hay nada para activar. Corré --step=seed --apply para una tanda nueva`
+          );
+          return;
+        }
 
         // Solo los logros que el seed dejó inactivos; uno que un admin desactivó por su cuenta no se reactiva
         const filter = { _id: { $in: lastSeedBackup.pendingActivationIds }, isActive: false };
         const inactive = await mongoose.connection.collection('achievements').find(filter).toArray();
         log(`Logros inactivos a activar: ${inactive.map(achievement => achievement.title).join(', ') || 'ninguno'}`);
 
-        if (!apply || inactive.length === 0) return;
+        if (!apply) return;
 
-        const result = await mongoose.connection.collection('achievements').updateMany(filter, {
-          $set: { isActive: true },
-        });
-        log(`Activados: ${result.modifiedCount}`);
+        if (inactive.length > 0) {
+          const result = await mongoose.connection.collection('achievements').updateMany(filter, {
+            $set: { isActive: true },
+          });
+          log(`Activados: ${result.modifiedCount}`);
+        }
+        // El backup queda consumido: repetir `activate` no debe reactivar lo que un admin desactive después
+        markSeedBackupActivated(lastSeedBackup.filePath);
       },
     },
   },
