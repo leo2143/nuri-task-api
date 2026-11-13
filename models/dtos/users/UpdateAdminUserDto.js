@@ -9,6 +9,8 @@ export class UpdateAdminUserDto extends UpdateUserDto {
   static schema = UpdateUserDto.schema.extend({
     password: passwordField.optional(),
     isSubscribed: z.boolean({ invalid_type_error: 'isSubscribed debe ser un valor booleano' }).optional(),
+    // El panel admin manda null para quitar la imagen (igual que CreateAdminUserDto)
+    profileImageUrl: z.string().nullable().optional(),
   });
 
   constructor(data) {
