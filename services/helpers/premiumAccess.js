@@ -28,3 +28,15 @@ export function partitionByPremiumVisibility(activeAchievements, isPremium) {
   const visibleAchievements = activeAchievements.filter(achievement => achievement.tier === 'basic');
   return { visibleAchievements, premiumLocked: activeAchievements.length - visibleAchievements.length };
 }
+
+/**
+ * Vista de un logro premium bloqueado para un usuario free: solo lo que hace falta para dibujar la tarjeta.
+ * Es una lista blanca (no una lista negra) para que un campo nuevo del modelo no se filtre sin querer: el título, la
+ * descripción y las reglas del logro no salen del servidor.
+ * @param {{_id: *, tier: string, imageUrl?: string, isActive?: boolean}} achievement - Logro como objeto plano (lean o `toObject()`)
+ * @returns {{_id: *, tier: string, imageUrl: (string|undefined), isActive: (boolean|undefined)}}
+ */
+export function toLockedAchievementView(achievement) {
+  const { _id, tier, imageUrl, isActive } = achievement;
+  return { _id, tier, imageUrl, isActive };
+}

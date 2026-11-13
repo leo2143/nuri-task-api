@@ -13,7 +13,12 @@ import {
   buildWindowProgressPipeline,
 } from './helpers/achievementProgressPipeline.js';
 import { resolveTimeZone } from './helpers/dateTime.js';
-import { PREMIUM_ACCESS_USER_SELECT, hasPremiumAccess, partitionByPremiumVisibility } from './helpers/premiumAccess.js';
+import {
+  PREMIUM_ACCESS_USER_SELECT,
+  hasPremiumAccess,
+  partitionByPremiumVisibility,
+  toLockedAchievementView,
+} from './helpers/premiumAccess.js';
 import mongoose from 'mongoose';
 import chalk from 'chalk';
 
@@ -53,7 +58,9 @@ async function mapWithConcurrency(items, limit, task) {
  */
 export class UserAchievementService {
   /**
-   * Obtiene todos los logros con el progreso del usuario
+   * Obtiene todos los logros con el progreso del usuario.
+   * Un usuario sin acceso Premium recibe los logros premium bloqueados (`isAccessible: false`, progreso por defecto) y
+   * sin título, descripción ni reglas: solo `_id`, `tier`, `imageUrl` e `isActive`.
    * @param {string} userId - ID del usuario
    * @param {Object} pagination - Opciones de paginación
    * @returns {Promise<SuccessResponseModel|ErrorResponseModel>} Respuesta con los logros y el progreso del usuario
@@ -95,7 +102,7 @@ export class UserAchievementService {
       const achievementsWithProgress = paginatedAchievements.map(achievement => {
         const isAccessible = isPremium || achievement.tier === 'basic';
         return {
-          ...achievement,
+          ...(isAccessible ? achievement : toLockedAchievementView(achievement)),
           isAccessible,
           userProgress: isAccessible
             ? userProgressByAchievementId.get(achievement._id.toString()) || DEFAULT_PROGRESS
@@ -113,6 +120,7 @@ export class UserAchievementService {
    * Obtiene el progreso del usuario en un logro específico.
    * Un usuario sin acceso Premium ve un logro premium con el progreso por defecto, sin importar lo que haya guardado
    * (progreso o finalización silenciosa): la puerta de acceso vive acá y no depende del middleware de la ruta.
+   * En ese caso el logro viaja sin título, descripción ni reglas (solo `_id`, `tier`, `imageUrl` e `isActive`).
    * @param {string} userId - ID del usuario
    * @param {string} achievementId - ID del logro
    * @returns {Promise<SuccessResponseModel|NotFoundResponseModel|ErrorResponseModel>} Respuesta con el progreso del usuario
@@ -129,7 +137,7 @@ export class UserAchievementService {
         const user = await User.findById(userId).select(PREMIUM_ACCESS_USER_SELECT).lean();
         if (!hasPremiumAccess(user)) {
           return new SuccessResponseModel(
-            { achievement: achievementData, ...DEFAULT_PROGRESS },
+            { achievement: toLockedAchievementView(achievementData.toObject()), ...DEFAULT_PROGRESS },
             'Progreso de logro obtenido correctamente'
           );
         }
